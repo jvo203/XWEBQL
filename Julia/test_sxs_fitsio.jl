@@ -13,3 +13,5 @@ end
 
 nevents = length(x)
 println("nevents = ", nevents)
+
+# right now the high-level FITSIO does not support 'X' columns
