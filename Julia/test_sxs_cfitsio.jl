@@ -18,7 +18,7 @@ fits_movabs_hdu(f, 2)
 nevents = parse(Int32, fits_read_keyword(f, "NAXIS2")[1])
 println("nevents = ", nevents)
 
-# prepare x as zeros
+# prepare data arrays
 x = zeros(Int32, nevents)
 y = zeros(Int32, nevents)
 energy = zeros(Float32, nevents)
