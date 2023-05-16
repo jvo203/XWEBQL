@@ -7,9 +7,22 @@ for hdu in f
     println(typeof(hdu))
 end
 
-@time x = read(f[2], "X")
-@time y = read(f[2], "Y")
-@time energy = read(f[2], "UPI")
+x_t = @async begin
+	global x
+	x = read(f[2], "X")
+end
+
+y_t = @async begin
+	global y
+	y = read(f[2], "Y")
+end
+
+e_t = @async begin
+	global energy
+	energy = read(f[2], "UPI")
+end
+
+@time wait.([x_t, y_t, e_t])
 
 nevents = length(x)
 println("nevents = ", nevents)
