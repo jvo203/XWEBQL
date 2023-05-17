@@ -3,31 +3,10 @@ using Mmap
 filename = homedir() * "/NAO/JAXA/ah100040060sxs_p0px1010_cl.evt"
 io = open(filename, "r+")
 sxs = Mmap.mmap(io, Vector{UInt8})
+close(io)
 
 println(typeof(sxs))
 println(length(sxs))
-
-# convert Vector{UInt8} to String
-
-function process_header_copilot(chunk)
-    # convert Vector{UInt8} to String
-    header = String(chunk)
-    # split the header into lines
-    lines = split(header, "\n")
-    # remove the last line
-    lines = lines[1:end-1]
-    # remove the first line
-    lines = lines[2:end]
-    # remove the last 3 characters from each line
-    lines = [line[1:end-3] for line in lines]
-    # split each line into a key and a value
-    lines = [split(line, "=") for line in lines]
-    # remove leading and trailing whitespace from each key and value
-    lines = [[strip(s) for s in line] for line in lines]
-    # convert the lines into a Dict
-    header = Dict(lines)
-    return header
-end
 
 function has_end(chunk::Vector{UInt8})
     header = String(chunk)
