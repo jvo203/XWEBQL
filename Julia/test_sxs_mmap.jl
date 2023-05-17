@@ -17,6 +17,15 @@ function has_end(chunk::Vector{UInt8})
     end
 end
 
+function has_table(chunk::Vector{UInt8})
+    header = String(chunk)
+    if findfirst("XTENSION= 'BINTABLE'", header) !== nothing
+        return true
+    else
+        return false
+    end
+end
+
 function process_header(chunk::Vector{UInt8})
     header = String(chunk)
     has_end = false
@@ -28,7 +37,7 @@ function process_header(chunk::Vector{UInt8})
         has_end = true
     end
 
-    println("has_end = ", has_end)
+    # println("has_end = ", has_end)
 
     # split each line into a key and a value
     lines = [split(line, "=") for line in lines]
@@ -48,17 +57,17 @@ end
 
 counter = 0
 
-# skip the first HDU
+# find the table
 @time begin
     global counter
     global sxs
 
-    while !has_end(sxs[counter*2880+1:(counter+1)*2880])
+    while !has_table(sxs[counter*2880+1:(counter+1)*2880])
         global counter
         counter += 1
     end
 
-    counter += 1
+    # counter += 1 # this is only needed by "has_end"
 end
 println("counter = ", counter)
 
@@ -82,3 +91,9 @@ end
 println("counter = ", counter)
 
 # the table data starts here
+# get NAXIS2 and TFIELDS
+NAXIS2 = parse(Int, header["NAXIS2"])
+TFIELDS = parse(Int, header["TFIELDS"])
+
+println("NAXIS2 = ", NAXIS2)
+println("TFIELDS = ", TFIELDS)
