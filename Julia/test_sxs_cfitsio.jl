@@ -18,13 +18,15 @@ fits_movabs_hdu(f, 2)
 nevents = parse(Int32, fits_read_keyword(f, "NAXIS2")[1])
 println("nevents = ", nevents)
 
-# prepare data arrays
-x = zeros(Int32, nevents)
-y = zeros(Int32, nevents)
-energy = zeros(Float32, nevents)
+@time begin
+    # prepare data arrays
+    x = Vector{Int32}(undef, nevents)
+    y = Vector{Int32}(undef, nevents)
+    energy = Vector{Float32}(undef, nevents)
 
-@time fits_read_col(f, 40, 1, 1, x)
-@time fits_read_col(f, 41, 1, 1, y)
-@time fits_read_col(f, 42, 1, 1, energy)
+    fits_read_col(f, 40, 1, 1, x)
+    fits_read_col(f, 41, 1, 1, y)
+    fits_read_col(f, 42, 1, 1, energy)
+end
 
 fits_close_file(f)
