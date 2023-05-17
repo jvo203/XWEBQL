@@ -1,0 +1,1 @@
+sxs = homedir() * "/NAO/JAXA/ah100040060sxs_p0px1010_cl.evt"
