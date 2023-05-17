@@ -57,25 +57,49 @@ function process_header(chunk::Vector{UInt8})
     # remove leading and trailing whitespace from each key and value
     lines = [[strip(s) for s in line] for line in lines]
 
+    # println(lines)
+
     # remove empty (1-element) lines
     lines = filter(line -> length(line) > 1, lines)
 
     # convert the lines into a Dict
     header = Dict(lines)
-    return header
+    return (header, has_end)
 end
 
 counter = 0
 
-
 # skip the first HDU
 @time begin
     global counter
+    global sxs
 
     while !has_end(sxs[counter*2880+1:(counter+1)*2880])
+        global counter
         counter += 1
     end
+
+    counter += 1
 end
 println("counter = ", counter)
 
-#@time process_header(chunk)
+# OK, we should be at the start of the second HDU
+header = Dict()
+@time begin
+    global sxs, counter
+    local has_end
+
+    has_end = false
+
+    while !has_end
+        global counter, header
+        new_header, has_end = process_header(sxs[counter*2880+1:(counter+1)*2880])
+        header = merge(header, new_header)
+        counter += 1
+    end
+end
+
+#println("header = ", header)
+println("counter = ", counter)
+
+# the table data starts here
