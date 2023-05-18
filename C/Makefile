@@ -1,4 +1,4 @@
-.DEFAULT_GOAL := fitswebqlse
+.DEFAULT_GOAL := sxs
 
 # get the Homebrew installation directory
 # brew --prefix is not available from inside the Homebrew environment
@@ -82,7 +82,7 @@ endif
 
 JEMALLOC = `pkg-config --libs jemalloc` -L`jemalloc-config --libdir` -Wl,-rpath,`jemalloc-config --libdir` -ljemalloc `jemalloc-config --libs`
 TCMALLOC = -ltcmalloc
-TARGET = fitswebqlse
+TARGET = test_sxs
 
 # Intel Integrated Performance Primitives Library
 ifeq ($(UNAME_S),Linux)
@@ -104,25 +104,13 @@ IPP += -lippi -lippdc -lipps -lippcore
 MKL += -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl
 # -liomp5
 
-ZFP = zfp
-ZFP_SRC := $(wildcard $(ZFP)/src/*.c)
-
-# src/zforp.f90 src/zfp.f90
-# src/psrs_sort.c
-# src/iso_varying_string.f90
-# src/zmq.f90
-# src/wavelet.f90
-# src/lz4.f90
-# src/ipp.c src/psrs_sort.c src/http.c src/hash_table.c src/json.c src/json_write.c src/m_mrgrnk.f90 src/mod_sort.f90 src/wavelet.f90 src/fixed_array.f90 src/fixed_array2.f90 src/zfp_array.f90 src/histogram.c src/classifier.f90 src/fits_omp.f90 src/net.f90 src/main.f90
-SRC = $(ZFP_SRC) src/webql.ispc src/compress.c src/bunzip.c src/zpipe.c src/junzip.c src/unzip.c src/my_threads.c src/cpu.c src/json.c src/ini.c src/mongoose.c src/mjson.c src/histogram.c src/hash_table.c src/json_write.c src/cluster.c src/http.c src/ws.c src/ring_buffer.c src/linked_list.f90 src/conrec.f90 src/lttb.f90 src/fixed_array.f90 src/lz4.f90 src/classifier.f90 src/quantile.f90 src/unix_pthread.f90 src/fits.f90 src/main.c
-# src/UStorage.f90 src/List.f90 # does not compile
+SRC = sxs.c test_sxs.c
 
 # macOS Accelerate vImage is actually rather slow
 ifeq ($(UNAME_S),Darwin)
-#ifeq ($(UNAME_M),arm64)
-	SRC += src/vimage.c
+	#SRC += src/vimage.c
 else
-	SRC += src/ipp.c
+	#SRC += src/ipp.c
 endif
 
 OBJ := $(SRC:.f90=.o)
@@ -274,62 +262,8 @@ endif
 %.o: %.f90
 	$(FORT) $(FLAGS) $(MOD) -o $@ -c $<
 
-fitswebqlse: $(OBJ)
+sxs: $(OBJ)
 	$(CC) $(CFLAGS) -o $(TARGET) $^ $(LIBS) $(IPP) $(MKL) $(JEMALLOC)
 
-test:
-	$(FORT) $(FLAGS) src/wavelet.f90 src/fixed_array.f90 src/zfp_array.f90 src/lz4.f90 src/testWavelets.f90 -o testWavelets -llz4 $(LIBS)
-# on macos -L/usr/local/opt/lz4/lib -llz4
-
-json:
-	ifort -Ofast -xHost -mavx -axAVX -qopt-report=2 tests/json_serialize.f90 -o serialize `pkg-config --libs json-fortran`
-
-mpi:
-	$(FORT) -Ofast -xHost test.f90 -o test
-
-zmq:
-#$(FORT) -Ofast -xHost -mavx -axAVX -qopt-report=2 -qopenmp src/zmq.f90 tests/test_zmq.f90 -o test_zmq -lzmq -lczmq
-	gfortran -Ofast -fopenmp src/zmq.f90 tests/test_zmq.f90 -o test_zmq -L/usr/local/lib -lzmq -lczmq
-
-compress::
-#$(CC) $(CFLAGS) tests/zfp_compress.c -o zfp_compress -lzfp
-	$(FORT) $(FLAGS) src/zforp.f90 tests/zfp_compress.f90 -o zfp_compress -L/home/chris/zfp/build/lib64 -lzfp $(LIBS)
-#-L/home/chris/zfp/build/lib64 -lzfp
-
-block:
-	$(FORT) $(FLAGS) src/wavelet.f90 tests/zfp_block.f90 -o zfp_block $(LIBS)
-
-block128:
-	$(FORT) $(FLAGS) src/wavelet.f90 tests/zfp_block_128.f90 -o zfp_block_128 $(LIBS)
-
-fixed:
-	ispc -g -O3 --pic --opt=fast-math --addressing=32 tests/fixed.ispc -o tests/fixed.o
-	$(FORT) $(FLAGS) tests/test_fixed_array.f90 tests/fixed.o -o test_fixed_array $(LIBS)
-
-encode:
-	ispc -g -O3 --pic --opt=fast-math --addressing=32 src/webql.ispc -o src/zfp.o -h tests/webql.h
-	$(CC) $(CFLAGS) tests/zfp_encode.c src/zfp.o -o zfp_encode -lm
-#icc -O0 tests/zfp_encode.c -o zfp_encode -lm
-
-gzfp:
-	gfortran -Ofast -I/home/chris/zfp/build/modules tests/zfp_compress.f90 -o zfp_compress -L/home/chris/zfp/build/lib64 -lzFORp
-
-mutex:
-	gfortran -cpp -D__macOS__ src/unix_pthread.f90 mutex.f90 -pthread
-
-thread:
-	gfortran -cpp -D__macOS__ src/my_threads.c  thread.f90 -pthread
-
-mutexC:
-	gcc mutex.c -pthread
-
-mutexL:
-	gfortran -cpp -D__linux__ src/unix_pthread.f90 mutex.f90 -pthread
-
-#-corray-config-file=./config
-
-contour:
-	g++ -Ofast tests/test_contouring.cpp
-
 clean:
-	rm -f $(ZFP)/src/*.o $(ZFP)/src/*.d src/*.mod src/*.o src/*.d src/*.optrpt *.mod *.o *.d *.optrpt $(TARGET) testWavelets
+	rm -f *.mod *.o *.d *.optrpt $(TARGET)
