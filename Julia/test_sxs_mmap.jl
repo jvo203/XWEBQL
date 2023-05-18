@@ -220,7 +220,7 @@ function get_column_offset(id::Int, bytes)
     end
 end
 
-function get_column(id::Int, offset, data, bytes, types)
+function get_column(id::Int, offset::Int, data, bytes, types)
     return [reinterpret(types[id], reverse(data[i:i+bytes[id]-1])) for i in offset+1:NAXIS1:length(data)]
 end
 
