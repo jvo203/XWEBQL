@@ -147,6 +147,15 @@ function get_row_types(type)
     return row_type
 end
 
+function find_column(columns, name)
+    for (i, column) in enumerate(columns)
+        if column == name
+            return i
+        end
+    end
+
+    return nothing
+end
 
 function end_header(lines)
     indexes = findall(x -> startswith(x, "END"), lines)
@@ -291,3 +300,12 @@ println("counter = ", counter)
 # the table data starts here
 data_start = counter * 2880 + 1
 data = @view sxs[data_start:data_start+NAXIS2*NAXIS1-1]
+
+# get the "X", "Y" and "UPI" columns
+idx = find_column(column_names, "X")
+idy = find_column(column_names, "Y")
+idupi = find_column(column_names, "UPI")
+
+println("idx = ", idx)
+println("idy = ", idy)
+println("idupi = ", idupi)
