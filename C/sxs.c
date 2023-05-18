@@ -52,6 +52,11 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
         return -1;
     }
 
+    char *sxs_char = (char *)sxs;
+
+    // printf the first 2880 characters
+    printf("sxs_char = %.2880s\n", sxs_char);
+
     // munmap the file
     status = munmap(sxs, filesize);
 
