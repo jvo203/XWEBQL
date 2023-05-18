@@ -212,6 +212,18 @@ function process_header(chunk::Vector{UInt8})
     return (header, has_end)
 end
 
+function get_column_offset(id::Int, bytes)
+    if (idx > 1)
+        return sum(bytes[1:id-1])
+    else
+        return 0
+    end
+end
+
+function get_column(id::Int, offset, data, bytes, types)
+    return [reinterpret(types[id], reverse(data[i:i+bytes[id]-1])) for i in offset+1:NAXIS1:length(data)]
+end
+
 counter = 0
 
 # find the table
@@ -306,6 +318,16 @@ idx = find_column(column_names, "X")
 idy = find_column(column_names, "Y")
 idupi = find_column(column_names, "UPI")
 
-println("idx = ", idx)
-println("idy = ", idy)
-println("idupi = ", idupi)
+offsetx = get_column_offset(idx, row_bytes)
+offsety = get_column_offset(idy, row_bytes)
+offsetupi = get_column_offset(idupi, row_bytes)
+
+println("idx = ", idx, ", offsetx = ", offsetx)
+println("idy = ", idy, ", offsety = ", offsety)
+println("idupi = ", idupi, ", offsetupi = ", offsetupi)
+
+@time begin
+    x = get_column(idx, offsetx, data, row_bytes, row_types)
+    y = get_column(idy, offsety, data, row_bytes, row_types)
+    energy = get_column(idupi, offsetupi, data, row_bytes, row_types)
+end
