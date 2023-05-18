@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <stdio.h>
 
 #include "sxs.h"
@@ -20,6 +21,10 @@ int main()
         printf("read_sxs_events() failed.\n");
         return 1;
     }
+
+    free(x);
+    free(y);
+    free(energy);
 
     return 0;
 }
