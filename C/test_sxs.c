@@ -8,6 +8,16 @@ int main()
     printf("event_filename = %s\n", event_filename);
 
     // open the event file and mmap it
+    char *sxs = sxs_open(event_filename);
+
+    if (sxs == NULL)
+    {
+        printf("sxs_open failed\n");
+        return 1;
+    }
+
+    // finally destroy the mmap
+    sxs_close(sxs);
 
     return 0;
 }
