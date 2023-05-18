@@ -17,7 +17,7 @@ function get_string(value)
     return strip(value[start+1:stop-1])
 end
 
-function get_num_bytes(type)
+function get_row_bytes(type)
     local num_bytes = 0
 
     # get the number of bytes for the data type
@@ -100,6 +100,51 @@ function get_num_bytes(type)
     end
 
     return num_bytes
+end
+
+function get_row_types(type)
+    local row_type = Any
+
+    # get the number of bytes for the data type
+    if type[end] == 'L'
+        # logical (Boolean)
+        row_type = Bool
+    elseif type[end] == 'X'
+        # bit array
+        row_type = BitVector
+    elseif type[end] == 'B'
+        # Unsigned byte
+        row_type = UInt8
+    elseif type[end] == 'I'
+        # 16-bit integer
+        row_type = Int16
+    elseif type[end] == 'J'
+        # 32-bit integer
+        row_type = Int32
+    elseif type[end] == 'K'
+        # 64-bit integer
+        row_type = Int64
+    elseif type[end] == 'A'
+        # character
+        row_type = Char
+    elseif type[end] == 'E'
+        # single-precision float (32-bit)
+        row_type = Float32
+    elseif type[end] == 'D'
+        # double-precision float (64-bit)
+        row_type = Float64
+    elseif type[end] == 'C'
+        # single-precision complex
+        row_type = ComplexF32
+    elseif type[end] == 'M'
+        # double-precision complex
+        row_type = ComplexF64
+    else
+        # unknown
+        throw(ArgumentError("Unhandled data type: $type"))
+    end
+
+    return row_type
 end
 
 
@@ -221,8 +266,11 @@ end
 println("column_names = ", column_names)
 println("column_types = ", column_types)
 
-bytes_per_row = get_num_bytes.(column_types)
-println("bytes_per_row = ", bytes_per_row)
+row_bytes = get_row_bytes.(column_types)
+println("row_bytes = ", row_bytes)
+
+row_types = get_row_types.(column_types)
+println("row_types = ", row_types)
 
 #=
 # skip another header
