@@ -8,7 +8,6 @@ close(io)
 println(typeof(sxs))
 println(length(sxs))
 
-
 function get_string(value)
     # get location of the first and second single quote
     start = findfirst("'", value)[1]
@@ -16,6 +15,49 @@ function get_string(value)
 
     # trim and return the string between the quotes
     return strip(value[start+1:stop-1])
+end
+
+function get_num_bytes(type)
+    # get the number of bytes for the data type
+    if type[end] == 'L'
+        # logical (Boolean)
+        num_bytes = parse(Int, type[1:end-1])
+    elseif type[end] == 'X'
+        # bit array (rounded to the nearest byte)
+        num_bytes = Int(max(parse(Int, type[1:end-1]) / 8, 1))
+    elseif type[end] == 'B'
+        # Unsigned byte
+        num_bytes = parse(Int, type[1:end-1])
+    elseif type[end] == 'I'
+        # 16-bit integer
+        num_bytes = 2 * parse(Int, type[1:end-1])
+    elseif type[end] == 'J'
+        # 32-bit integer
+        num_bytes = 4 * parse(Int, type[1:end-1])
+    elseif type[end] == 'K'
+        # 64-bit integer
+        num_bytes = 8 * parse(Int, type[1:end-1])
+    elseif type[end] == 'A'
+        # character
+        num_bytes = parse(Int, type[1:end-1])
+    elseif type[end] == 'E'
+        # single-precision float (32-bit)
+        num_bytes = 4 * parse(Int, type[1:end-1])
+    elseif type[end] == 'D'
+        # double-precision float (64-bit)
+        num_bytes = 8 * parse(Int, type[1:end-1])
+    elseif type[end] == 'C'
+        # single-precision complex
+        num_bytes = 8 * parse(Int, type[1:end-1])
+    elseif type[end] == 'M'
+        # double-precision complex
+        num_bytes = 16 * parse(Int, type[1:end-1])
+    else
+        # unknown
+        throw(ArgumentError("Unhandled data type: $type"))
+    end
+
+    return num_bytes
 end
 
 function has_end(chunk::Vector{UInt8})
@@ -125,3 +167,5 @@ end
 
 println("column_names = ", column_names)
 println("column_types = ", column_types)
+
+get_num_bytes.(column_types)
