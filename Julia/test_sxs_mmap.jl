@@ -8,6 +8,16 @@ close(io)
 println(typeof(sxs))
 println(length(sxs))
 
+
+function get_string(value)
+    # get location of the first and second single quote
+    start = findfirst("'", value)[1]
+    stop = findlast("'", value)[1]
+
+    # trim and return the string between the quotes
+    return strip(value[start+1:stop-1])
+end
+
 function has_end(chunk::Vector{UInt8})
     header = String(chunk)
     if findfirst("END", header) !== nothing
@@ -74,15 +84,12 @@ println("counter = ", counter)
 # OK, we should be at the start of the second HDU
 header = Dict()
 @time begin
-    global sxs, counter
-    local has_end
-
-    has_end = false
+    local has_end = false
 
     while !has_end
-        global counter, header
+        global counter, header, sxs
         new_header, has_end = process_header(sxs[counter*2880+1:(counter+1)*2880])
-        header = merge(header, new_header)
+        merge!(header, new_header)
         counter += 1
     end
 end
@@ -97,3 +104,24 @@ TFIELDS = parse(Int, header["TFIELDS"])
 
 println("NAXIS2 = ", NAXIS2)
 println("TFIELDS = ", TFIELDS)
+
+# iterate through TTYPE1, TFORM1, TUNIT1, etc.
+# to get the column names, data types, and units
+column_names = []
+column_types = []
+
+for i in 1:TFIELDS
+    global column_names, column_types, header
+
+    try
+        name = get_string(header["TTYPE$i"])
+        type = get_string(header["TFORM$i"])
+        column_names = [column_names; name]
+        column_types = [column_types; type]
+    catch KeyError
+        println("KeyError: ", i)
+    end
+end
+
+println("column_names = ", column_names)
+println("column_types = ", column_types)
