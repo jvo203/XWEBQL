@@ -18,40 +18,82 @@ function get_string(value)
 end
 
 function get_num_bytes(type)
+    local num_bytes = 0
+
     # get the number of bytes for the data type
     if type[end] == 'L'
         # logical (Boolean)
-        num_bytes = parse(Int, type[1:end-1])
+        try
+            num_bytes = parse(Int, type[1:end-1])
+        catch
+            num_bytes = 1
+        end
     elseif type[end] == 'X'
         # bit array (rounded to the nearest byte)
-        num_bytes = Int(max(parse(Int, type[1:end-1]) / 8, 1))
+        try
+            num_bytes = Int(max(parse(Int, type[1:end-1]) / 8, 1))
+        catch
+            num_bytes = 1
+        end
     elseif type[end] == 'B'
         # Unsigned byte
         num_bytes = parse(Int, type[1:end-1])
     elseif type[end] == 'I'
         # 16-bit integer
-        num_bytes = 2 * parse(Int, type[1:end-1])
+        try
+            num_bytes = 2 * parse(Int, type[1:end-1])
+        catch
+            num_bytes = 2
+        end
     elseif type[end] == 'J'
         # 32-bit integer
-        num_bytes = 4 * parse(Int, type[1:end-1])
+        try
+            num_bytes = 4 * parse(Int, type[1:end-1])
+        catch
+            num_bytes = 4
+        end
     elseif type[end] == 'K'
         # 64-bit integer
-        num_bytes = 8 * parse(Int, type[1:end-1])
+        try
+            num_bytes = 8 * parse(Int, type[1:end-1])
+        catch
+            num_bytes = 8
+        end
     elseif type[end] == 'A'
         # character
-        num_bytes = parse(Int, type[1:end-1])
+        try
+            num_bytes = parse(Int, type[1:end-1])
+        catch
+            num_bytes = 1
+        end
     elseif type[end] == 'E'
         # single-precision float (32-bit)
-        num_bytes = 4 * parse(Int, type[1:end-1])
+        try
+            num_bytes = 4 * parse(Int, type[1:end-1])
+        catch
+            num_bytes = 4
+        end
     elseif type[end] == 'D'
         # double-precision float (64-bit)
-        num_bytes = 8 * parse(Int, type[1:end-1])
+        try
+            num_bytes = 8 * parse(Int, type[1:end-1])
+        catch
+            num_bytes = 8
+        end
     elseif type[end] == 'C'
         # single-precision complex
-        num_bytes = 8 * parse(Int, type[1:end-1])
+        try
+            num_bytes = 8 * parse(Int, type[1:end-1])
+        catch
+            num_bytes = 8
+        end
     elseif type[end] == 'M'
         # double-precision complex
-        num_bytes = 16 * parse(Int, type[1:end-1])
+        try
+            num_bytes = 16 * parse(Int, type[1:end-1])
+        catch
+            num_bytes = 16
+        end
     else
         # unknown
         throw(ArgumentError("Unhandled data type: $type"))
@@ -60,13 +102,25 @@ function get_num_bytes(type)
     return num_bytes
 end
 
+
+function end_header(lines)
+    indexes = findall(x -> startswith(x, "END"), lines)
+
+    # check if indexes is empty
+    if isempty(indexes)
+        return false
+    else
+        return true
+    end
+end
+
 function has_end(chunk::Vector{UInt8})
     header = String(chunk)
-    if findfirst("END", header) !== nothing
-        return true
-    else
-        return false
-    end
+
+    # divide the header into lines 80-character long
+    lines = [header[i:i+79] for i in 1:80:length(header)-79]
+
+    return end_header(lines)
 end
 
 function has_table(chunk::Vector{UInt8})
@@ -85,9 +139,8 @@ function process_header(chunk::Vector{UInt8})
     # divide the header into lines 80-character long
     lines = [header[i:i+79] for i in 1:80:length(header)-79]
 
-    if findfirst("END", header) !== nothing
-        has_end = true
-    end
+    # find "END" in the vector of lines
+    has_end = end_header(lines)
 
     # println("has_end = ", has_end)
 
@@ -96,8 +149,6 @@ function process_header(chunk::Vector{UInt8})
 
     # remove leading and trailing whitespace from each key and value
     lines = [[strip(s) for s in line] for line in lines]
-
-    # println(lines)
 
     # remove empty (1-element) lines
     lines = filter(line -> length(line) > 1, lines)
@@ -139,11 +190,12 @@ end
 #println("header = ", header)
 println("counter = ", counter)
 
-# the table data starts here
-# get NAXIS2 and TFIELDS
+# get NAXIS1, NAXIS2 and TFIELDS
+NAXIS1 = parse(Int, header["NAXIS1"])
 NAXIS2 = parse(Int, header["NAXIS2"])
 TFIELDS = parse(Int, header["TFIELDS"])
 
+println("NAXIS1 = ", NAXIS1)
 println("NAXIS2 = ", NAXIS2)
 println("TFIELDS = ", TFIELDS)
 
@@ -158,6 +210,7 @@ for i in 1:TFIELDS
     try
         name = get_string(header["TTYPE$i"])
         type = get_string(header["TFORM$i"])
+
         column_names = [column_names; name]
         column_types = [column_types; type]
     catch KeyError
@@ -168,4 +221,25 @@ end
 println("column_names = ", column_names)
 println("column_types = ", column_types)
 
-get_num_bytes.(column_types)
+bytes_per_row = get_num_bytes.(column_types)
+println("bytes_per_row = ", bytes_per_row)
+
+#=
+# skip another header
+@time begin
+    global counter
+    global sxs
+
+    while !has_end(sxs[counter*2880+1:(counter+1)*2880])
+        global counter
+        counter += 1
+    end
+
+    counter += 1 # this is only needed by "has_end"
+end
+=#
+println("counter = ", counter)
+
+# the table data starts here
+data_start = counter * 2880 + 1
+data = @view sxs[data_start:data_start+NAXIS2*NAXIS1-1]
