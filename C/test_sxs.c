@@ -16,11 +16,13 @@ int main()
     // open the event file and mmap it
     num_events = read_sxs_events(event_filename, &x, &y, &energy);
 
-    if (num_events == 0)
+    if (num_events == -1)
     {
         printf("read_sxs_events() failed.\n");
         return 1;
     }
+
+    printf("num_events = %d\n", num_events);
 
     free(x);
     free(y);
