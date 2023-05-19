@@ -173,6 +173,10 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
     int NAXIS2 = 0;
     int TFIELDS = 0;
 
+    int posx = 0;
+    int posy = 0;
+    int posupi = 0;
+
     while (sxs_offset + FITS_CHUNK_LENGTH <= filesize)
     {
         if (scan_table_header(sxs_char + sxs_offset, &NAXIS1, &NAXIS2, &TFIELDS))
