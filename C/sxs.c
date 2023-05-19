@@ -27,7 +27,7 @@ bool has_table_extension(const char *sxs)
         return false;
 }
 
-bool scan_table_header(const char *sxs, int *num_rows, int *bytes_per_row)
+bool scan_table_header(const char *sxs, int *naxis1, int *naxis2)
 {
     // process the header one line at a time
     for (size_t offset = 0; offset < FITS_CHUNK_LENGTH; offset += FITS_LINE_LENGTH)
@@ -41,10 +41,10 @@ bool scan_table_header(const char *sxs, int *num_rows, int *bytes_per_row)
         };
 
         if (strncmp(line, "NAXIS1  = ", 10) == 0)
-            *bytes_per_row = hdr_get_int_value(line + 10);
+            *naxis1 = hdr_get_int_value(line + 10);
 
         if (strncmp(line, "NAXIS2  = ", 10) == 0)
-            *num_rows = hdr_get_int_value(line + 10);
+            *naxis2 = hdr_get_int_value(line + 10);
     }
 
     return false;
@@ -144,6 +144,11 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
 
     printf("NAXIS1 = %d, NAXIS2 = %d\n", NAXIS1, NAXIS2);
 
+    // allocate the arrays
+    x_ptr = (int16_t *)malloc(NAXIS2 * sizeof(int16_t));
+    y_ptr = (int16_t *)malloc(NAXIS2 * sizeof(int16_t));
+    energy_ptr = (float *)malloc(NAXIS2 * sizeof(float));
+
     // point to the start of the data
     sxs_offset += FITS_CHUNK_LENGTH;
 
@@ -151,6 +156,7 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
     *x = x_ptr;
     *y = y_ptr;
     *energy = energy_ptr;
+    num_events = NAXIS2;
 
 cleanup:
     // munmap the file
