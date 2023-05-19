@@ -48,6 +48,17 @@ bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields)
 
         if (strncmp(line, "TFIELDS = ", 10) == 0)
             *tfields = hdr_get_int_value(line + 10);
+
+        // detect the TTYPEXX and TFORMXX lines
+        if (strncmp(line, "TTYPE", 5) == 0)
+        {
+            printf("TTYPE = %.70s\n", line + 10);
+        }
+
+        if (strncmp(line, "TFORM", 5) == 0)
+        {
+            printf("TFORM = %.8s\n", line + 10);
+        }
     }
 
     return false;
