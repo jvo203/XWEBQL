@@ -144,6 +144,9 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
 
     printf("NAXIS1 = %d, NAXIS2 = %d\n", NAXIS1, NAXIS2);
 
+    // point to the start of the data
+    sxs_offset += FITS_CHUNK_LENGTH;
+
     // set the result pointers
     *x = x_ptr;
     *y = y_ptr;
