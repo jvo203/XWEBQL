@@ -18,6 +18,20 @@ int hdr_get_int_value(char *hdr)
     return atoi(hdr);
 };
 
+char *hdr_get_string_value(char *hdr)
+{
+    char string[FITS_LINE_LENGTH] = "";
+
+    // printf("VALUE(%s)\n", hdr);
+
+    sscanf(hdr, "'%s'", string);
+
+    if (string[strlen(string) - 1] == '\'')
+        string[strlen(string) - 1] = '\0';
+
+    return strdup(string);
+};
+
 bool has_table_extension(const char *sxs)
 {
     // only scan the beginning of the header
@@ -55,12 +69,20 @@ bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields)
             int index;
             char *name = NULL;
 
-            printf("%.80s\n", line);
+            // printf("%.80s\n", line);
             int status = sscanf(line, "TTYPE%d", &index);
 
             if (status == 1)
             {
-                printf("TTYPE%d = %.8s\n", index, line + 10);
+                // printf("TTYPE%d = %.8s\n", index, line + 10);
+
+                name = hdr_get_string_value(line + 10);
+
+                if (name != NULL)
+                {
+                    printf("TTYPE%d = '%s'\n", index, name);
+                    free(name);
+                }
             }
         }
 
