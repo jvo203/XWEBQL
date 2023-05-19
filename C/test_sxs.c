@@ -31,6 +31,15 @@ int main()
 
     printf("num_events = %d\n", num_events);
 
+    // print the first and last values
+    printf("x[0] = %d\n", x[0]);
+    printf("y[0] = %d\n", y[0]);
+    printf("energy[0] = %f\n", energy[0]);
+
+    printf("x[%d] = %d\n", num_events - 1, x[num_events - 1]);
+    printf("y[%d] = %d\n", num_events - 1, y[num_events - 1]);
+    printf("energy[%d] = %f\n", num_events - 1, energy[num_events - 1]);
+
     free(x);
     free(y);
     free(energy);
