@@ -27,7 +27,7 @@ bool has_table_extension(const char *sxs)
         return false;
 }
 
-bool scan_table_header(const char *sxs, int *naxis1, int *naxis2)
+bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields)
 {
     // process the header one line at a time
     for (size_t offset = 0; offset < FITS_CHUNK_LENGTH; offset += FITS_LINE_LENGTH)
@@ -45,6 +45,9 @@ bool scan_table_header(const char *sxs, int *naxis1, int *naxis2)
 
         if (strncmp(line, "NAXIS2  = ", 10) == 0)
             *naxis2 = hdr_get_int_value(line + 10);
+
+        if (strncmp(line, "TFIELDS = ", 10) == 0)
+            *tfields = hdr_get_int_value(line + 10);
     }
 
     return false;
@@ -129,10 +132,11 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
     // we've got the table extension, now find the number of rows/columns
     int NAXIS1 = 0;
     int NAXIS2 = 0;
+    int TFIELDS = 0;
 
     while (sxs_offset + FITS_CHUNK_LENGTH <= filesize)
     {
-        if (scan_table_header(sxs_char + sxs_offset, &NAXIS1, &NAXIS2))
+        if (scan_table_header(sxs_char + sxs_offset, &NAXIS1, &NAXIS2, &TFIELDS))
         {
             printf("table header ends in hdu #%d\n", hdu);
             break;
@@ -142,7 +146,7 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
         hdu++;
     }
 
-    printf("NAXIS1 = %d, NAXIS2 = %d\n", NAXIS1, NAXIS2);
+    printf("NAXIS1 = %d, NAXIS2 = %d, TFIELDS = %d\n", NAXIS1, NAXIS2, TFIELDS);
 
     // allocate the arrays
     x_ptr = (int16_t *)malloc(NAXIS2 * sizeof(int16_t));
