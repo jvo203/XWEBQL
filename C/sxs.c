@@ -339,7 +339,8 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
     printf("x_offset = %d, y_offset = %d, upi_offset = %d\n", x_offset, y_offset, upi_offset);
 
     // get the data, swapping endianness
-    // #pragma omp parallel for
+
+#pragma omp parallel for
     for (i = 0; i < NAXIS2; i++)
     {
         x_ptr[i] = __builtin_bswap16(*(int16_t *)(sxs_char + sxs_offset + x_offset /*+ i * NAXIS1*/));
