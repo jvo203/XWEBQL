@@ -67,7 +67,6 @@ bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields, 
         if (strncmp(line, "TTYPE", 5) == 0)
         {
             int index;
-
             int status = sscanf(line, "TTYPE%d", &index);
 
             if (status == 1)
@@ -76,8 +75,6 @@ bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields, 
 
                 if (name != NULL)
                 {
-                    printf("TTYPE%d = '%s'\n", index, name);
-
                     // check if the name is "X", "Y" or "UPI"
                     if (strcmp(name, "X") == 0)
                         *posx = index;
@@ -94,7 +91,19 @@ bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields, 
         // detect the TFORMXX lines
         if (strncmp(line, "TFORM", 5) == 0)
         {
-            printf("TFORM = %.8s\n", line + 10);
+            int index;
+            int status = sscanf(line, "TFORM%d", &index);
+
+            if (status == 1)
+            {
+                char *type = hdr_get_string_value(line + 10);
+
+                if (type != NULL)
+                {
+                    printf("TFORM%d = '%s'\n", index, type);
+                    free(type);
+                }
+            }
         }
     }
 
