@@ -41,9 +41,8 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
         return -1;
     }
 
-    // mmap the file
+    // mmap and close the file
     void *sxs = mmap(NULL, filesize, PROT_READ, MAP_PRIVATE, fd, 0);
-
     close(fd);
 
     if (sxs == MAP_FAILED)
@@ -53,9 +52,12 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
     }
 
     char *sxs_char = (char *)sxs;
+    size_t sxs_offset = 0;
 
     // printf the first 2880 characters
-    printf("sxs_char = %.2880s\n", sxs_char);
+    // printf("sxs_char = %.2880s\n", sxs_char);
+
+    // first find the binary table extension
 
     // munmap the file
     status = munmap(sxs, filesize);
