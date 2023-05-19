@@ -41,7 +41,7 @@ bool has_table_extension(const char *sxs)
         return false;
 }
 
-bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields)
+bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields, int *posx, int *posy, int *posupi)
 {
     // process the header one line at a time
     for (size_t offset = 0; offset < FITS_CHUNK_LENGTH; offset += FITS_LINE_LENGTH)
@@ -77,6 +77,15 @@ bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields)
                 if (name != NULL)
                 {
                     printf("TTYPE%d = '%s'\n", index, name);
+
+                    // check if the name is "X", "Y" or "UPI"
+                    if (strcmp(name, "X") == 0)
+                        *posx = index;
+                    else if (strcmp(name, "Y") == 0)
+                        *posy = index;
+                    else if (strcmp(name, "UPI") == 0)
+                        *posupi = index;
+
                     free(name);
                 }
             }
@@ -179,7 +188,7 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
 
     while (sxs_offset + FITS_CHUNK_LENGTH <= filesize)
     {
-        if (scan_table_header(sxs_char + sxs_offset, &NAXIS1, &NAXIS2, &TFIELDS))
+        if (scan_table_header(sxs_char + sxs_offset, &NAXIS1, &NAXIS2, &TFIELDS, &posx, &posy, &posupi))
         {
             printf("table header ends in hdu #%d\n", hdu);
             break;
@@ -193,6 +202,7 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
     sxs_offset += FITS_CHUNK_LENGTH;
 
     printf("NAXIS1 = %d, NAXIS2 = %d, TFIELDS = %d\n", NAXIS1, NAXIS2, TFIELDS);
+    printf("posx = %d, posy = %d, posupi = %d\n", posx, posy, posupi);
 
     // check if there is enough data in the file
     if (sxs_offset + (size_t)NAXIS2 * (size_t)NAXIS1 > filesize)
