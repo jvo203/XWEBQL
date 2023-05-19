@@ -8,7 +8,18 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
+#include <string.h>
+
 #include "sxs.h"
+
+bool has_table_extension(const char *sxs)
+{
+    // only scan the beginning of the header
+    if (strncmp(sxs, "XTENSION= 'BINTABLE'", 20) == 0)
+        return true;
+    else
+        return false;
+}
 
 int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **energy)
 {
@@ -32,6 +43,13 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
 
     filesize = st.st_size;
 
+    // check if the filesize is greater than 2880
+    if (filesize < FITS_CHUNK_LENGTH)
+    {
+        printf("filesize is less than %d.\n", FITS_CHUNK_LENGTH);
+        return -1;
+    }
+
     // open the file
     int fd = open(filename, O_RDONLY);
 
@@ -53,12 +71,40 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
 
     char *sxs_char = (char *)sxs;
     size_t sxs_offset = 0;
+    int hdu = 0;
+    bool had_table = false;
 
     // printf the first 2880 characters
     // printf("sxs_char = %.2880s\n", sxs_char);
 
     // first find the binary table extension
+    while (sxs_offset + FITS_CHUNK_LENGTH <= filesize)
+    {
+        if (has_table_extension(sxs_char + sxs_offset))
+        {
+            printf("found table extension in hdu #%d\n", hdu);
+            had_table = true;
+            break;
+        }
 
+        sxs_offset += FITS_CHUNK_LENGTH;
+        hdu++;
+    }
+
+    if (!had_table)
+    {
+        printf("no table extension found.\n");
+        goto cleanup;
+    }
+
+    // we've got the table extension, now find the number of rows/columns
+
+    // set the result pointers
+    *x = x_ptr;
+    *y = y_ptr;
+    *energy = energy_ptr;
+
+cleanup:
     // munmap the file
     status = munmap(sxs, filesize);
 
