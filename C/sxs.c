@@ -39,6 +39,12 @@ bool scan_table_header(const char *sxs, int *num_rows, int *bytes_per_row)
             printf("FITS HEADER END DETECTED.\n");
             return true;
         };
+
+        if (strncmp(line, "NAXIS1  = ", 10) == 0)
+            *bytes_per_row = hdr_get_int_value(line + 10);
+
+        if (strncmp(line, "NAXIS2  = ", 10) == 0)
+            *num_rows = hdr_get_int_value(line + 10);
     }
 
     return false;
