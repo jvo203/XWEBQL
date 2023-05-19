@@ -189,15 +189,22 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
         hdu++;
     }
 
+    // point to the start of the data
+    sxs_offset += FITS_CHUNK_LENGTH;
+
     printf("NAXIS1 = %d, NAXIS2 = %d, TFIELDS = %d\n", NAXIS1, NAXIS2, TFIELDS);
+
+    // check if there is enough data in the file
+    if (sxs_offset + (size_t)NAXIS2 * (size_t)NAXIS1 > filesize)
+    {
+        printf("not enough data in the file.\n");
+        goto cleanup;
+    }
 
     // allocate the arrays
     x_ptr = (int16_t *)malloc(NAXIS2 * sizeof(int16_t));
     y_ptr = (int16_t *)malloc(NAXIS2 * sizeof(int16_t));
     energy_ptr = (float *)malloc(NAXIS2 * sizeof(float));
-
-    // point to the start of the data
-    sxs_offset += FITS_CHUNK_LENGTH;
 
     // set the result pointers
     *x = x_ptr;
