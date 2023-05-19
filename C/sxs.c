@@ -183,6 +183,16 @@ bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields, 
     return false;
 }
 
+int get_column_offset(int *columns, int index)
+{
+    int offset = 0;
+
+    for (int i = 0; i < index; i++)
+        offset += columns[i];
+
+    return offset;
+}
+
 int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **energy)
 {
     int *column_sizes = NULL;
