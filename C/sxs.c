@@ -143,7 +143,7 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
     char *sxs_char = (char *)sxs;
     size_t sxs_offset = 0;
     int hdu = 0;
-    bool had_table = false;
+    bool has_table = false;
 
     // printf the first 2880 characters
     // printf("sxs_char = %.2880s\n", sxs_char);
@@ -154,7 +154,7 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
         if (has_table_extension(sxs_char + sxs_offset))
         {
             printf("found a binary table extension in hdu #%d\n", hdu);
-            had_table = true;
+            has_table = true;
             break;
         }
 
@@ -162,7 +162,7 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
         hdu++;
     }
 
-    if (!had_table)
+    if (!has_table)
     {
         printf("no table extension found.\n");
         goto cleanup;
