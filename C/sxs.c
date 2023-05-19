@@ -67,16 +67,12 @@ bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields)
         if (strncmp(line, "TTYPE", 5) == 0)
         {
             int index;
-            char *name = NULL;
 
-            // printf("%.80s\n", line);
             int status = sscanf(line, "TTYPE%d", &index);
 
             if (status == 1)
             {
-                // printf("TTYPE%d = %.8s\n", index, line + 10);
-
-                name = hdr_get_string_value(line + 10);
+                char *name = hdr_get_string_value(line + 10);
 
                 if (name != NULL)
                 {
