@@ -322,6 +322,42 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
     y_ptr = (int16_t *)malloc(NAXIS2 * sizeof(int16_t));
     energy_ptr = (float *)malloc(NAXIS2 * sizeof(float));
 
+    if (x_ptr == NULL || y_ptr == NULL || energy_ptr == NULL)
+    {
+        free(x_ptr);
+        free(y_ptr);
+        free(energy_ptr);
+
+        printf("malloc() failed.\n");
+        goto cleanup;
+    }
+
+    int x_offset = get_column_offset(column_sizes, posx - 1);
+    int y_offset = get_column_offset(column_sizes, posy - 1);
+    int upi_offset = get_column_offset(column_sizes, posupi - 1);
+
+    printf("x_offset = %d, y_offset = %d, upi_offset = %d\n", x_offset, y_offset, upi_offset);
+
+    /*for (i = 0; i < NAXIS2; i++)
+    {
+        x_ptr[i] = *(int16_t *)(sxs_char + sxs_offset + x_offset);
+        y_ptr[i] = *(int16_t *)(sxs_char + sxs_offset + y_offset);
+        energy_ptr[i] = *(float *)(sxs_char + sxs_offset + upi_offset);
+
+        sxs_offset += NAXIS1;
+    }*/
+
+    // get the data, swapping endianness
+
+#pragma omp parallel for
+    for (i = 0; i < NAXIS2; i++)
+    {
+        x_ptr[i] = __builtin_bswap16(*(int16_t *)(sxs_char + sxs_offset + x_offset /*+ i * NAXIS1*/));
+        y_ptr[i] = __builtin_bswap16(*(int16_t *)(sxs_char + sxs_offset + y_offset /*+ i * NAXIS1*/));
+        energy_ptr[i] = __builtin_bswap32(*(float *)(sxs_char + sxs_offset + upi_offset /*+ i * NAXIS1*/));
+        sxs_offset += NAXIS1;
+    }
+
     // set the result pointers
     *x = x_ptr;
     *y = y_ptr;
