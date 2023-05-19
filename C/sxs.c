@@ -48,7 +48,7 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
 
     if (sxs == MAP_FAILED)
     {
-        printf("mmap() failed.\n");
+        perror("mmap() failed:");
         return -1;
     }
 
