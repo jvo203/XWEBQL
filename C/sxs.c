@@ -346,7 +346,8 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
         x_ptr[i] = __builtin_bswap16(*(int16_t *)(sxs_char + sxs_offset + x_offset /*+ i * NAXIS1*/));
         y_ptr[i] = __builtin_bswap16(*(int16_t *)(sxs_char + sxs_offset + y_offset /*+ i * NAXIS1*/));
         unsigned int tmp = __builtin_bswap32(*(int32_t *)(sxs_char + sxs_offset + upi_offset /*+ i * NAXIS1*/));
-        energy_ptr[i] = *(float *)&tmp;
+        // energy_ptr[i] = *(float *)&tmp;
+        memcpy(&energy_ptr[i], &tmp, sizeof(float));
         sxs_offset += NAXIS1;
     }
 
