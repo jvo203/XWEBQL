@@ -104,7 +104,7 @@ bool has_table_extension(const char *sxs)
         return false;
 }
 
-bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields, int *posx, int *posy, int *posupi)
+bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields, int *posx, int *posy, int *posupi, int **columns)
 {
     // process the header one line at a time
     for (size_t offset = 0; offset < FITS_CHUNK_LENGTH; offset += FITS_LINE_LENGTH)
@@ -124,7 +124,12 @@ bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields, 
             *naxis2 = hdr_get_int_value(line + 10);
 
         if (strncmp(line, "TFIELDS = ", 10) == 0)
+        {
             *tfields = hdr_get_int_value(line + 10);
+
+            // allocate memory for the column sizes
+            *columns = (int *)malloc(*tfields * sizeof(int));
+        }
 
         // detect the TTYPEXX lines
         if (strncmp(line, "TTYPE", 5) == 0)
@@ -164,6 +169,11 @@ bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields, 
                 if (type != NULL)
                 {
                     int size = get_type_size(type);
+
+                    // store the size of the column
+                    if (*columns != NULL && index > 0 && index <= *tfields)
+                        (*columns)[index - 1] = size;
+
                     free(type);
                 }
             }
@@ -175,6 +185,7 @@ bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields, 
 
 int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **energy)
 {
+    int *column_sizes = NULL;
     int16_t *x_ptr = NULL;
     int16_t *y_ptr = NULL;
     float *energy_ptr = NULL;
@@ -260,7 +271,7 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
 
     while (sxs_offset + FITS_CHUNK_LENGTH <= filesize)
     {
-        if (scan_table_header(sxs_char + sxs_offset, &NAXIS1, &NAXIS2, &TFIELDS, &posx, &posy, &posupi))
+        if (scan_table_header(sxs_char + sxs_offset, &NAXIS1, &NAXIS2, &TFIELDS, &posx, &posy, &posupi, &column_sizes))
         {
             printf("table header ends in hdu #%d\n", hdu);
             break;
@@ -275,6 +286,19 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
 
     printf("NAXIS1 = %d, NAXIS2 = %d, TFIELDS = %d\n", NAXIS1, NAXIS2, TFIELDS);
     printf("posx = %d, posy = %d, posupi = %d\n", posx, posy, posupi);
+
+    // sum the column sizes
+    int i;
+    int sum = 0;
+
+    for (i = 0; i < TFIELDS; i++)
+        sum += column_sizes[i];
+
+    if (sum != NAXIS1)
+    {
+        printf("error: bytes_per_row != NAXIS1\n");
+        goto cleanup;
+    }
 
     // check if there is enough data in the file
     if (sxs_offset + (size_t)NAXIS2 * (size_t)NAXIS1 > filesize)
@@ -295,6 +319,8 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
     num_events = NAXIS2;
 
 cleanup:
+    free(column_sizes);
+
     // munmap the file
     status = munmap(sxs, filesize);
 
