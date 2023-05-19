@@ -40,6 +40,22 @@ int main()
     printf("y[%d] = %d\n", num_events - 1, y[num_events - 1]);
     printf("energy[%d] = %f\n", num_events - 1, energy[num_events - 1]);
 
+    // sum x, y and energy
+    int64_t x_sum = 0;
+    int64_t y_sum = 0;
+    double energy_sum = 0.0;
+
+    for (int i = 0; i < num_events; i++)
+    {
+        x_sum += x[i];
+        y_sum += y[i];
+        energy_sum += energy[i];
+    }
+
+    printf("x_sum = %lld\n", x_sum);
+    printf("y_sum = %lld\n", y_sum);
+    printf("energy_sum = %f\n", energy_sum);
+
     free(x);
     free(y);
     free(energy);
