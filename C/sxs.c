@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <string.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -8,9 +10,13 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
-#include <string.h>
-
 #include "sxs.h"
+
+int hdr_get_int_value(char *hdr)
+{
+    // printf("VALUE(%s)\n", hdr);
+    return atoi(hdr);
+};
 
 bool has_table_extension(const char *sxs)
 {
@@ -19,6 +25,23 @@ bool has_table_extension(const char *sxs)
         return true;
     else
         return false;
+}
+
+bool scan_table_header(const char *sxs, int *num_rows, int *bytes_per_row)
+{
+    // process the header one line at a time
+    for (size_t offset = 0; offset < FITS_CHUNK_LENGTH; offset += FITS_LINE_LENGTH)
+    {
+        char *line = (char *)sxs + offset;
+
+        if (strncmp(line, "END       ", 10) == 0)
+        {
+            printf("FITS HEADER END DETECTED.\n");
+            return true;
+        };
+    }
+
+    return false;
 }
 
 int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **energy)
@@ -82,7 +105,7 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
     {
         if (has_table_extension(sxs_char + sxs_offset))
         {
-            printf("found table extension in hdu #%d\n", hdu);
+            printf("found a binary table extension in hdu #%d\n", hdu);
             had_table = true;
             break;
         }
@@ -98,6 +121,22 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
     }
 
     // we've got the table extension, now find the number of rows/columns
+    int NAXIS1 = 0;
+    int NAXIS2 = 0;
+
+    while (sxs_offset + FITS_CHUNK_LENGTH <= filesize)
+    {
+        if (scan_table_header(sxs_char + sxs_offset, &NAXIS1, &NAXIS2))
+        {
+            printf("table header ends in hdu #%d\n", hdu);
+            break;
+        }
+
+        sxs_offset += FITS_CHUNK_LENGTH;
+        hdu++;
+    }
+
+    printf("NAXIS1 = %d, NAXIS2 = %d\n", NAXIS1, NAXIS2);
 
     // set the result pointers
     *x = x_ptr;
