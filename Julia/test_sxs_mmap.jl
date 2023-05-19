@@ -37,7 +37,11 @@ function get_row_bytes(type)
         end
     elseif type[end] == 'B'
         # Unsigned byte
-        num_bytes = parse(Int, type[1:end-1])
+        try
+            num_bytes = parse(Int, type[1:end-1])
+        catch
+            num_bytes = 1
+        end
     elseif type[end] == 'I'
         # 16-bit integer
         try

@@ -32,6 +32,69 @@ char *hdr_get_string_value(char *hdr)
     return strdup(string);
 };
 
+int get_type_size(char *type)
+{
+    int len = strlen(type);
+
+    if (len == 0)
+        return 0;
+
+    char last = type[len - 1];
+
+    // zero-out the last character
+    type[len - 1] = '\0';
+
+    // get the number of units (bits or bytes)
+    int num = atoi(type);
+
+    // logical (Boolean)
+    if (last == 'L')
+        return MAX(1, num);
+
+    // bit array (rounded to the nearest byte)
+    if (last == 'X')
+        return MAX(1, (num + 7) / 8);
+
+    // Unsigned byte
+    if (last == 'B')
+        return MAX(1, num);
+
+    // 16-bit integer
+    if (last == 'I')
+        return 2 * MAX(1, num);
+
+    // 32-bit integer
+    if (last == 'J')
+        return 4 * MAX(1, num);
+
+    // 64-bit integer
+    if (last == 'K')
+        return 8 * MAX(1, num);
+
+    // character
+    if (last == 'A')
+        return MAX(1, num);
+
+    // single-precision float (32-bit)
+    if (last == 'E')
+        return 4 * MAX(1, num);
+
+    // double-precision float (64-bit)
+    if (last == 'D')
+        return 8 * MAX(1, num);
+
+    // single-precision complex
+    if (last == 'C')
+        return 8 * MAX(1, num);
+
+    // double-precision complex
+    if (last == 'M')
+        return 16 * MAX(1, num);
+
+    printf("get_type_size() failed.\n");
+    return 0;
+}
+
 bool has_table_extension(const char *sxs)
 {
     // only scan the beginning of the header
@@ -100,7 +163,7 @@ bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields, 
 
                 if (type != NULL)
                 {
-                    printf("TFORM%d = '%s'\n", index, type);
+                    int size = get_type_size(type);
                     free(type);
                 }
             }
