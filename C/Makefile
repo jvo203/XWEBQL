@@ -133,10 +133,11 @@ ifeq ($(CC),icc)
 endif
 
 # `pkg-config --cflags libavif` `pkg-config --cflags libjpeg`
-INC = `pkg-config --cflags glib-2.0` `pkg-config --cflags libmicrohttpd` `pkg-config --cflags libcurl` `pkg-config --cflags liblz4` `pkg-config --cflags cfitsio` `pkg-config --cflags x265` `pkg-config --cflags jemalloc` `pkg-config --cflags libczmq` `pkg-config --cflags libpq` -I./$(ZFP)/include -I./$(ZFP)/src 
+# INC = `pkg-config --cflags glib-2.0` `pkg-config --cflags libmicrohttpd` `pkg-config --cflags libcurl` `pkg-config --cflags liblz4` `pkg-config --cflags cfitsio` `pkg-config --cflags x265` `pkg-config --cflags jemalloc` `pkg-config --cflags libczmq` `pkg-config --cflags libpq` -I./$(ZFP)/include -I./$(ZFP)/src 
+INC = 
 
 ifneq ($(UNAME_S),Darwin)
-	INC += `pkg-config --cflags libcpuid`
+	# INC += `pkg-config --cflags libcpuid`
 endif
 
 ifneq ($(UNAME_S),Darwin)
@@ -153,10 +154,11 @@ ifneq ($(SHARE),)
 endif
 
 # `pkg-config --libs libavif` `pkg-config --libs libjpeg`
-LIBS = -L/usr/local/lib `pkg-config --libs glib-2.0` `pkg-config --libs libmicrohttpd` `pkg-config --libs liblz4` `pkg-config --libs cfitsio` -lsqlite3 `pkg-config --libs libcurl` -lz -lbz2 -pthread `pkg-config --libs libzmq` `pkg-config --libs libczmq` `pkg-config --libs x265` `pkg-config --libs libpq`
+# LIBS = -L/usr/local/lib `pkg-config --libs glib-2.0` `pkg-config --libs libmicrohttpd` `pkg-config --libs liblz4` `pkg-config --libs cfitsio` -lsqlite3 `pkg-config --libs libcurl` -lz -lbz2 -pthread `pkg-config --libs libzmq` `pkg-config --libs libczmq` `pkg-config --libs x265` `pkg-config --libs libpq`
+LIBS = 
 
 ifneq ($(UNAME_S),Darwin)
-	LIBS += `pkg-config --libs libcpuid`
+	# LIBS += `pkg-config --libs libcpuid`
 endif
 
 # -lzfp before cfitsio
@@ -175,8 +177,8 @@ ifeq ($(UNAME_S),Darwin)
 	# LIBS += -L/usr/local/opt/openssl/lib -L/usr/local/opt/curl/lib -lcurl
 	#MOD += `pkg-config --cflags json-fortran`
 
-	INC += -I${HOMEBREW_PREFIX}/opt/libpq/include -I${HOMEBREW_PREFIX}/opt/bzip2/include
-	LIBS += -L${HOMEBREW_PREFIX}/opt/libpq/lib -L${HOMEBREW_PREFIX}/opt/bzip2/lib
+	# INC += -I${HOMEBREW_PREFIX}/opt/libpq/include -I${HOMEBREW_PREFIX}/opt/bzip2/include
+	# LIBS += -L${HOMEBREW_PREFIX}/opt/libpq/lib -L${HOMEBREW_PREFIX}/opt/bzip2/lib
 
 	CC = ${HOMEBREW_PREFIX}/opt/gcc/bin/gcc-13
 	FORT = ${HOMEBREW_PREFIX}/opt/gcc/bin/gfortran-13
