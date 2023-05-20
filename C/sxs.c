@@ -340,7 +340,7 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
 
     // get the data, swapping endianness
 
-#pragma omp parallel for private(i, sxs_offset)
+#pragma omp parallel for
     for (i = 0; i < NAXIS2; i++)
     {
         int_float tmp;
