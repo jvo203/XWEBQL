@@ -340,14 +340,17 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
 
     // get the data, swapping endianness
 
-#pragma omp parallel for
+#pragma omp parallel for private(i, sxs_offset)
     for (i = 0; i < NAXIS2; i++)
     {
+        int_float tmp;
+
         x_ptr[i] = __builtin_bswap16(*(int16_t *)(sxs_char + sxs_offset + x_offset /*+ i * NAXIS1*/));
         y_ptr[i] = __builtin_bswap16(*(int16_t *)(sxs_char + sxs_offset + y_offset /*+ i * NAXIS1*/));
-        unsigned int tmp = __builtin_bswap32(*(int32_t *)(sxs_char + sxs_offset + upi_offset /*+ i * NAXIS1*/));
+        tmp.i = __builtin_bswap32(*(int32_t *)(sxs_char + sxs_offset + upi_offset /*+ i * NAXIS1*/));
+        energy_ptr[i] = tmp.f;
         // energy_ptr[i] = *(float *)&tmp; // this breaks aliasing rules
-        memcpy(&energy_ptr[i], &tmp, sizeof(float)); // this does not break aliasing
+        // memcpy(&energy_ptr[i], &tmp, sizeof(float)); // this does not break aliasing
         sxs_offset += NAXIS1;
     }
 
