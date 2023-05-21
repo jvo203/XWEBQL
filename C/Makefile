@@ -61,8 +61,8 @@ ifeq ($(UNAME_S),Linux)
 				FORT := ifort
 
 				# not so fast, the icc / ifort combo is buggy (unstable?) !!! an answer :> recursive I/O seg. faults
-				CC := gcc
-				FORT := gfortran
+				# CC := gcc
+				# FORT := gfortran
 			endif
 		endif
 
