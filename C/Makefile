@@ -61,8 +61,8 @@ ifeq ($(UNAME_S),Linux)
 				FORT := ifort
 
 				# not so fast, the icc / ifort combo is buggy (unstable?) !!! an answer :> recursive I/O seg. faults
-				# CC := gcc
-				# FORT := gfortran
+				CC := gcc
+				FORT := gfortran
 			endif
 		endif
 
@@ -204,7 +204,9 @@ ifeq ($(UNAME_S),Darwin)
 	## LIBS += -L${HOMEBREW_PREFIX}/opt/llvm/lib -lomp	
 
 	# CC = zig cc
-	# CFLAGS := -Xpreprocessor -Ofast -flto -fopenmp=libgomp -fno-finite-math-only -Wno-register -funroll-loops -ftree-vectorize -Rpass=loop-vectorize -flax-vector-conversions -Wl,-no_compact_unwind -Wno-unused-command-line-argument
+	# CFLAGS := -Xpreprocessor -Ofast -fopenmp=libgomp -fno-finite-math-only -Wno-register -funroll-loops -ftree-vectorize -Rpass=loop-vectorize -flax-vector-conversions -Wno-unused-command-line-argument
+	## -flto # not supported yet
+	## -Wl,-no_compact_unwind
 	# LIBS += -lgomp
 	## INC += -I${HOMEBREW_PREFIX}/opt/libomp/include
 	## LIBS += -L${HOMEBREW_PREFIX}/opt/libomp/lib -lomp	
