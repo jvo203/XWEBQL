@@ -210,12 +210,12 @@ ifeq ($(UNAME_S),Darwin)
 	## LIBS += -L${HOMEBREW_PREFIX}/opt/libomp/lib -lomp	
 
 	# try Intel compilers for a change! ... compilation (mongoose!?) & linking problems ...
-	# CC = icc
-	# FORT = ifort
-	# FLAGS := -Ofast -xHost -mavx -axAVX -qopt-report=2 -qopenmp -mcmodel=large -shared-intel
-	# CFLAGS := $(FLAGS) -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include
+	CC = icc
+	FORT = ifort
+	FLAGS := -Ofast -xHost -mavx -axAVX -qopt-report=2 -qopenmp -mcmodel=large -shared-intel
+	CFLAGS := $(FLAGS) -I/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include
 	# icc main.c -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
-	# FLAGS += -heap-arrays 32 -align array64byte -fpp -D__$(OS)__
+	FLAGS += -heap-arrays 32 -align array64byte -fpp -D__$(OS)__
 
 	ifeq ($(FORT),nagfor)
 		MPI_LINK_FLAGS = $(shell mpifort --showme:link)
