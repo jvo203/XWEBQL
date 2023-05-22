@@ -5,7 +5,7 @@ const Allocator = std.mem.Allocator;
 const FITS_CHUNK_LENGTH = 2880;
 const FITS_LINE_LENGTH = 80;
 
-const metadata = struct {
+const XEvents = struct {
     NAXIS1: i32,
     NAXIS2: i32,
     TFIELDS: i32,
@@ -78,8 +78,8 @@ fn has_table_extension(header: []const u8) bool {
     return std.mem.eql(u8, header[0..20], "XTENSION= 'BINTABLE'");
 }
 
-fn scan_table_header(header: []const u8, meta: *metadata) bool {
-    _ = meta;
+fn scan_table_header(header: []const u8, events: *XEvents) bool {
+    _ = events;
 
     // process the header one line at a time
     var i: usize = 0;
@@ -142,14 +142,14 @@ fn read_sxs_events(filename: []const u8, allocator: *const Allocator) !i32 {
         return error.Oops;
     }
 
-    var meta: metadata = metadata{ .NAXIS1 = undefined, .NAXIS2 = undefined, .TFIELDS = undefined, .x = undefined, .y = undefined, .upi = undefined };
+    var events = XEvents{ .NAXIS1 = undefined, .NAXIS2 = undefined, .TFIELDS = undefined, .x = undefined, .y = undefined, .upi = undefined };
 
     // scan the table header
     while (sxs_offset < stats.size) {
         const header = sxs[sxs_offset .. sxs_offset + FITS_CHUNK_LENGTH];
         sxs_offset += FITS_CHUNK_LENGTH;
 
-        if (scan_table_header(header, &meta)) {
+        if (scan_table_header(header, &events)) {
             break;
         }
     }
