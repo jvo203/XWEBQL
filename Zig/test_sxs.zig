@@ -5,6 +5,15 @@ const Allocator = std.mem.Allocator;
 const FITS_CHUNK_LENGTH = 2880;
 const FITS_LINE_LENGTH = 80;
 
+const metadata = struct {
+    NAXIS1: i32,
+    NAXIS2: i32,
+    TFIELDS: i32,
+    x: i32,
+    y: i32,
+    upi: i32,
+};
+
 // create a read_sxs_events function that takes a filename and returns a tuple with x,y,energy arrays
 //fn read_sxs_events(filename: []const u8) (x: []f32, y: []f32, energy: []f32) {
 //   const std = @import("std");
@@ -69,6 +78,12 @@ fn has_table_extension(header: []const u8) bool {
     return std.mem.eql(u8, header[0..20], "XTENSION= 'BINTABLE'");
 }
 
+fn scan_table(header: []const u8, meta: *metadata) bool {
+    _ = meta;
+    _ = header;
+    return false;
+}
+
 fn read_sxs_events(filename: []const u8, allocator: *const Allocator) !i32 {
     _ = allocator;
 
@@ -96,7 +111,6 @@ fn read_sxs_events(filename: []const u8, allocator: *const Allocator) !i32 {
     // print("{s}\n", .{sxs[0..2880]});
 
     var sxs_offset: usize = 0;
-    var hdu: i32 = 0;
     var has_table: bool = false;
 
     // first find the binary table extension
@@ -108,13 +122,27 @@ fn read_sxs_events(filename: []const u8, allocator: *const Allocator) !i32 {
             has_table = true;
             break;
         }
-        hdu += 1;
     }
 
     if (!has_table) {
         std.debug.print("critical error: no table extension found\n", .{});
         return error.Oops;
     }
+
+    var meta: metadata = metadata{ .NAXIS1 = undefined, .NAXIS2 = undefined, .TFIELDS = undefined, .x = undefined, .y = undefined, .upi = undefined };
+
+    // scan the table header
+    while (sxs_offset < stats.size) {
+        const header = sxs[sxs_offset .. sxs_offset + FITS_CHUNK_LENGTH];
+        sxs_offset += FITS_CHUNK_LENGTH;
+
+        if (scan_table(header, &meta)) {
+            break;
+        }
+    }
+
+    // point to the start of the data
+    sxs_offset += FITS_CHUNK_LENGTH;
 
     return 0;
 }
