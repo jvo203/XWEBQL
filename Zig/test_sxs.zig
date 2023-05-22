@@ -1,7 +1,9 @@
+const print = @import("std").debug.print;
 const std = @import("std");
 
 pub fn main() void {
-    std.debug.print("Testing Reading X-Ray SXS event files\n", .{});
+    const event_filename = "../../../NAO/JAXA/ah100040060sxs_p0px1010_cl.evt";
+    print("event_filename = {s}\n", .{event_filename});
 
     const start = std.time.nanoTimestamp();
 
