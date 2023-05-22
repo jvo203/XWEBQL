@@ -82,8 +82,11 @@ fn scan_table(header: []const u8, meta: *metadata) bool {
     _ = meta;
 
     // process the header one line at a time
-    for (0..header.len - FITS_LINE_LENGTH) |i| {
+    var i: usize = 0;
+
+    while (i < header.len) {
         const line = header[i .. i + FITS_LINE_LENGTH];
+        i += FITS_LINE_LENGTH;
 
         // detect the "END" keyword
         if (std.mem.eql(u8, line[0..3], "END")) {
@@ -119,21 +122,19 @@ fn read_sxs_events(filename: []const u8, allocator: *const Allocator) !i32 {
     // finally unmap the event file
     defer std.os.munmap(sxs);
 
-    // print the first 2880 characters in sxs
-    // print("{s}\n", .{sxs[0..2880]});
-
     var sxs_offset: usize = 0;
     var has_table: bool = false;
 
     // first find the binary table extension
     while (sxs_offset < stats.size) {
         const header = sxs[sxs_offset .. sxs_offset + FITS_CHUNK_LENGTH];
-        sxs_offset += FITS_CHUNK_LENGTH;
 
         if (has_table_extension(header)) {
             has_table = true;
             break;
         }
+
+        sxs_offset += FITS_CHUNK_LENGTH;
     }
 
     if (!has_table) {
@@ -153,8 +154,10 @@ fn read_sxs_events(filename: []const u8, allocator: *const Allocator) !i32 {
         }
     }
 
-    // point to the start of the data
-    sxs_offset += FITS_CHUNK_LENGTH;
+    // sxs_offset now points to the start of the data
+
+    // print the first 5 characters in sxs data part
+    print("{s}\n", .{sxs[sxs_offset .. sxs_offset + 5]});
 
     return 0;
 }
