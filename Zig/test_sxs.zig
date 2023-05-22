@@ -2,8 +2,10 @@ const print = @import("std").debug.print;
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 
-// create a read_sxs_events function that takes a filename and returns a tuple with x,y,energy arrays
+const FITS_CHUNK_LENGTH = 2880;
+const FITS_LINE_LENGTH = 80;
 
+// create a read_sxs_events function that takes a filename and returns a tuple with x,y,energy arrays
 //fn read_sxs_events(filename: []const u8) (x: []f32, y: []f32, energy: []f32) {
 //   const std = @import("std");
 //  const io = std.io;
@@ -90,8 +92,29 @@ fn read_sxs_events(filename: []const u8, allocator: *const Allocator) !i32 {
     // finally unmap the event file
     defer std.os.munmap(sxs);
 
-    // print the first 80 characters in sxs
-    print("{s}\n", .{sxs[0..80]});
+    // print the first 2880 characters in sxs
+    // print("{s}\n", .{sxs[0..2880]});
+
+    var sxs_offset: usize = 0;
+    var hdu: i32 = 0;
+    var has_table: bool = false;
+
+    // first find the binary table extension
+    while (sxs_offset < stats.size) {
+        const header = sxs[sxs_offset .. sxs_offset + FITS_CHUNK_LENGTH];
+        sxs_offset += FITS_CHUNK_LENGTH;
+
+        if (has_table_extension(header)) {
+            has_table = true;
+            break;
+        }
+        hdu += 1;
+    }
+
+    if (!has_table) {
+        std.debug.print("critical error: no table extension found\n", .{});
+        return error.Oops;
+    }
 
     return 0;
 }
