@@ -65,17 +65,29 @@ const Allocator = std.mem.Allocator;
 
 fn read_sxs_events(filename: []const u8, allocator: *const Allocator) !i32 {
     _ = allocator;
-    print("reading {s}\n", .{filename});
 
     // open the file, get a file descriptor
-    //var fd = try std.os.open(filename, std.c.O_RDONLY, 0);
-    //defer std.os.close(fd);
+    const fd = try std.os.open(filename, std.c.O.RDONLY, 0);
+    defer std.os.close(fd);
 
-    var file = try std.fs.cwd().openFile(filename, .{});
-    defer file.close();
+    // get the file size via fstat
+    const stats = try std.os.fstat(fd);
 
-    const fd = file.handle;
-    print("fd = {d}\n", .{fd});
+    // mmap the event file
+    const sxs = try std.os.mmap(
+        null,
+        @intCast(usize, stats.size),
+        std.os.PROT.READ,
+        std.os.MAP.PRIVATE,
+        fd,
+        0,
+    );
+
+    // finally unmap the event file
+    defer std.os.munmap(sxs);
+
+    // print the first 80 characters in sxs
+    print("{s}\n", .{sxs[0..80]});
 
     return 0;
 }
