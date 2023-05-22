@@ -72,11 +72,9 @@ pub fn main() void {
     print("event_filename = {s}\n", .{event_filename});
 
     const start = std.time.nanoTimestamp();
-
-    _ = read_sxs_events(event_filename);
-
+    const num_events = read_sxs_events(event_filename);
     var duration: f64 = @intToFloat(f64, std.time.nanoTimestamp() - start);
     duration /= 1_000_000;
 
-    std.debug.print("Zig elapsed time: {d:.6} ms\n", .{duration});
+    std.debug.print("num_events = {d}, zig elapsed time: {d:.6} ms\n", .{ num_events, duration });
 }
