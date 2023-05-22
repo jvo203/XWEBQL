@@ -89,7 +89,7 @@ fn scan_table_header(header: []const u8, meta: *metadata) bool {
         i += FITS_LINE_LENGTH;
 
         // detect the "END" keyword
-        if (std.mem.eql(u8, line[0..3], "END")) {
+        if (std.mem.eql(u8, line[0..10], "END       ")) {
             return true;
         }
 
