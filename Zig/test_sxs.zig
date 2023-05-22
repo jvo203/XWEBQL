@@ -78,8 +78,7 @@ fn has_table_extension(header: []const u8) bool {
     return std.mem.eql(u8, header[0..20], "XTENSION= 'BINTABLE'");
 }
 
-fn scan_table_header(header: []const u8, events: *XEvents) bool {
-    _ = events;
+fn scan_table_header(header: []const u8, events: *XEvents) !bool {
 
     // process the header one line at a time
     var i: usize = 0;
@@ -95,10 +94,10 @@ fn scan_table_header(header: []const u8, events: *XEvents) bool {
 
         // detect the "NAXIS1" keyword
         if (std.mem.eql(u8, line[0..10], "NAXIS1  = ")) {
-            print("{s}\n", .{line});
+            print("|{s}|\n", .{line[10..FITS_LINE_LENGTH]});
             // parse the value
-            //const value = try std.mem.parseInt(u8, line[10..FITS_LINE_LENGTH]);
-            //events.NAXIS1 = value;
+            const value = try std.fmt.parseInt(i32, line[10..FITS_LINE_LENGTH], 10);
+            events.NAXIS1 = value;
         }
     }
 
@@ -155,7 +154,7 @@ fn read_sxs_events(filename: []const u8, allocator: *const Allocator) !i32 {
         const header = sxs[sxs_offset .. sxs_offset + FITS_CHUNK_LENGTH];
         sxs_offset += FITS_CHUNK_LENGTH;
 
-        if (scan_table_header(header, &events)) {
+        if (try scan_table_header(header, &events)) {
             break;
         }
     }
