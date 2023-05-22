@@ -93,7 +93,13 @@ fn scan_table_header(header: []const u8, events: *XEvents) bool {
             return true;
         }
 
-        // print("{s}\n", .{line});
+        // detect the "NAXIS1" keyword
+        if (std.mem.eql(u8, line[0..10], "NAXIS1  = ")) {
+            print("{s}\n", .{line});
+            // parse the value
+            //const value = try std.mem.parseInt(u8, line[10..FITS_LINE_LENGTH]);
+            //events.NAXIS1 = value;
+        }
     }
 
     return false;
