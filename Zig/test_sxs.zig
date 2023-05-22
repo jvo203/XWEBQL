@@ -78,7 +78,7 @@ fn has_table_extension(header: []const u8) bool {
     return std.mem.eql(u8, header[0..20], "XTENSION= 'BINTABLE'");
 }
 
-fn scan_table(header: []const u8, meta: *metadata) bool {
+fn scan_table_header(header: []const u8, meta: *metadata) bool {
     _ = meta;
 
     // process the header one line at a time
@@ -93,7 +93,7 @@ fn scan_table(header: []const u8, meta: *metadata) bool {
             return true;
         }
 
-        print("{s}\n", .{line});
+        // print("{s}\n", .{line});
     }
 
     return false;
@@ -149,7 +149,7 @@ fn read_sxs_events(filename: []const u8, allocator: *const Allocator) !i32 {
         const header = sxs[sxs_offset .. sxs_offset + FITS_CHUNK_LENGTH];
         sxs_offset += FITS_CHUNK_LENGTH;
 
-        if (scan_table(header, &meta)) {
+        if (scan_table_header(header, &meta)) {
             break;
         }
     }
