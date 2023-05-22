@@ -80,7 +80,19 @@ fn has_table_extension(header: []const u8) bool {
 
 fn scan_table(header: []const u8, meta: *metadata) bool {
     _ = meta;
-    _ = header;
+
+    // process the header one line at a time
+    for (0..header.len - FITS_LINE_LENGTH) |i| {
+        const line = header[i .. i + FITS_LINE_LENGTH];
+
+        // detect the "END" keyword
+        if (std.mem.eql(u8, line[0..3], "END")) {
+            return true;
+        }
+
+        print("{s}\n", .{line});
+    }
+
     return false;
 }
 
