@@ -63,6 +63,10 @@ const Allocator = std.mem.Allocator;
 //return (x, y, energy);
 //}
 
+fn has_table_extension(header: []const u8) bool {
+    return std.mem.eql(u8, header[0..20], "XTENSION= 'BINTABLE'");
+}
+
 fn read_sxs_events(filename: []const u8, allocator: *const Allocator) !i32 {
     _ = allocator;
 
