@@ -63,18 +63,24 @@ const Allocator = std.mem.Allocator;
 //return (x, y, energy);
 //}
 
-fn read_sxs_events(filename: []const u8, allocator: *const Allocator) i32 {
+fn read_sxs_events(filename: []const u8, allocator: *const Allocator) !i32 {
     _ = allocator;
     print("reading {s}\n", .{filename});
 
     // open the file, get a file descriptor
-    var fd = try std.os.open(filename, .{});
-    defer std.os.close(fd);
+    //var fd = try std.os.open(filename, std.c.O_RDONLY, 0);
+    //defer std.os.close(fd);
+
+    var file = try std.fs.cwd().openFile(filename, .{});
+    defer file.close();
+
+    const fd = file.handle;
+    print("fd = {d}\n", .{fd});
 
     return 0;
 }
 
-pub fn main() void {
+pub fn main() !void {
     const event_filename = "../../../NAO/JAXA/ah100040060sxs_p0px1010_cl.evt";
     print("event_filename = {s}\n", .{event_filename});
 
@@ -84,7 +90,7 @@ pub fn main() void {
     const allocator = arena.allocator();
 
     const start = std.time.nanoTimestamp();
-    const num_events = read_sxs_events(event_filename, &allocator);
+    const num_events = try read_sxs_events(event_filename, &allocator);
     var duration: f64 = @intToFloat(f64, std.time.nanoTimestamp() - start);
     duration /= 1_000_000;
 
