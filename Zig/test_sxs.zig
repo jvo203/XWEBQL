@@ -305,7 +305,10 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !i32 {
         bytes_per_row += column;
     }
 
-    print("bytes_per_row = {d}\n", .{bytes_per_row});
+    if (bytes_per_row != events.NAXIS1) {
+        std.debug.print("critical error: bytes_per_row != NAXIS1\n", .{});
+        return error.Oops;
+    }
 
     // sxs_offset now points to the start of the data
 
