@@ -336,10 +336,31 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !i32 {
     const upi = try allocator.alloc(f32, @intCast(usize, events.NAXIS2));
     _ = upi;
 
-    // sxs_offset now points to the start of the data
+    // sxs_offset now points to the start of the binary data
+    const data = sxs[sxs_offset .. sxs_offset + @intCast(usize, events.NAXIS2) * @intCast(usize, events.NAXIS1)];
+    var offset: usize = 0;
+
+    var i: usize = 0;
 
     // print the first 5 characters in sxs data part
-    print("{s}\n", .{sxs[sxs_offset .. sxs_offset + 5]});
+    print("{s}\n", .{data[0..5]});
+
+    // go through all the rows
+    while (i < @intCast(usize, events.NAXIS2)) {
+        const x_arr = data[offset + x_offset .. offset + x_offset + 2];
+        _ = x_arr;
+        const y_arr = data[offset + y_offset .. offset + y_offset + 2];
+        _ = y_arr;
+        const upi_arr = data[offset + upi_offset .. offset + upi_offset + 4];
+        _ = upi_arr;
+
+        //x[i] = x_value;
+        //y[i] = y_value;
+        //upi[i] = upi_value;
+
+        i += 1;
+        offset += @intCast(usize, events.NAXIS1);
+    }
 
     return events.NAXIS2;
 }
