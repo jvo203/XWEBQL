@@ -299,6 +299,14 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !i32 {
     print("TFIELDS = {d}\n", .{events.TFIELDS});
     print("ix:{d}, iy:{d}, iupi:{d}\n", .{ events.ix, events.iy, events.iupi });
 
+    // sum the events.columns array
+    var bytes_per_row: i32 = 0;
+    for (events.columns) |column| {
+        bytes_per_row += column;
+    }
+
+    print("bytes_per_row = {d}\n", .{bytes_per_row});
+
     // sxs_offset now points to the start of the data
 
     // print the first 5 characters in sxs data part
