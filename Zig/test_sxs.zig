@@ -341,7 +341,7 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !i32 {
     // print the first 5 characters in sxs data part
     print("{s}\n", .{sxs[sxs_offset .. sxs_offset + 5]});
 
-    return 0;
+    return events.NAXIS2;
 }
 
 pub fn main() !void {
