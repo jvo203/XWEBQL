@@ -12,6 +12,7 @@ const XEvents = struct {
     ix: i32,
     iy: i32,
     iupi: i32,
+    columns: []i32,
 };
 
 // create a read_sxs_events function that takes a filename and returns a tuple with x,y,energy arrays
@@ -83,7 +84,7 @@ fn has_table_extension(header: []const u8) bool {
     return std.mem.eql(u8, header[0..20], "XTENSION= 'BINTABLE'");
 }
 
-fn scan_table_header(header: []const u8, events: *XEvents) !bool {
+fn scan_table_header(header: []const u8, events: *XEvents, allocator: Allocator) !bool {
 
     // process the header one line at a time
     var i: usize = 0;
@@ -110,6 +111,11 @@ fn scan_table_header(header: []const u8, events: *XEvents) !bool {
         // get the "TFIELDS" keyword
         if (std.mem.eql(u8, line[0..10], "TFIELDS = ")) {
             events.TFIELDS = try hdr_get_int_value(line);
+
+            // allocate the columns array
+            if (events.TFIELDS > 0) {
+                events.columns = try allocator.alloc(i32, @intCast(usize, events.TFIELDS));
+            }
         }
     }
 
@@ -119,7 +125,6 @@ fn scan_table_header(header: []const u8, events: *XEvents) !bool {
 }
 
 fn read_sxs_events(filename: []const u8, allocator: Allocator) !i32 {
-    _ = allocator;
 
     // open the file, get a file descriptor
     const fd = try std.os.open(filename, std.c.O.RDONLY, 0);
@@ -161,14 +166,14 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !i32 {
         return error.Oops;
     }
 
-    var events = XEvents{ .NAXIS1 = undefined, .NAXIS2 = undefined, .TFIELDS = undefined, .ix = undefined, .iy = undefined, .iupi = undefined };
+    var events = XEvents{ .NAXIS1 = undefined, .NAXIS2 = undefined, .TFIELDS = undefined, .ix = undefined, .iy = undefined, .iupi = undefined, .columns = undefined };
 
     // scan the table header
     while (sxs_offset < stats.size) {
         const header = sxs[sxs_offset .. sxs_offset + FITS_CHUNK_LENGTH];
         sxs_offset += FITS_CHUNK_LENGTH;
 
-        if (try scan_table_header(header, &events)) {
+        if (try scan_table_header(header, &events, allocator)) {
             break;
         }
     }
