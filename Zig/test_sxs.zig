@@ -15,6 +15,16 @@ const XEvents = struct {
     columns: []i32,
 };
 
+const i16type = union {
+    bytes: []u8,
+    value: i16,
+};
+
+const f32type = union {
+    bytes: []u8,
+    value: f32,
+};
+
 // create a read_sxs_events function that takes a filename and returns a tuple with x,y,energy arrays
 //fn read_sxs_events(filename: []const u8) (x: []f32, y: []f32, energy: []f32) {
 //   const std = @import("std");
@@ -338,23 +348,37 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !i32 {
 
     // sxs_offset now points to the start of the binary data
     const data = sxs[sxs_offset .. sxs_offset + @intCast(usize, events.NAXIS2) * @intCast(usize, events.NAXIS1)];
-    var offset: usize = 0;
 
+    var offset: usize = 0;
     var i: usize = 0;
 
-    // print the first 5 characters in sxs data part
-    print("{s}\n", .{data[0..5]});
+    var x_value = i16type{ .bytes = undefined };
+    var y_value = i16type{ .bytes = undefined };
+    var upi_value = f32type{ .bytes = undefined };
+
+    var x_val: i16 = undefined;
+    _ = x_val;
+    var y_val: i16 = undefined;
+    _ = y_val;
+    var upi_val: f32 = undefined;
+    _ = upi_val;
 
     // go through all the rows
     while (i < @intCast(usize, events.NAXIS2)) {
         const x_arr = data[offset + x_offset .. offset + x_offset + 2];
-        _ = x_arr;
-        const y_arr = data[offset + y_offset .. offset + y_offset + 2];
-        _ = y_arr;
-        const upi_arr = data[offset + upi_offset .. offset + upi_offset + 4];
-        _ = upi_arr;
+        //std.mem.copyForwards(i16, &x_val, x_arr.ptr);
+        //@memcpy(&x_val, x_arr.ptr);
+        //const x_ptr = std.mem.bytesAsValue(i16, data.ptr + offset + x_offset);
+        //const x_ptr = std.mem.bytesAsValue(i16, x_arr.ptr);
+        //const x_val = std.mem.bytesToValue(i16, x_arr);
 
-        //x[i] = x_value;
+        x_value.bytes = x_arr;
+        const y_arr = data[offset + y_offset .. offset + y_offset + 2];
+        y_value.bytes = y_arr;
+        const upi_arr = data[offset + upi_offset .. offset + upi_offset + 4];
+        upi_value.bytes = upi_arr;
+
+        //x[i] = @byteSwap(x_val);
         //y[i] = y_value;
         //upi[i] = upi_value;
 
