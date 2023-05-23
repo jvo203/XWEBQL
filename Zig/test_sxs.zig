@@ -328,6 +328,14 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !i32 {
 
     print("x_offset = {d}, y_offset = {d}, upi_offset = {d}\n", .{ x_offset, y_offset, upi_offset });
 
+    // allocate the arrays
+    const x = try allocator.alloc(i16, @intCast(usize, events.NAXIS2));
+    _ = x;
+    const y = try allocator.alloc(i16, @intCast(usize, events.NAXIS2));
+    _ = y;
+    const upi = try allocator.alloc(f32, @intCast(usize, events.NAXIS2));
+    _ = upi;
+
     // sxs_offset now points to the start of the data
 
     // print the first 5 characters in sxs data part
