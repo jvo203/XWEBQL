@@ -6,23 +6,13 @@ const FITS_CHUNK_LENGTH = 2880;
 const FITS_LINE_LENGTH = 80;
 
 const XEvents = struct {
-    NAXIS1: i32,
-    NAXIS2: i32,
-    TFIELDS: i32,
+    NAXIS1: usize,
+    NAXIS2: usize,
+    TFIELDS: usize,
     ix: i32,
     iy: i32,
     iupi: i32,
     columns: []i32,
-};
-
-const i16type = union {
-    bytes: []u8,
-    value: i16,
-};
-
-const f32type = union {
-    bytes: []u8,
-    value: f32,
 };
 
 // create a read_sxs_events function that takes a filename and returns a tuple with x,y,energy arrays
@@ -179,21 +169,21 @@ fn scan_table_header(header: []const u8, events: *XEvents, allocator: Allocator)
 
         // get the "NAXIS1" keyword
         if (std.mem.eql(u8, line[0..10], "NAXIS1  = ")) {
-            events.NAXIS1 = try hdr_get_int_value(line);
+            events.NAXIS1 = @intCast(usize, try hdr_get_int_value(line));
         }
 
         // get the "NAXIS2" keyword
         if (std.mem.eql(u8, line[0..10], "NAXIS2  = ")) {
-            events.NAXIS2 = try hdr_get_int_value(line);
+            events.NAXIS2 = @intCast(usize, try hdr_get_int_value(line));
         }
 
         // get the "TFIELDS" keyword
         if (std.mem.eql(u8, line[0..10], "TFIELDS = ")) {
-            events.TFIELDS = try hdr_get_int_value(line);
+            events.TFIELDS = @intCast(usize, try hdr_get_int_value(line));
 
             // allocate the columns array
             if (events.TFIELDS > 0) {
-                events.columns = try allocator.alloc(i32, @intCast(usize, events.TFIELDS));
+                events.columns = try allocator.alloc(i32, events.TFIELDS);
             }
         }
 
@@ -261,7 +251,7 @@ fn get_column_offset(columns: []i32, index: i32) usize {
     return @intCast(usize, offset);
 }
 
-fn read_sxs_events(filename: []const u8, allocator: Allocator) !i32 {
+fn read_sxs_events(filename: []const u8, allocator: Allocator) !usize {
 
     // open the file, get a file descriptor
     const fd = try std.os.open(filename, std.c.O.RDONLY, 0);
@@ -339,51 +329,34 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !i32 {
     print("x_offset = {d}, y_offset = {d}, upi_offset = {d}\n", .{ x_offset, y_offset, upi_offset });
 
     // allocate the arrays
-    const x = try allocator.alloc(i16, @intCast(usize, events.NAXIS2));
+    const x = try allocator.alloc(i16, events.NAXIS2);
     _ = x;
-    const y = try allocator.alloc(i16, @intCast(usize, events.NAXIS2));
+    const y = try allocator.alloc(i16, events.NAXIS2);
     _ = y;
-    const upi = try allocator.alloc(f32, @intCast(usize, events.NAXIS2));
+    const upi = try allocator.alloc(f32, events.NAXIS2);
     _ = upi;
 
     // sxs_offset now points to the start of the binary data
-    const data = sxs[sxs_offset .. sxs_offset + @intCast(usize, events.NAXIS2) * @intCast(usize, events.NAXIS1)];
+    const data = sxs[sxs_offset .. sxs_offset + events.NAXIS2 * events.NAXIS1];
 
     var offset: usize = 0;
     var i: usize = 0;
 
-    var x_value = i16type{ .bytes = undefined };
-    var y_value = i16type{ .bytes = undefined };
-    var upi_value = f32type{ .bytes = undefined };
-
-    var x_val: i16 = undefined;
-    _ = x_val;
-    var y_val: i16 = undefined;
-    _ = y_val;
-    var upi_val: f32 = undefined;
-    _ = upi_val;
-
     // go through all the rows
-    while (i < @intCast(usize, events.NAXIS2)) {
+    while (i < events.NAXIS2) {
         const x_arr = data[offset + x_offset .. offset + x_offset + 2];
-        //std.mem.copyForwards(i16, &x_val, x_arr.ptr);
-        //@memcpy(&x_val, x_arr.ptr);
-        //const x_ptr = std.mem.bytesAsValue(i16, data.ptr + offset + x_offset);
-        //const x_ptr = std.mem.bytesAsValue(i16, x_arr.ptr);
-        //const x_val = std.mem.bytesToValue(i16, x_arr);
-
-        x_value.bytes = x_arr;
+        _ = x_arr;
         const y_arr = data[offset + y_offset .. offset + y_offset + 2];
-        y_value.bytes = y_arr;
+        _ = y_arr;
         const upi_arr = data[offset + upi_offset .. offset + upi_offset + 4];
-        upi_value.bytes = upi_arr;
+        _ = upi_arr;
 
         //x[i] = @byteSwap(x_val);
         //y[i] = y_value;
         //upi[i] = upi_value;
 
         i += 1;
-        offset += @intCast(usize, events.NAXIS1);
+        offset += events.NAXIS1;
     }
 
     return events.NAXIS2;
