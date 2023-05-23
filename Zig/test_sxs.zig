@@ -80,6 +80,25 @@ fn hdr_get_int_value(line: []const u8) !i32 {
     return try std.fmt.parseInt(i32, str, 10);
 }
 
+fn hdr_get_string_value(line: []const u8) ?[]const u8 {
+    const str = line[10..FITS_LINE_LENGTH];
+
+    // find the enclosing '' in str
+    const pos1 = std.mem.indexOf(u8, str, "'");
+
+    if (pos1) |p1| {
+        const pos2 = std.mem.lastIndexOf(u8, str, "'");
+
+        if (pos2) |p2| {
+            return std.mem.trim(u8, str[p1 + 1 .. p2], " \r\n\t");
+        } else {
+            return null;
+        }
+    } else {
+        return null;
+    }
+}
+
 fn has_table_extension(header: []const u8) bool {
     return std.mem.eql(u8, header[0..20], "XTENSION= 'BINTABLE'");
 }
@@ -115,6 +134,34 @@ fn scan_table_header(header: []const u8, events: *XEvents, allocator: Allocator)
             // allocate the columns array
             if (events.TFIELDS > 0) {
                 events.columns = try allocator.alloc(i32, @intCast(usize, events.TFIELDS));
+            }
+        }
+
+        // detect the TTYPEXX lines
+        if (std.mem.eql(u8, line[0..5], "TTYPE")) {
+            //print("|{s}|\n", .{line});
+
+            // find the first " " in line
+            const pos = std.mem.indexOf(u8, line, " ");
+
+            if (pos) |j| {
+                const str = line[5..j];
+                const index = try std.fmt.parseInt(i32, str, 10);
+                //print("|{s}|:{d}\n", .{ str, index });
+
+                const value = hdr_get_string_value(line);
+                if (value) |column| {
+                    //print("column:|{s}|\n", .{column});
+
+                    // test column for "X", "Y" and "UPI"
+                    if (std.mem.eql(u8, column, "X")) {
+                        events.ix = index;
+                    } else if (std.mem.eql(u8, column, "Y")) {
+                        events.iy = index;
+                    } else if (std.mem.eql(u8, column, "UPI")) {
+                        events.iupi = index;
+                    }
+                }
             }
         }
     }
