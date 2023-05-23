@@ -104,7 +104,7 @@ fn scan_table_header(header: []const u8, events: *XEvents) !bool {
     return false;
 }
 
-fn read_sxs_events(filename: []const u8, allocator: *const Allocator) !i32 {
+fn read_sxs_events(filename: []const u8, allocator: Allocator) !i32 {
     _ = allocator;
 
     // open the file, get a file descriptor
@@ -177,7 +177,7 @@ pub fn main() !void {
     const allocator = arena.allocator();
 
     const start = std.time.nanoTimestamp();
-    const num_events = try read_sxs_events(event_filename, &allocator);
+    const num_events = try read_sxs_events(event_filename, allocator);
     var duration: f64 = @intToFloat(f64, std.time.nanoTimestamp() - start);
     duration /= 1_000_000;
 
