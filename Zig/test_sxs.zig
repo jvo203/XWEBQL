@@ -164,6 +164,29 @@ fn scan_table_header(header: []const u8, events: *XEvents, allocator: Allocator)
                 }
             }
         }
+
+        // detect the TFORMXX lines
+        if (std.mem.eql(u8, line[0..5], "TFORM")) {
+            print("|{s}|\n", .{line});
+
+            // find the first " " in line
+            const pos = std.mem.indexOf(u8, line, " ");
+
+            if (pos) |j| {
+                const str = line[5..j];
+                const index = try std.fmt.parseInt(i32, str, 10);
+                print("|{s}|:{d}\n", .{ str, index });
+
+                const value = hdr_get_string_value(line);
+                if (value) |columnType| {
+                    print("type:|{s}|\n", .{columnType});
+
+                    // get the type size
+                    //const size = try std.fmt.parseInt(i32, columnType[0 .. columnType.len - 1], 10);
+                    //print("size:|{d}|\n", .{size});
+                }
+            }
+        }
     }
 
     //print("|{s}|\n", .{line[10..FITS_LINE_LENGTH]});
