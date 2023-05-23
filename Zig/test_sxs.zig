@@ -99,6 +99,56 @@ fn hdr_get_string_value(line: []const u8) ?[]const u8 {
     }
 }
 
+fn get_column_size(columnType: []const u8) i32 {
+    const last = columnType[columnType.len - 1];
+    const num = std.fmt.parseInt(i32, columnType[0 .. columnType.len - 1], 10) catch 0;
+
+    // logical (Boolean)
+    if (last == 'L') {
+        return @max(1, num);
+    } else
+    // bit array (rounded to the nearest byte)
+    if (last == 'X') {
+        return @max(1, @divFloor(num + 7, 8));
+    } else
+    // Unsigned byte
+    if (last == 'B') {
+        return @max(1, num);
+    } else
+    // 16-bit integer
+    if (last == 'I') {
+        return 2 * @max(1, num);
+    } else
+    // 32-bit integer
+    if (last == 'J') {
+        return 4 * @max(1, num);
+    } else
+    // 64-bit integer
+    if (last == 'K') {
+        return 8 * @max(1, num);
+    } else
+    // character
+    if (last == 'A') {
+        return @max(1, num);
+    } else
+    // single-precision float (32-bit)
+    if (last == 'E') {
+        return 4 * @max(1, num);
+    } else
+    // double-precision float (64-bit)
+    if (last == 'D') {
+        return 8 * @max(1, num);
+    } else
+    // single-precision complex
+    if (last == 'C') {
+        return 8 * @max(1, num);
+    } else
+    // double-precision complex
+    if (last == 'M') {
+        return 16 * @max(1, num);
+    } else return 0;
+}
+
 fn has_table_extension(header: []const u8) bool {
     return std.mem.eql(u8, header[0..20], "XTENSION= 'BINTABLE'");
 }
@@ -167,23 +217,18 @@ fn scan_table_header(header: []const u8, events: *XEvents, allocator: Allocator)
 
         // detect the TFORMXX lines
         if (std.mem.eql(u8, line[0..5], "TFORM")) {
-            print("|{s}|\n", .{line});
-
             // find the first " " in line
             const pos = std.mem.indexOf(u8, line, " ");
 
             if (pos) |j| {
                 const str = line[5..j];
                 const index = try std.fmt.parseInt(i32, str, 10);
-                print("|{s}|:{d}\n", .{ str, index });
 
                 const value = hdr_get_string_value(line);
                 if (value) |columnType| {
-                    print("type:|{s}|\n", .{columnType});
-
                     // get the type size
-                    //const size = try std.fmt.parseInt(i32, columnType[0 .. columnType.len - 1], 10);
-                    //print("size:|{d}|\n", .{size});
+                    const size = get_column_size(columnType);
+                    events.columns[@intCast(usize, index - 1)] = size;
                 }
             }
         }
