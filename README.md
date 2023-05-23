@@ -1,2 +1,2 @@
 # XWEBQL
-JAXA/JVO X-Ray WebQL
+JAXA/JVO X-ray WebQL
