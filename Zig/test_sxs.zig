@@ -9,9 +9,9 @@ const XEvents = struct {
     NAXIS1: i32,
     NAXIS2: i32,
     TFIELDS: i32,
-    x: i32,
-    y: i32,
-    upi: i32,
+    ix: i32,
+    iy: i32,
+    iupi: i32,
 };
 
 // create a read_sxs_events function that takes a filename and returns a tuple with x,y,energy arrays
@@ -74,6 +74,11 @@ const XEvents = struct {
 //return (x, y, energy);
 //}
 
+fn hdr_get_int_value(line: []const u8) !i32 {
+    const str = std.mem.trim(u8, line[10..FITS_LINE_LENGTH], " \r\n\t");
+    return try std.fmt.parseInt(i32, str, 10);
+}
+
 fn has_table_extension(header: []const u8) bool {
     return std.mem.eql(u8, header[0..20], "XTENSION= 'BINTABLE'");
 }
@@ -92,14 +97,23 @@ fn scan_table_header(header: []const u8, events: *XEvents) !bool {
             return true;
         }
 
-        // detect the "NAXIS1" keyword
+        // get the "NAXIS1" keyword
         if (std.mem.eql(u8, line[0..10], "NAXIS1  = ")) {
-            print("|{s}|\n", .{line[10..FITS_LINE_LENGTH]});
-            // parse the value
-            const value = try std.fmt.parseInt(i32, line[10..FITS_LINE_LENGTH], 10);
-            events.NAXIS1 = value;
+            events.NAXIS1 = try hdr_get_int_value(line);
+        }
+
+        // get the "NAXIS2" keyword
+        if (std.mem.eql(u8, line[0..10], "NAXIS2  = ")) {
+            events.NAXIS2 = try hdr_get_int_value(line);
+        }
+
+        // get the "TFIELDS" keyword
+        if (std.mem.eql(u8, line[0..10], "TFIELDS = ")) {
+            events.TFIELDS = try hdr_get_int_value(line);
         }
     }
+
+    //print("|{s}|\n", .{line[10..FITS_LINE_LENGTH]});
 
     return false;
 }
@@ -147,7 +161,7 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !i32 {
         return error.Oops;
     }
 
-    var events = XEvents{ .NAXIS1 = undefined, .NAXIS2 = undefined, .TFIELDS = undefined, .x = undefined, .y = undefined, .upi = undefined };
+    var events = XEvents{ .NAXIS1 = undefined, .NAXIS2 = undefined, .TFIELDS = undefined, .ix = undefined, .iy = undefined, .iupi = undefined };
 
     // scan the table header
     while (sxs_offset < stats.size) {
@@ -158,6 +172,12 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !i32 {
             break;
         }
     }
+
+    // print the XEvents struct
+    print("NAXIS1 = {d}\n", .{events.NAXIS1});
+    print("NAXIS2 = {d}\n", .{events.NAXIS2});
+    print("TFIELDS = {d}\n", .{events.TFIELDS});
+    print("ix:{d}, iy:{d}, iupi:{d}\n", .{ events.ix, events.iy, events.iupi });
 
     // sxs_offset now points to the start of the data
 
