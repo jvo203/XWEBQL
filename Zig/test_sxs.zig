@@ -239,6 +239,18 @@ fn scan_table_header(header: []const u8, events: *XEvents, allocator: Allocator)
     return false;
 }
 
+fn get_column_offset(columns: []i32, index: i32) usize {
+    var offset: i32 = 0;
+    var i: usize = 0;
+
+    while (i < index) {
+        offset += columns[@intCast(usize, i)];
+        i += 1;
+    }
+
+    return @intCast(usize, offset);
+}
+
 fn read_sxs_events(filename: []const u8, allocator: Allocator) !i32 {
 
     // open the file, get a file descriptor
@@ -309,6 +321,12 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !i32 {
         std.debug.print("critical error: bytes_per_row != NAXIS1\n", .{});
         return error.Oops;
     }
+
+    const x_offset = get_column_offset(events.columns, events.ix - 1);
+    const y_offset = get_column_offset(events.columns, events.iy - 1);
+    const upi_offset = get_column_offset(events.columns, events.iupi - 1);
+
+    print("x_offset = {d}, y_offset = {d}, upi_offset = {d}\n", .{ x_offset, y_offset, upi_offset });
 
     // sxs_offset now points to the start of the data
 
