@@ -189,20 +189,15 @@ fn scan_table_header(header: []const u8, events: *XEvents, allocator: Allocator)
 
         // detect the TTYPEXX lines
         if (std.mem.eql(u8, line[0..5], "TTYPE")) {
-            //print("|{s}|\n", .{line});
-
             // find the first " " in line
             const pos = std.mem.indexOf(u8, line, " ");
 
             if (pos) |j| {
                 const str = line[5..j];
                 const index = try std.fmt.parseInt(i32, str, 10);
-                //print("|{s}|:{d}\n", .{ str, index });
-
                 const value = hdr_get_string_value(line);
-                if (value) |column| {
-                    //print("column:|{s}|\n", .{column});
 
+                if (value) |column| {
                     // test column for "X", "Y" and "UPI"
                     if (std.mem.eql(u8, column, "X")) {
                         events.ix = index;
@@ -330,11 +325,8 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !usize {
 
     // allocate the arrays
     const x = try allocator.alloc(i16, events.NAXIS2);
-    _ = x;
     const y = try allocator.alloc(i16, events.NAXIS2);
-    _ = y;
     const upi = try allocator.alloc(f32, events.NAXIS2);
-    _ = upi;
 
     // sxs_offset now points to the start of the binary data
     const data = sxs[sxs_offset .. sxs_offset + events.NAXIS2 * events.NAXIS1];
@@ -345,15 +337,13 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !usize {
     // go through all the rows
     while (i < events.NAXIS2) {
         const x_arr = data[offset + x_offset .. offset + x_offset + 2];
-        _ = x_arr;
         const y_arr = data[offset + y_offset .. offset + y_offset + 2];
-        _ = y_arr;
         const upi_arr = data[offset + upi_offset .. offset + upi_offset + 4];
-        _ = upi_arr;
 
-        //x[i] = @byteSwap(x_val);
-        //y[i] = y_value;
-        //upi[i] = upi_value;
+        x[i] = std.mem.readIntSliceBig(i16, x_arr);
+        y[i] = std.mem.readIntSliceBig(i16, y_arr);
+        const upi_value = std.mem.readIntSliceBig(i32, upi_arr);
+        upi[i] = @bitCast(f32, upi_value);
 
         i += 1;
         offset += events.NAXIS1;
