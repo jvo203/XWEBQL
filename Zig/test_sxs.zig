@@ -283,14 +283,9 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
 
     // go through all the rows
     while (i < meta.NAXIS2) {
-        const x_arr = data[offset + x_offset .. offset + x_offset + 2];
-        const y_arr = data[offset + y_offset .. offset + y_offset + 2];
-        const upi_arr = data[offset + upi_offset .. offset + upi_offset + 4];
-
-        x[i] = std.mem.readIntSliceBig(i16, x_arr);
-        y[i] = std.mem.readIntSliceBig(i16, y_arr);
-        const upi_value = std.mem.readIntSliceBig(i32, upi_arr);
-        upi[i] = @bitCast(f32, upi_value);
+        x[i] = std.mem.readIntSliceBig(i16, data[offset + x_offset .. offset + x_offset + 2]);
+        y[i] = std.mem.readIntSliceBig(i16, data[offset + y_offset .. offset + y_offset + 2]);
+        upi[i] = @bitCast(f32, std.mem.readIntSliceBig(i32, data[offset + upi_offset .. offset + upi_offset + 4]));
 
         i += 1;
         offset += meta.NAXIS1;
