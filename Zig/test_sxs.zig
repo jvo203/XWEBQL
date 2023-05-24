@@ -5,7 +5,7 @@ const Allocator = std.mem.Allocator;
 const FITS_CHUNK_LENGTH = 2880;
 const FITS_LINE_LENGTH = 80;
 
-const XEvents = struct {
+const XEventsMeta = struct {
     NAXIS1: usize,
     NAXIS2: usize,
     TFIELDS: usize,
@@ -13,6 +13,13 @@ const XEvents = struct {
     iy: i32,
     iupi: i32,
     columns: []i32,
+};
+
+const XEvents = struct {
+    num_events: usize,
+    x: []i16,
+    y: []i16,
+    energy: []f32,
 };
 
 fn hdr_get_int_value(line: []const u8) !i32 {
@@ -93,7 +100,7 @@ fn has_table_extension(header: []const u8) bool {
     return std.mem.eql(u8, header[0..20], "XTENSION= 'BINTABLE'");
 }
 
-fn scan_table_header(header: []const u8, events: *XEvents, allocator: Allocator) !bool {
+fn scan_table_header(header: []const u8, events: *XEventsMeta, allocator: Allocator) !bool {
 
     // process the header one line at a time
     var i: usize = 0;
@@ -228,54 +235,54 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
         return error.Oops;
     }
 
-    var events = XEvents{ .NAXIS1 = undefined, .NAXIS2 = undefined, .TFIELDS = undefined, .ix = undefined, .iy = undefined, .iupi = undefined, .columns = undefined };
+    var meta = XEventsMeta{ .NAXIS1 = undefined, .NAXIS2 = undefined, .TFIELDS = undefined, .ix = undefined, .iy = undefined, .iupi = undefined, .columns = undefined };
 
     // scan the table header
     while (sxs_offset < stats.size) {
         const header = sxs[sxs_offset .. sxs_offset + FITS_CHUNK_LENGTH];
         sxs_offset += FITS_CHUNK_LENGTH;
 
-        if (try scan_table_header(header, &events, allocator)) {
+        if (try scan_table_header(header, &meta, allocator)) {
             break;
         }
     }
 
-    // print the XEvents struct
-    print("NAXIS1 = {d}\n", .{events.NAXIS1});
-    print("NAXIS2 = {d}\n", .{events.NAXIS2});
-    print("TFIELDS = {d}\n", .{events.TFIELDS});
-    print("ix:{d}, iy:{d}, iupi:{d}\n", .{ events.ix, events.iy, events.iupi });
+    // print the XEventsMeta struct
+    print("NAXIS1 = {d}\n", .{meta.NAXIS1});
+    print("NAXIS2 = {d}\n", .{meta.NAXIS2});
+    print("TFIELDS = {d}\n", .{meta.TFIELDS});
+    print("ix:{d}, iy:{d}, iupi:{d}\n", .{ meta.ix, meta.iy, meta.iupi });
 
     // sum the events.columns array
     var bytes_per_row: i32 = 0;
-    for (events.columns) |column| {
+    for (meta.columns) |column| {
         bytes_per_row += column;
     }
 
-    if (bytes_per_row != events.NAXIS1) {
+    if (bytes_per_row != meta.NAXIS1) {
         std.debug.print("critical error: bytes_per_row != NAXIS1\n", .{});
         return error.Oops;
     }
 
-    const x_offset = get_column_offset(events.columns, events.ix - 1);
-    const y_offset = get_column_offset(events.columns, events.iy - 1);
-    const upi_offset = get_column_offset(events.columns, events.iupi - 1);
+    const x_offset = get_column_offset(meta.columns, meta.ix - 1);
+    const y_offset = get_column_offset(meta.columns, meta.iy - 1);
+    const upi_offset = get_column_offset(meta.columns, meta.iupi - 1);
 
     print("x_offset = {d}, y_offset = {d}, upi_offset = {d}\n", .{ x_offset, y_offset, upi_offset });
 
     // allocate the arrays
-    const x = try allocator.alloc(i16, events.NAXIS2);
-    const y = try allocator.alloc(i16, events.NAXIS2);
-    const upi = try allocator.alloc(f32, events.NAXIS2);
+    const x = try allocator.alloc(i16, meta.NAXIS2);
+    const y = try allocator.alloc(i16, meta.NAXIS2);
+    const upi = try allocator.alloc(f32, meta.NAXIS2);
 
     // sxs_offset now points to the start of the binary data
-    const data = sxs[sxs_offset .. sxs_offset + events.NAXIS2 * events.NAXIS1];
+    const data = sxs[sxs_offset .. sxs_offset + meta.NAXIS2 * meta.NAXIS1];
 
     var offset: usize = 0;
     var i: usize = 0;
 
     // go through all the rows
-    while (i < events.NAXIS2) {
+    while (i < meta.NAXIS2) {
         const x_arr = data[offset + x_offset .. offset + x_offset + 2];
         const y_arr = data[offset + y_offset .. offset + y_offset + 2];
         const upi_arr = data[offset + upi_offset .. offset + upi_offset + 4];
@@ -286,10 +293,10 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
         upi[i] = @bitCast(f32, upi_value);
 
         i += 1;
-        offset += events.NAXIS1;
+        offset += meta.NAXIS1;
     }
 
-    return events;
+    return XEvents{ .num_events = meta.NAXIS2, .x = x, .y = y, .energy = upi };
 }
 
 pub fn main() !void {
@@ -307,7 +314,5 @@ pub fn main() !void {
     duration /= 1_000_000;
 
     std.debug.print("Zig elapsed time: {d:.6} ms\n", .{duration});
-
-    const num_events = events.NAXIS2;
-    std.debug.print("num_events = {d}\n", .{num_events});
+    std.debug.print("num_events = {d}\n", .{events.num_events});
 }
