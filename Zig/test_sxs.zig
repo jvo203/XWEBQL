@@ -283,9 +283,9 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
 
     // go through all the rows
     while (i < meta.NAXIS2) {
-        x[i] = std.mem.readIntSliceBig(i16, data[offset + x_offset .. offset + x_offset + 2]);
-        y[i] = std.mem.readIntSliceBig(i16, data[offset + y_offset .. offset + y_offset + 2]);
-        upi[i] = @bitCast(f32, std.mem.readIntSliceBig(i32, data[offset + upi_offset .. offset + upi_offset + 4]));
+        x[i] = std.mem.readIntSliceBig(i16, data[offset + x_offset ..]);
+        y[i] = std.mem.readIntSliceBig(i16, data[offset + y_offset ..]);
+        upi[i] = @bitCast(f32, std.mem.readIntSliceBig(i32, data[offset + upi_offset ..]));
 
         i += 1;
         offset += meta.NAXIS1;
@@ -308,6 +308,11 @@ pub fn main() !void {
     var duration: f64 = @intToFloat(f64, std.time.nanoTimestamp() - start);
     duration /= 1_000_000;
 
-    std.debug.print("Zig elapsed time: {d:.6} ms\n", .{duration});
-    std.debug.print("num_events = {d}\n", .{events.num_events});
+    std.debug.print("num_events = {d}, Zig elapsed time: {d:.6} ms\n", .{ events.num_events, duration });
+
+    // print the first values
+    print("x[0] = {d}, y[0] = {d}, energy[0] = {}\n", .{ events.x[0], events.y[0], events.energy[0] });
+
+    // print the last values
+    print("x[{d}] = {d}, y[{d}] = {d}, energy[{d}] = {}\n", .{ events.num_events - 1, events.x[events.num_events - 1], events.num_events - 1, events.y[events.num_events - 1], events.num_events - 1, events.energy[events.num_events - 1] });
 }
