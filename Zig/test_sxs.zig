@@ -22,9 +22,9 @@ const XEvents = struct {
     energy: []f32,
 };
 
-fn hdr_get_int_value(line: []const u8) !i32 {
+fn hdr_get_int_value(comptime T: type, line: []const u8) !T {
     const str = std.mem.trim(u8, line[10..FITS_LINE_LENGTH], " \r\n\t");
-    return try std.fmt.parseInt(i32, str, 10);
+    return try std.fmt.parseInt(T, str, 10);
 }
 
 fn hdr_get_string_value(line: []const u8) ?[]const u8 {
@@ -116,17 +116,17 @@ fn scan_table_header(header: []const u8, events: *XEventsMeta, allocator: Alloca
 
         // get the "NAXIS1" keyword
         if (std.mem.eql(u8, line[0..10], "NAXIS1  = ")) {
-            events.NAXIS1 = @intCast(usize, try hdr_get_int_value(line));
+            events.NAXIS1 = try hdr_get_int_value(usize, line);
         }
 
         // get the "NAXIS2" keyword
         if (std.mem.eql(u8, line[0..10], "NAXIS2  = ")) {
-            events.NAXIS2 = @intCast(usize, try hdr_get_int_value(line));
+            events.NAXIS2 = try hdr_get_int_value(usize, line);
         }
 
         // get the "TFIELDS" keyword
         if (std.mem.eql(u8, line[0..10], "TFIELDS = ")) {
-            events.TFIELDS = @intCast(usize, try hdr_get_int_value(line));
+            events.TFIELDS = try hdr_get_int_value(usize, line);
 
             // allocate the columns array
             if (events.TFIELDS > 0) {
