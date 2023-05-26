@@ -5,7 +5,7 @@ const Allocator = std.mem.Allocator;
 const FITS_CHUNK_LENGTH = 2880;
 const FITS_LINE_LENGTH = 80;
 
-const XEventsMeta = struct {
+const XMeta = struct {
     NAXIS1: usize,
     NAXIS2: usize,
     TFIELDS: usize,
@@ -21,6 +21,11 @@ const XEvents = struct {
     y: []i16,
     energy: []f32,
 };
+
+// get the number of CPU cores
+fn getMaxThreads() usize {
+    return @max(1, std.Thread.getCpuCount() catch 1);
+}
 
 fn hdr_get_int_value(comptime T: type, line: []const u8) !T {
     const str = std.mem.trim(u8, line[10..FITS_LINE_LENGTH], " \r\n\t");
@@ -100,7 +105,7 @@ fn has_table_extension(header: []const u8) bool {
     return std.mem.eql(u8, header[0..20], "XTENSION= 'BINTABLE'");
 }
 
-fn scan_table_header(header: []const u8, events: *XEventsMeta, allocator: Allocator) !bool {
+fn scan_table_header(header: []const u8, events: *XMeta, allocator: Allocator) !bool {
 
     // process the header one line at a time
     var i: usize = 0;
@@ -235,7 +240,7 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
         return error.Oops;
     }
 
-    var meta = XEventsMeta{ .NAXIS1 = undefined, .NAXIS2 = undefined, .TFIELDS = undefined, .ix = undefined, .iy = undefined, .iupi = undefined, .columns = undefined };
+    var meta = XMeta{ .NAXIS1 = undefined, .NAXIS2 = undefined, .TFIELDS = undefined, .ix = undefined, .iy = undefined, .iupi = undefined, .columns = undefined };
 
     // scan the table header
     while (sxs_offset < stats.size) {
@@ -247,7 +252,7 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
         }
     }
 
-    // print the XEventsMeta struct
+    // print the XMeta struct
     print("NAXIS1 = {d}\n", .{meta.NAXIS1});
     print("NAXIS2 = {d}\n", .{meta.NAXIS2});
     print("TFIELDS = {d}\n", .{meta.TFIELDS});
@@ -280,6 +285,8 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
 
     var offset: usize = 0;
     var i: usize = 0;
+
+    print("num_cores: {d}\n", .{getMaxThreads()});
 
     // go through all the rows
     while (i < meta.NAXIS2) {
