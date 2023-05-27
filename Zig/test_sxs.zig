@@ -22,9 +22,11 @@ const XEvents = struct {
     energy: []f32,
 };
 
+const Thread = std.Thread;
+
 // get the number of CPU cores
 fn getNumCores() usize {
-    return @max(1, std.Thread.getCpuCount() catch 1);
+    return @max(1, Thread.getCpuCount() catch 1);
 }
 
 fn hdr_get_int_value(comptime T: type, line: []const u8) !T {
@@ -198,6 +200,20 @@ fn get_column_offset(columns: []i32, index: i32) usize {
     return @intCast(usize, offset);
 }
 
+fn read_sxs_threaded(data: []const u8, x: []i16, y: []i16, upi: []f32, num_events: usize, x_offset: usize, y_offset: usize, upi_offset: usize, stride: usize) void {
+    var offset: usize = 0;
+    var i: usize = 0;
+
+    while (i < num_events) {
+        x[i] = std.mem.readIntSliceBig(i16, data[offset + x_offset ..]);
+        y[i] = std.mem.readIntSliceBig(i16, data[offset + y_offset ..]);
+        upi[i] = @bitCast(f32, std.mem.readIntSliceBig(i32, data[offset + upi_offset ..]));
+
+        i += 1;
+        offset += stride;
+    }
+}
+
 fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
 
     // open the file, get a file descriptor
@@ -284,21 +300,15 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
     const data = sxs[sxs_offset .. sxs_offset + meta.NAXIS2 * meta.NAXIS1];
 
     var offset: usize = 0;
+    _ = offset;
     var i: usize = 0;
+    _ = i;
 
     const maxThreads = @min(16, getNumCores());
 
     print("num_cores: {d}, max_threads: {d}\n", .{ getNumCores(), maxThreads });
 
-    // go through all the rows
-    while (i < meta.NAXIS2) {
-        x[i] = std.mem.readIntSliceBig(i16, data[offset + x_offset ..]);
-        y[i] = std.mem.readIntSliceBig(i16, data[offset + y_offset ..]);
-        upi[i] = @bitCast(f32, std.mem.readIntSliceBig(i32, data[offset + upi_offset ..]));
-
-        i += 1;
-        offset += meta.NAXIS1;
-    }
+    read_sxs_threaded(data, x, y, upi, meta.NAXIS2, x_offset, y_offset, upi_offset, meta.NAXIS1);
 
     return XEvents{ .num_events = meta.NAXIS2, .x = x, .y = y, .energy = upi };
 }
