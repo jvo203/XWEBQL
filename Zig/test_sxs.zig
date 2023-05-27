@@ -23,7 +23,7 @@ const XEvents = struct {
 };
 
 // get the number of CPU cores
-fn getMaxThreads() usize {
+fn getNumCores() usize {
     return @max(1, std.Thread.getCpuCount() catch 1);
 }
 
@@ -286,7 +286,9 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
     var offset: usize = 0;
     var i: usize = 0;
 
-    print("num_cores: {d}\n", .{getMaxThreads()});
+    const maxThreads = @min(16, getNumCores());
+
+    print("num_cores: {d}, max_threads: {d}\n", .{ getNumCores(), maxThreads });
 
     // go through all the rows
     while (i < meta.NAXIS2) {
