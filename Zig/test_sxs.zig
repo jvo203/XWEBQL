@@ -311,11 +311,7 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
 
     while (i < num_threads) {
         const offset = i * work_size;
-        var size = work_size;
-
-        if (i == num_threads - 1) {
-            size = meta.NAXIS2 - offset;
-        }
+        const size = if (i == num_threads - 1) (meta.NAXIS2 - offset) else work_size;
 
         //read_sxs_threaded(data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], upi[offset..], size, x_offset, y_offset, upi_offset, meta.NAXIS1);
         handles[i] = try Thread.spawn(.{}, read_sxs_threaded, .{ data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], upi[offset..], size, x_offset, y_offset, upi_offset, meta.NAXIS1 });
