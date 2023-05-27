@@ -305,7 +305,9 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
     var i: usize = 0;
     const work_size = meta.NAXIS2 / num_threads;
 
-    var handles: [16]Thread = undefined;
+    // create an array of <num_threads> Thread handles
+    const handles = try allocator.alloc(Thread, num_threads);
+    defer allocator.free(handles);
 
     while (i < num_threads) {
         const offset = i * work_size;
