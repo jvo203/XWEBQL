@@ -315,7 +315,7 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
 
         //read_sxs_threaded(data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], upi[offset..], size, x_offset, y_offset, upi_offset, meta.NAXIS1);
         handles[i] = try Thread.spawn(.{}, read_sxs_threaded, .{ data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], upi[offset..], size, x_offset, y_offset, upi_offset, meta.NAXIS1 });
-        i = i + 1;
+        i += 1;
     }
 
     for (handles) |handle| {
