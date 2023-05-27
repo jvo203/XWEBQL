@@ -299,16 +299,30 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
     // sxs_offset now points to the start of the binary data
     const data = sxs[sxs_offset .. sxs_offset + meta.NAXIS2 * meta.NAXIS1];
 
-    var offset: usize = 0;
-    _ = offset;
+    const num_threads = @min(16, getNumCores());
+    print("num_cores: {d}, num_threads: {d}\n", .{ getNumCores(), num_threads });
+
     var i: usize = 0;
-    _ = i;
+    const work_size = meta.NAXIS2 / num_threads;
 
-    const maxThreads = @min(16, getNumCores());
+    var handles: [16]Thread = undefined;
 
-    print("num_cores: {d}, max_threads: {d}\n", .{ getNumCores(), maxThreads });
+    while (i < num_threads) {
+        const offset = i * work_size;
+        var size = work_size;
 
-    read_sxs_threaded(data, x, y, upi, meta.NAXIS2, x_offset, y_offset, upi_offset, meta.NAXIS1);
+        if (i == num_threads - 1) {
+            size = meta.NAXIS2 - offset;
+        }
+
+        //read_sxs_threaded(data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], upi[offset..], size, x_offset, y_offset, upi_offset, meta.NAXIS1);
+        handles[i] = try Thread.spawn(.{}, read_sxs_threaded, .{ data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], upi[offset..], size, x_offset, y_offset, upi_offset, meta.NAXIS1 });
+        i = i + 1;
+    }
+
+    for (handles) |handle| {
+        handle.join();
+    }
 
     return XEvents{ .num_events = meta.NAXIS2, .x = x, .y = y, .energy = upi };
 }
