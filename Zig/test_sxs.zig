@@ -200,11 +200,11 @@ fn get_column_offset(columns: []i32, index: i32) usize {
     return @intCast(usize, offset);
 }
 
-fn read_sxs_threaded(data: []const u8, x: []i16, y: []i16, upi: []f32, num_events: usize, x_offset: usize, y_offset: usize, upi_offset: usize, stride: usize) void {
+fn read_sxs_threaded(data: []const u8, x: []i16, y: []i16, upi: []f32, size: usize, x_offset: usize, y_offset: usize, upi_offset: usize, stride: usize) void {
     var offset: usize = 0;
     var i: usize = 0;
 
-    while (i < num_events) {
+    while (i < size) {
         x[i] = std.mem.readIntSliceBig(i16, data[offset + x_offset ..]);
         y[i] = std.mem.readIntSliceBig(i16, data[offset + y_offset ..]);
         upi[i] = @bitCast(f32, std.mem.readIntSliceBig(i32, data[offset + upi_offset ..]));
