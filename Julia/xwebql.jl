@@ -244,7 +244,7 @@ end
 
 
 function serveROOT(request::HTTP.Request)
-    # @show request
+    @show request
     # @show request.method
     # @show HTTP.header(request, "Content-Type")
     # @show HTTP.payload(request)
@@ -265,9 +265,9 @@ function serveROOT(request::HTTP.Request)
 end
 
 const XROUTER = HTTP.Router()
+#HTTP.register!(XROUTER, "GET", "/exit", gracefullyShutdown)
+#HTTP.register!(XROUTER, "GET", "/get_directory", serveDirectory)
 HTTP.register!(XROUTER, "GET", "/", serveROOT)
-HTTP.register!(XROUTER, "GET", "/exit", gracefullyShutdown)
-HTTP.register!(XROUTER, "GET", "/get_directory", serveDirectory)
 
 println("$SERVER_STRING")
 println("DATASET TIMEOUT: $(TIMEOUT)s")
@@ -315,7 +315,7 @@ end
 ws_handle(req) = SERVER_STRING |> WebSockets.Response
 const ws_server = WebSockets.ServerWS(ws_handle, ws_gatekeeper)
 
-@async WebSockets.serve(ws_server, host, WS_PORT)
+Threads.@spawn :interactive WebSockets.serve(ws_server, host, WS_PORT)
 
 try
     HTTP.serve(XROUTER, host, UInt16(HTTP_PORT))
