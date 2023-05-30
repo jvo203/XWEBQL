@@ -244,7 +244,7 @@ end
 
 
 function serveROOT(request::HTTP.Request)
-    @show request
+    # @show request
     # @show request.method
     # @show HTTP.header(request, "Content-Type")
     # @show HTTP.payload(request)
