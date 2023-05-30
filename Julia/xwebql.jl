@@ -243,7 +243,7 @@ function gracefullyShutdown(request::HTTP.Request)
 end
 
 
-function serveROOT(request::HTTP.Request)
+function serveDocument(request::HTTP.Request)
     # @show request
     # @show request.method
     # @show HTTP.header(request, "Content-Type")
@@ -265,10 +265,10 @@ function serveROOT(request::HTTP.Request)
 end
 
 const XROUTER = HTTP.Router()
-HTTP.register!(XROUTER, "GET", "/", serveROOT)
+HTTP.register!(XROUTER, "GET", "/", serveDocument)
 HTTP.register!(XROUTER, "GET", "/exit", gracefullyShutdown)
 HTTP.register!(XROUTER, "GET", "/get_directory", serveDirectory)
-HTTP.register!(XROUTER, "GET", "*", serveROOT)
+HTTP.register!(XROUTER, "GET", "*", serveDocument)
 
 println("$SERVER_STRING")
 println("DATASET TIMEOUT: $(TIMEOUT)s")
