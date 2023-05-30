@@ -265,9 +265,10 @@ function serveROOT(request::HTTP.Request)
 end
 
 const XROUTER = HTTP.Router()
-#HTTP.register!(XROUTER, "GET", "/exit", gracefullyShutdown)
-#HTTP.register!(XROUTER, "GET", "/get_directory", serveDirectory)
 HTTP.register!(XROUTER, "GET", "/", serveROOT)
+HTTP.register!(XROUTER, "GET", "/exit", gracefullyShutdown)
+HTTP.register!(XROUTER, "GET", "/get_directory", serveDirectory)
+HTTP.register!(XROUTER, "GET", "*", serveROOT)
 
 println("$SERVER_STRING")
 println("DATASET TIMEOUT: $(TIMEOUT)s")
