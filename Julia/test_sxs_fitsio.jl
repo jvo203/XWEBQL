@@ -1,6 +1,7 @@
 using FITSIO
 
-sxs = homedir() * "/NAO/JAXA/ah100040060sxs_p0px1010_cl.evt"
+sxs = "file://" * homedir() * "/NAO/JAXA/ah100040060sxs_p0px1010_cl.evt"
+println(sxs)
 f = FITS(sxs)
 
 for hdu in f
