@@ -1,4 +1,4 @@
 mutable struct XDataSet
-    filepath::String
+    uri::String
     # metadata
 end
