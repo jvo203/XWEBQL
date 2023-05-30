@@ -320,8 +320,7 @@ const ws_server = WebSockets.ServerWS(ws_handle, ws_gatekeeper)
 try
     HTTP.serve(XROUTER, host, UInt16(HTTP_PORT))
 catch e
-    println(e)
-    warn(e)
+    @warn(e)
     typeof(e) == InterruptException && rethrow(e)
 finally
     exitFunc()
