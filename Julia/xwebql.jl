@@ -216,9 +216,11 @@ function serveDirectory(request::HTTP.Request)
 end
 
 function exitFunc(exception=false)
-    global ws_server
+    global ws_server, gc_task
 
     @info "shutting down XWEBQL ..."
+
+    @async Base.throwto(gc_task, InterruptException())
 
     remove_symlinks()
 
@@ -444,6 +446,40 @@ ws_handle(req) = SERVER_STRING |> WebSockets.Response
 const ws_server = WebSockets.ServerWS(ws_handle, ws_gatekeeper)
 
 Threads.@spawn :interactive WebSockets.serve(ws_server, host, WS_PORT)
+
+if TIMEOUT > 0
+    # a garbage collection loop (dataset timeout)
+    global gc_task = @async while true
+        sleep(10)
+
+        # purge datasets
+        for (datasetid, xobject) in XOBJECTS
+            elapsed = datetime2unix(now()) - xobject.last_accessed[]
+
+            if elapsed > TIMEOUT
+                println("Purging a dataset '$datasetid' ...")
+
+                lock(XLOCK)
+
+                try
+                    xobject = pop!(XOBJECTS, datasetid)
+                    println("Removed '$(xobject.id)' .")
+                    finalize(xobject)
+                catch e
+                    println("Failed to remove a dataset: $e")
+                finally
+                    unlock(LOCK)
+                end
+
+                # do not wait, trigger garbage collection *NOW*
+                GC.gc()
+
+                # yet another run to trigger finalizers ...
+                GC.gc()
+            end
+        end
+    end
+end
 
 try
     HTTP.serve(XROUTER, host, UInt16(HTTP_PORT))
