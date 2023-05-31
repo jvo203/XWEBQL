@@ -240,7 +240,6 @@ function gracefullyShutdown(request::HTTP.Request)
     return HTTP.Response(200, "Shutting down $(SERVER_STRING)")
 end
 
-
 function serveDocument(request::HTTP.Request)
     # @show request
     # @show request.method
@@ -262,10 +261,15 @@ function serveDocument(request::HTTP.Request)
     return serveFile(path)
 end
 
+function serveXEvents(request::HTTP.Request)
+    return HTTP.Response(501, "Not Implemented")
+end
+
 const XROUTER = HTTP.Router()
 HTTP.register!(XROUTER, "GET", "/", serveDocument)
 HTTP.register!(XROUTER, "GET", "/exit", gracefullyShutdown)
 HTTP.register!(XROUTER, "GET", "/get_directory", serveDirectory)
+HTTP.register!(XROUTER, "GET", "/xwebql/open.html", serveXEvents)
 HTTP.register!(XROUTER, "GET", "*", serveDocument)
 
 println("$SERVER_STRING")
