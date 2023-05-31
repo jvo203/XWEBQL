@@ -1,3 +1,4 @@
+using Distributed
 using FITSIO
 
 mutable struct XDataSet
