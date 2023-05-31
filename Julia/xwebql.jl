@@ -220,11 +220,37 @@ function exitFunc(exception=false)
 
     @info "shutting down XWEBQL ..."
 
+    remove_symlinks()
+
     try
         #println("WebSocket Server .out channel: ", string(take!(ws_server.out)))
         close(ws_server)
     catch e
         println(e)
+    end
+
+    # empty XOBJECTS
+    for (key, value) in XOBJECTS
+        println("Purging a dataset '$key' ...")
+        println("id: $(value.id), uri: $(value.uri)")
+
+        lock(XLOCK)
+
+        try
+            xobject = pop!(XOBJECTS, key)
+            println("Removed '$(xobject.id)' .")
+            finalize(xobject)
+        catch e
+            println("Failed to remove a dataset: $e")
+        finally
+            unlock(XLOCK)
+        end
+
+        # do not wait, trigger garbage collection *NOW*
+        GC.gc()
+
+        # yet another run to trigger finalizers ...
+        GC.gc()
     end
 
     @info "XWEBQL shutdown completed."
@@ -278,6 +304,25 @@ function create_root_path(root_path)
     end
 end
 
+function remove_symlinks()
+    # scan HT_DOCS for any symlinks and remove them
+
+    foreach(readdir(HT_DOCS, join=true)) do f
+
+        # is it a symbolic link ?
+        if islink(f)
+            # if so remove it
+            try
+                println("removing a symbolic link $f")
+                rm(f)
+            catch err
+                println(err)
+            end
+        end
+
+    end
+end
+
 function serveXEvents(request::HTTP.Request)
     global XOBJECTS, XLOCK
 
@@ -318,9 +363,29 @@ function serveXEvents(request::HTTP.Request)
     println("dataset: \"$dataset\"")
     println("ext: \"$ext\"")
 
-    has_events = dataset_exists(dataset, XOBJECTS, XLOCK)
+    if !dataset_exists(dataset, XOBJECTS, XLOCK)
+        local uri = ""
 
-    println("has_events: $has_events")
+        if dir != ""
+            uri = "file://" * dir * "/" * dataset
+
+            if ext != ""
+                uri *= "." * ext
+            end
+        else
+            uri = dataset
+        end
+
+        # create a new dataset
+        xdataset = XDataSet(dataset, uri)
+        finalizer(finale, xdataset)
+
+        # insert the dataset into the global list
+        insert_dataset(xdataset, XOBJECTS, XLOCK)
+
+        # start a new event processing thread
+        Threads.@spawn load_events(xdataset, uri)
+    end
 
     return HTTP.Response(501, "Not Implemented")
 end
@@ -329,7 +394,7 @@ const XROUTER = HTTP.Router()
 HTTP.register!(XROUTER, "GET", "/", serveDocument)
 HTTP.register!(XROUTER, "GET", "/exit", gracefullyShutdown)
 HTTP.register!(XROUTER, "GET", "/get_directory", serveDirectory)
-HTTP.register!(XROUTER, "GET", "/xwebql/events.html", serveXEvents)
+HTTP.register!(XROUTER, "GET", "/*/events.html", serveXEvents)
 HTTP.register!(XROUTER, "GET", "*", serveDocument)
 
 println("$SERVER_STRING")
