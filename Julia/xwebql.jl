@@ -216,9 +216,11 @@ function serveDirectory(request::HTTP.Request)
 end
 
 function exitFunc(exception=false)
-    global ws_server, gc_task
+    global ws_server, gc_task, running
 
-    @async Base.throwto(gc_task, InterruptException())
+    running = false
+    #@async Base.throwto(gc_task, InterruptException())
+    #wait(gc_task)
 
     @info "shutting down XWEBQL ..."
 
@@ -249,10 +251,10 @@ function exitFunc(exception=false)
         end
 
         # do not wait, trigger garbage collection *NOW*
-        #GC.gc()
+        GC.gc()
 
         # yet another run to trigger finalizers ...
-        #GC.gc()
+        GC.gc()
     end
 
     @info "XWEBQL shutdown completed."
@@ -260,6 +262,7 @@ function exitFunc(exception=false)
 end
 
 # the SIGINT will be caught later on
+running = true
 Base.exit_on_sigint(false)
 
 function gracefullyShutdown(request::HTTP.Request)
@@ -387,6 +390,10 @@ function serveXEvents(request::HTTP.Request)
 
         # start a new event processing thread
         Threads.@spawn load_events(xdataset, uri)
+    else
+        # update_timestamp
+        xdataset = get_dataset(dataset, XOBJECTS, XLOCK)
+        update_timestamp(xdataset)
     end
 
     return HTTP.Response(501, "Not Implemented")
@@ -448,7 +455,7 @@ const ws_server = WebSockets.ServerWS(ws_handle, ws_gatekeeper)
 Threads.@spawn :interactive WebSockets.serve(ws_server, host, WS_PORT)
 
 # a garbage collection loop (dataset timeout)
-global gc_task = @async garbage_collector(XOBJECTS, XLOCK, TIMEOUT)
+# global gc_task = @async garbage_collector(XOBJECTS, XLOCK, TIMEOUT)
 
 try
     HTTP.serve(XROUTER, host, UInt16(HTTP_PORT))

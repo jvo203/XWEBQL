@@ -2,7 +2,7 @@ using Dates
 using Distributed
 using FITSIO
 
-finale(x) = @async println("Finalizing $(x.id).$(x.uri)\n")
+finale(x) = @async println("Finalizing $(x.id).$(x.uri)")
 
 mutable struct XDataSet
     id::String
@@ -72,13 +72,17 @@ function get_dataset(datasetid::String, xobjects, xlock)::XDataSet
 end
 
 function garbage_collector(xobjects, xlock, timeout::Int64)
+    global running
+
     if timeout <= 0
         return
     end
 
     try
-        while true
+        while running
+            println("sleeping ...")
             sleep(10)
+            println("done sleeping.")
 
             # purge datasets
             for (datasetid, xobject) in xobjects
@@ -100,19 +104,20 @@ function garbage_collector(xobjects, xlock, timeout::Int64)
                     end
 
                     # do not wait, trigger garbage collection *NOW*
-                    #GC.gc()
+                    GC.gc()
 
                     # yet another run to trigger finalizers ...
-                    #GC.gc()
+                    GC.gc()
                 end
             end
         end
     catch e
+        global running = false
         @warn(e)
-        typeof(e) == InterruptException && rethrow(e)
-    finally
-        @info "Garbage collection loop terminated."
+        #typeof(e) == InterruptException && rethrow(e)        
     end
+
+    @info "Garbage collection loop terminated."
 end
 
 function load_events(xdataset::XDataSet, uri::String)
