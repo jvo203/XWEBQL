@@ -71,6 +71,50 @@ function get_dataset(datasetid::String, xobjects, xlock)::XDataSet
     return dataset
 end
 
+function garbage_collector(xobjects, xlock, timeout::Int64)
+    if timeout <= 0
+        return
+    end
+
+    try
+        while true
+            sleep(10)
+
+            # purge datasets
+            for (datasetid, xobject) in xobjects
+                elapsed = datetime2unix(now()) - xobject.last_accessed[]
+
+                if elapsed > timeout
+                    println("Purging a dataset '$datasetid' ...")
+
+                    lock(xlock)
+
+                    try
+                        xobject = pop!(XOBJECTS, datasetid)
+                        println("Removed '$(xobject.id)' .")
+                        finalize(xobject)
+                    catch e
+                        println("Failed to remove a dataset: $e")
+                    finally
+                        unlock(xlock)
+                    end
+
+                    # do not wait, trigger garbage collection *NOW*
+                    #GC.gc()
+
+                    # yet another run to trigger finalizers ...
+                    #GC.gc()
+                end
+            end
+        end
+    catch e
+        @warn(e)
+        typeof(e) == InterruptException && rethrow(e)
+    finally
+        @info "Garbage collection loop terminated."
+    end
+end
+
 function load_events(xdataset::XDataSet, uri::String)
     println("loading $uri::$(xdataset.id)")
 end
