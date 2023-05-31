@@ -1,5 +1,4 @@
 using ArgParse
-using Distributed
 using HTTP
 using JSON
 using Sockets
@@ -184,7 +183,7 @@ function serveDirectory(request::HTTP.Request)
                 if isfile(path)
 
                     # filter the filenames
-                    if endswith(filename, ".evt") || endswith(filename, ".evt.gz")
+                    if (endswith(filename, "_cl.evt") || endswith(filename, "_cl.evt.gz")) && contains(filename, "sxs")
 
                         dict = Dict(
                             "type" => "file",
