@@ -261,7 +261,67 @@ function serveDocument(request::HTTP.Request)
     return serveFile(path)
 end
 
+
+function create_root_path(root_path)
+    link = HT_DOCS * Base.Filesystem.path_separator * root_path
+
+    if !isdir(link)
+        target = "xwebql"
+        println("making a symbolic link $link --> $target")
+
+        try
+            symlink(target, link)
+        catch err
+            println(err)
+        end
+
+    end
+end
+
 function serveXEvents(request::HTTP.Request)
+    global XOBJECTS, XLOCK
+
+    root_path = HTTP.URIs.splitpath(request.target)[1]
+
+    params = HTTP.queryparams(HTTP.URI(request.target))
+
+    println("root path: \"$root_path\"")
+    # println(params)
+
+    create_root_path(root_path)
+
+    dir = ""
+    dataset = ""
+    ext = ""
+
+    try
+        ext = params["ext"]
+    catch _
+    end
+
+    try
+        dir = params["dir"]
+    catch _
+    end
+
+    try
+        dataset = params["filename"]
+    catch _
+    end
+
+    try
+        dataset = params["uri"]
+    catch _
+    end
+
+    println("dir: \"$dir\"")
+    println("dataset: \"$dataset\"")
+    println("ext: \"$ext\"")
+
+    has_events = dataset_exists(dataset, XOBJECTS, XLOCK)
+
+    println("has_events: $has_events")
+
     return HTTP.Response(501, "Not Implemented")
 end
 
