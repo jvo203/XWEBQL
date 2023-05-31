@@ -269,7 +269,7 @@ const XROUTER = HTTP.Router()
 HTTP.register!(XROUTER, "GET", "/", serveDocument)
 HTTP.register!(XROUTER, "GET", "/exit", gracefullyShutdown)
 HTTP.register!(XROUTER, "GET", "/get_directory", serveDirectory)
-HTTP.register!(XROUTER, "GET", "/xwebql/open.html", serveXEvents)
+HTTP.register!(XROUTER, "GET", "/xwebql/events.html", serveXEvents)
 HTTP.register!(XROUTER, "GET", "*", serveDocument)
 
 println("$SERVER_STRING")
