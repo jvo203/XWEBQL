@@ -218,22 +218,21 @@ end
 function exitFunc(exception=false)
     global ws_server
 
+    @info "shutting down XWEBQL ..."
+
     try
-        println("WebSocket Server .out channel: ", string(take!(ws_server.out)))
+        #println("WebSocket Server .out channel: ", string(take!(ws_server.out)))
         close(ws_server)
     catch e
         println(e)
     end
 
-    @info "XWEBQL shutdown."
+    @info "XWEBQL shutdown completed."
     exit()
 end
 
-if Base.isinteractive()
-    Base.exit_on_sigint(false)
-else
-    Base.atexit(exitFunc)
-end
+# the SIGINT will be caught later on
+Base.exit_on_sigint(false)
 
 function gracefullyShutdown(request::HTTP.Request)
     @async exitFunc(true)
