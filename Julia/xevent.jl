@@ -9,17 +9,24 @@ mutable struct XDataSet
     uri::String
     # metadata
 
+    # data
+    x::Any
+    y::Any
+    energy::Any
+    pixels::Any
+    mask::Any
+
     # house-keeping
     has_events::Threads.Atomic{Bool}
     has_error::Threads.Atomic{Bool}
     last_accessed::Threads.Atomic{Float64}
 
     function XDataSet()
-        new("", "", Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(0.0))
+        new("", "", Nothing, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(0.0))
     end
 
     function XDataSet(id::String, uri::String)
-        new(id, uri, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(datetime2unix(now())))
+        new(id, uri, Nothing, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(datetime2unix(now())))
     end
 end
 
