@@ -8,6 +8,7 @@ mutable struct XDataSet
     id::String
     uri::String
     # metadata
+    num_events::Integer
 
     # data
     x::Any
@@ -22,11 +23,11 @@ mutable struct XDataSet
     last_accessed::Threads.Atomic{Float64}
 
     function XDataSet()
-        new("", "", Nothing, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(0.0))
+        new("", "", 0, Nothing, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(0.0))
     end
 
     function XDataSet(id::String, uri::String)
-        new(id, uri, Nothing, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(datetime2unix(now())))
+        new(id, uri, 0, Nothing, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(datetime2unix(now())))
     end
 end
 
@@ -129,4 +130,32 @@ end
 
 function load_events(xdataset::XDataSet, uri::String)
     println("loading $uri::$(xdataset.id)")
+
+    f = FITS(uri)
+
+    for hdu in f
+        println(typeof(hdu))
+    end
+
+    try
+        @time begin
+            x = read(f[2], "X")
+            y = read(f[2], "Y")
+            energy = read(f[2], "UPI")
+        end
+
+        nevents = length(x)
+        println("nevents = ", nevents)
+
+        xdataset.num_events = nevents
+        xdataset.x = x
+        xdataset.y = y
+        xdataset.energy = energy
+        xdataset.has_events[] = true
+    catch e
+        println("Failed to load events: $e")
+        xdataset.has_error[] = true
+    end
+
+    close(f)
 end
