@@ -133,10 +133,6 @@ function load_events(xdataset::XDataSet, uri::String)
 
     f = FITS(uri)
 
-    for hdu in f
-        println(typeof(hdu))
-    end
-
     try
         @time begin
             x = read(f[2], "X")
@@ -155,6 +151,8 @@ function load_events(xdataset::XDataSet, uri::String)
     catch e
         println("Failed to load events: $e")
         xdataset.has_error[] = true
+    finally
+        update_timestamp(xdataset)
     end
 
     close(f)
