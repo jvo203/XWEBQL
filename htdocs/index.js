@@ -192,6 +192,8 @@ function main() {
 
     if (theme == 'dark') {
         document.getElementById("logo").style.filter = "invert(100%) grayscale(100%)";
+    } else {
+        document.getElementById("isas").style.filter = "invert(100%) grayscale(100%)";
     }
 
     //fetch the home directory first
