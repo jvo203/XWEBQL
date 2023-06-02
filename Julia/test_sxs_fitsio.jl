@@ -9,9 +9,42 @@ function truncate_spectrum(spectrum::Vector{Int64})
         i -= 1
     end
 
-    println(spectrum[1:i])
-    println("i = ", i)
     return spectrum[1:i]
+end
+
+function get_spectrum(data::Vector{Float32}, E_min::Float32, E_max::Float32, ΔE_min::Float32, dx::Int32)
+    local new_spectrum, max_energy, ΔE::Float32
+
+    #ΔE = max(ΔE_min, (E_max - E_min) / dx)
+    ΔE = (E_max - E_min) / dx
+    println("ΔE = ", ΔE)
+
+    max_energy = E_max
+
+    while ΔE >= ΔE_min
+        # prepare the histogram
+        h1 = Hist1D(data, E_min:ΔE:max_energy, overflow=false)
+        spectrum = bincounts(h1)
+        new_spectrum = truncate_spectrum(spectrum)
+        new_length = length(new_spectrum)
+
+        if new_length == length(spectrum)
+            break
+        end
+
+        # get the upper energy limit based on the new spectrum
+        max_energy = E_min + ΔE * new_length
+        println("max_energy = ", max_energy)
+
+        #ΔE = max(ΔE_min, (max_energy - E_min) / dx)
+        ΔE = (max_energy - E_min) / dx
+        println("ΔE = ", ΔE)
+
+        h1 = Hist1D(data, E_min:ΔE:max_energy, overflow=false)
+        spectrum = bincounts(h1)
+    end
+
+    return (new_spectrum, max_energy)
 end
 
 sxs = "file://" * homedir() * "/NAO/JAXA/ah100040060sxs_p0px1010_cl.evt"
@@ -47,7 +80,9 @@ E_max = Float32(1000.0) * 2^10 # eV
 spectrum = bincounts(h1)
 #println(spectrum)
 
-spectrum = truncate_spectrum(spectrum)
+@time (spectrum, E_max) = get_spectrum(energy, E_min, E_max, Float32(10.0), Int32(1024))
+
+println("E_max = ", E_max)
 
 @time h2 = Hist2D((x, y), (minimum(x)-0.5:1:maximum(x)+0.5, minimum(y)-0.5:1:maximum(y)+0.5))
 #@time h2 = Hist2D((x, y), (0.5:1:width+0.5, 0.5:1:height+0.5))
