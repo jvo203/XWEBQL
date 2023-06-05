@@ -47,6 +47,13 @@ const HT_DOCS = "htdocs"
 HTTP_PORT = 8080
 WS_PORT = HTTP_PORT + 1
 
+# parse the command-line arguments
+try
+    global HTTP_PORT = parsed_args["port"]
+    global WS_PORT = HTTP_PORT + 1
+catch _
+end
+
 include("xevent.jl")
 
 # a global list of FITS objects
@@ -340,6 +347,7 @@ function serveXEvents(request::HTTP.Request)
 
     create_root_path(root_path)
 
+    has_events = false
     dir = ""
     dataset = ""
     ext = ""
@@ -394,6 +402,7 @@ function serveXEvents(request::HTTP.Request)
         # update_timestamp
         xdataset = get_dataset(dataset, XOBJECTS, XLOCK)
         update_timestamp(xdataset)
+        has_events = true
     end
 
     return HTTP.Response(501, "Not Implemented")
