@@ -590,7 +590,7 @@ function serveXEvents(request::HTTP.Request)
     # HTML content
     va_count = 1
     write(resp, "<title>XWEBQL</title></head><body>\n")
-    write(resp, "<div id='votable' style='width: 0; height: 0;' data-va_count='$va_count' ")
+    write(resp, "<div id='htmlData' style='width: 0; height: 0;' data-va_count='$va_count' ")
     write(resp, "data-datasetId='$dataset' ")
     write(resp, "data-root-path='/$root_path/' ")
 
@@ -633,7 +633,7 @@ function serveXEvents(request::HTTP.Request)
         "var idleResize = -1;",
         "var idleWindow = -1;",
         "window.onresize = resizeMe;",
-        "window.onbeforeunload = close_websocket_connections;",
+        "window.onbeforeunload = close_websocket_connection;",
         "mainRenderer(); </script>\n",
     )
 
