@@ -584,8 +584,8 @@ function serveXEvents(request::HTTP.Request)
     write(resp, "</script>\n")
 
     # XWebQL main JavaScript + CSS
-    write(resp, "<script src=\"xwebqlse.js\"></script>\n")
-    write(resp, "<link rel=\"stylesheet\" href=\"xwebqlse.css\"/>\n")
+    write(resp, "<script src=\"xwebql.js\"></script>\n")
+    write(resp, "<link rel=\"stylesheet\" href=\"xwebql.css\"/>\n")
 
     # HTML content
     va_count = 1
