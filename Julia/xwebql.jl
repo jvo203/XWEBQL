@@ -612,6 +612,8 @@ function serveXEvents(request::HTTP.Request)
         write(resp, "' data-server-mode='SERVER")
     end
 
+    write(resp, "'></div>\n")
+
     write(resp, "<script>var WS_PORT = $WS_PORT;</script>\n")
 
     # the page entry point
