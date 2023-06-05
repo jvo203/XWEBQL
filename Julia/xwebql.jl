@@ -348,7 +348,6 @@ function serveXEvents(request::HTTP.Request)
 
     create_root_path(root_path)
 
-    has_events = false
     dir = ""
     dataset = ""
     ext = ""
@@ -403,7 +402,6 @@ function serveXEvents(request::HTTP.Request)
         # update_timestamp
         xdataset = get_dataset(dataset, XOBJECTS, XLOCK)
         update_timestamp(xdataset)
-        has_events = true
     end
 
     resp = IOBuffer()
@@ -613,9 +611,6 @@ function serveXEvents(request::HTTP.Request)
     else
         write(resp, "' data-server-mode='SERVER")
     end
-
-    has_events_str = has_events ? "1" : "0"
-    write(resp, "' data-has-events='$has_events_str'></div>\n")
 
     write(resp, "<script>var WS_PORT = $WS_PORT;</script>\n")
 

@@ -332,6 +332,13 @@ function addStylesheetRules(rules) {
     }
 }
 
+function hide_navigation_bar() {
+    try {
+        document.getElementById('menu').style.display = "none";
+        d3.select("#menu_activation_area").attr("opacity", 0.1);//was 0.7
+    } catch (e) { }
+}
+
 async function mainRenderer() {
     htmlData = document.getElementById('htmlData');
 
@@ -580,6 +587,71 @@ async function mainRenderer() {
             .attr("width", width)
             .attr("height", height)
             .attr('style', 'position: fixed; left: 10px; top: 10px; z-index: 51');
+
+        d3.select("#mainDiv").append("svg")
+            .attr("id", "BackgroundSVG")
+            .attr("width", width)
+            .attr("height", height)
+            .attr('style', 'position: fixed; left: 10px; top: 10px; z-index: 52');
+
+        d3.select("#mainDiv").append("canvas")
+            .attr("id", "ZOOMCanvas")
+            .attr("width", width)
+            .attr("height", height)
+            .attr('style', 'position: fixed; left: 10px; top: 10px; z-index: 53');
+
+        d3.select("#mainDiv").append("canvas")
+            .attr("id", "ViewportCanvas")
+            .attr("width", width)
+            .attr("height", height)
+            .attr('style', 'position: fixed; left: 10px; top: 10px; z-index: 54');
+
+
+        d3.select("#mainDiv").append("svg")
+            .attr("id", "BackSVG")
+            .attr("width", width)
+            .attr("height", height)
+            .attr('style', 'position: fixed; left: 10px; top: 10px; z-index: 55; cursor: default; mix-blend-mode: none');//difference or lighten or screen or overlay
+
+        //spectrum
+        var blend = '';
+
+        if (theme == 'bright')
+            blend = 'mix-blend-mode: difference; ';
+
+        d3.select("#mainDiv").append("canvas")
+            .attr("id", "SpectrumCanvas")
+            .attr("width", width)
+            .attr("height", height)
+            .attr('style', blend + 'position: fixed; left: 10px; top: 10px; z-index: 56');// mix-blend-mode: difference;
+
+        d3.select("#mainDiv").append("svg")
+            .attr("id", "FrontSVG")
+            .attr("width", width)
+            .attr("height", height)
+            .on("mouseenter", hide_navigation_bar)
+            .attr('style', 'position: fixed; left: 10px; top: 10px; z-index: 57; cursor: default');
+
+        // JVO logo
+        /*d3.select("#BackSVG").append("svg:image")
+            .attr("id", "jvoLogo")
+            .attr("x", (width - 1 - 199))
+            .attr("y", (height - 1 - 109))
+            .attr("xlink:href", "https://jvo.nao.ac.jp/images/JVO_logo_199x109.png")
+            .attr("width", 199)
+            .attr("height", 109)
+            .attr("opacity", 0.5);*/
+
+        // JAXA logo
+        d3.select("#BackSVG").append("svg:image")
+            .attr("id", "jvoLogo")
+            .attr("x", (width - 1 - 265))
+            .attr("y", (height - 1 - 162))
+            .attr("xlink:href", "https://www.jaxa.jp/images/logo.gif")
+            .attr("width", 265)
+            .attr("height", 162)
+            .attr("opacity", 0.5);
+
     };
 
     firstTime = false;
