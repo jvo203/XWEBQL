@@ -640,13 +640,7 @@ function serveXEvents(request::HTTP.Request)
 
     write(resp, "</body></html>")
 
-    try
-        return HTTP.Response(200, take!(resp))
-    catch e
-        return HTTP.Response(404, "Error: $e")
-    end
-
-    #return HTTP.Response(501, "Not Implemented")
+    return HTTP.Response(200, take!(resp))
 end
 
 const XROUTER = HTTP.Router()
