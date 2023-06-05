@@ -540,6 +540,9 @@ async function mainRenderer() {
         has_contours = false;
         has_preferences = false;
 
+        datasetId = htmlData.getAttribute('data-datasetId');//make it a global variable
+        console.log("datasetId:", datasetId);
+
         d3.select("body").append("div")
             .attr("id", "mainDiv")
             .attr("class", "main");
@@ -549,6 +552,34 @@ async function mainRenderer() {
         var height = Math.round(rect.height);
         document.getElementById('mainDiv').setAttribute("style", "width:" + width.toString() + "px");
         document.getElementById('mainDiv').setAttribute("style", "height:" + height.toString() + "px");
+
+        //set the default font-size (1em)
+        //emFontSize = Math.max(12, 0.011 * 0.5 * (rect.width + rect.height));
+        emFontSize = Math.max(12, 0.011 * (0.2 * rect.width + 0.8 * rect.height));
+        emStrokeWidth = Math.max(1, 0.1 * emFontSize);
+        document.body.style.fontSize = emFontSize + "px";
+        console.log("emFontSize : ", emFontSize.toFixed(2), "emStrokeWidth : ", emStrokeWidth.toFixed(2));
+
+        var width = rect.width - 20;
+        var height = rect.height - 20;
+
+        d3.select("#mainDiv").append("canvas")
+            .attr("id", "HTMLCanvas")
+            .attr("width", width)
+            .attr("height", height)
+            .attr('style', 'position: fixed; left: 10px; top: 10px; z-index: 0');
+
+        d3.select("#mainDiv").append("canvas")
+            .attr("id", "VideoCanvas")
+            .attr("width", width)
+            .attr("height", height)
+            .attr('style', 'position: fixed; left: 10px; top: 10px; z-index: 50');
+
+        d3.select("#mainDiv").append("svg")
+            .attr("id", "ContourSVG")
+            .attr("width", width)
+            .attr("height", height)
+            .attr('style', 'position: fixed; left: 10px; top: 10px; z-index: 51');
     };
 
     firstTime = false;
