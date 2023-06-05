@@ -648,6 +648,7 @@ HTTP.register!(XROUTER, "GET", "/", serveDocument)
 HTTP.register!(XROUTER, "GET", "/exit", gracefullyShutdown)
 HTTP.register!(XROUTER, "GET", "/get_directory", serveDirectory)
 HTTP.register!(XROUTER, "GET", "/*/events.html", serveXEvents)
+HTTP.register!(XROUTER, "GET", "*/*", serveDocument)
 HTTP.register!(XROUTER, "GET", "*", serveDocument)
 
 println("$SERVER_STRING")
