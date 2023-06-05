@@ -591,7 +591,7 @@ function serveXEvents(request::HTTP.Request)
     va_count = 1
     write(resp, "<title>XWEBQL</title></head><body>\n")
     write(resp, "<div id='votable' style='width: 0; height: 0;' data-va_count='$va_count' ")
-    write(resp, "data-datasetId='$datasetid' ")
+    write(resp, "data-datasetId='$dataset' ")
     write(resp, "data-root-path='/$root_path/' ")
 
     if !LOCAL_VERSION
