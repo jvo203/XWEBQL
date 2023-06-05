@@ -302,6 +302,36 @@ async function open_3d_view() {
     }
 }
 
+function addStylesheetRules(rules) {
+    var styleEl = document.createElement('style');
+
+    // Append <style> element to <head>
+    document.head.appendChild(styleEl);
+
+    // Grab style element's sheet
+    var styleSheet = styleEl.sheet;
+
+    for (var i = 0; i < rules.length; i++) {
+        var j = 1,
+            rule = rules[i],
+            selector = rule[0],
+            propStr = '';
+        // If the second argument of a rule is an array of arrays, correct our variables.
+        if (Array.isArray(rule[1][0])) {
+            rule = rule[1];
+            j = 0;
+        }
+
+        for (var pl = rule.length; j < pl; j++) {
+            var prop = rule[j];
+            propStr += prop[0] + ': ' + prop[1] + (prop[2] ? ' !important' : '') + ';\n';
+        }
+
+        // Insert CSS Rule
+        styleSheet.insertRule(selector + '{' + propStr + '}', styleSheet.cssRules.length);
+    }
+}
+
 async function mainRenderer() {
     htmlData = document.getElementById('htmlData');
 
@@ -395,9 +425,33 @@ async function mainRenderer() {
         video_fps_control = localStorage.getItem("video_fps_control");
 
     if (firstTime) {
+        console.log("theme:", theme);
+
+        if (theme == 'bright') {
+            d3.select("body")
+                .style('background-color', 'white')
+                .style('color', 'black');
+
+            d3.select("html")
+                .style('background-color', 'white')
+                .style('color', 'black');
+        } else {
+            // dynamically add the dark theme rules
+            addStylesheetRules([
+                ['.modal-content',
+                    ['background-color', 'rgb(0, 0, 0)'],
+                    ['background-color', 'rgba(0, 0, 0, 0.5)']
+                ],
+                ['.list-group-item',
+                    ['background-color', 'rgb(0, 0, 0)'],
+                    ['background-color', 'rgba(0, 0, 0, 0.5)'],
+                    ['color', 'inherit']
+                ]
+            ]);
+        }
+
         fps = 30;//target fps; 60 is OK in Chrome but a bit laggish in Firefox
         fpsInterval = 1000 / fps;
-
     };
 
     firstTime = false;
