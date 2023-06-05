@@ -23,6 +23,7 @@ end
 # parse command-line arguments (a config file, port numbers etc.)
 parsed_args = parse_commandline()
 
+LOCAL_VERSION = true
 TIMEOUT = 60 # [s]
 
 const VERSION_MAJOR = 1
@@ -405,7 +406,247 @@ function serveXEvents(request::HTTP.Request)
         has_events = true
     end
 
-    return HTTP.Response(501, "Not Implemented")
+    resp = IOBuffer()
+
+    write(resp, "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n")
+    write(
+        resp,
+        "<link href=\"https://fonts.googleapis.com/css?family=Inconsolata\" rel=\"stylesheet\"/>\n",
+    )
+    write(
+        resp,
+        "<link href=\"https://fonts.googleapis.com/css?family=Material+Icons\" rel=\"stylesheet\"/>\n",
+    )
+    write(resp, "<script src=\"https://d3js.org/d3.v7.min.js\"></script>\n")
+    write(
+        resp,
+        "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/reconnecting-websocket.min.js\"></script>\n",
+    )
+    write(
+        resp,
+        "<script src=\"//cdnjs.cloudflare.com/ajax/libs/numeral.js/2.0.6/numeral.min.js\"></script>\n",
+    )
+    write(
+        resp,
+        "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/ra_dec_conversion.min.js\"></script>\n",
+    )
+    write(
+        resp,
+        "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/sylvester.min.js\"></script>\n",
+    )
+    write(
+        resp,
+        "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/shortcut.min.js\"></script>\n",
+    )
+    write(
+        resp,
+        "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/colourmaps.min.js\"></script>\n",
+    )
+    write(
+        resp,
+        "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/lz4.min.js\"></script>\n",
+    )
+    write(
+        resp,
+        "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/marchingsquares-isocontours.min.js\" defer></script>\n",
+    )
+    write(
+        resp,
+        "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/marchingsquares-isobands.min.js\" defer></script>\n",
+    )
+
+    # Font Awesome
+    write(
+        resp,
+        "<script src=\"https://kit.fontawesome.com/8433b7dde2.js\" crossorigin=\"anonymous\"></script>\n",
+    )
+
+    # HTML5 FileSaver
+    write(resp, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/FileSaver.js\"></script>\n")
+
+    # WebAssembly
+    #=write(resp, "<script src=\"client.", WASM_VERSION, ".js\"></script>\n")
+    write(
+        resp,
+        "<script>\n",
+        "Module.ready\n",
+        "\t.then(status => console.log(status))\n",
+        "\t.catch(e => console.error(e));\n",
+        "</script>\n",
+    )=#
+
+    # Bootstrap viewport
+    write(
+        resp,
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no, minimum-scale=1, maximum-scale=1\">\n",
+    )
+
+    # Bootstrap v3.4.1
+    write(
+        resp,
+        "<link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css\" integrity=\"sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu\" crossorigin=\"anonymous\">",
+    )
+    write(
+        resp,
+        "<script src=\"https://code.jquery.com/jquery-1.12.4.min.js\" integrity=\"sha384-nvAa0+6Qg9clwYCGGPpDQLVpLNn0fRaROjHqs13t4Ggj3Ez50XnGQqc/r8MhnRDZ\" crossorigin=\"anonymous\"></script>",
+    )
+    write(
+        resp,
+        "<script src=\"https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js\" integrity=\"sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd\" crossorigin=\"anonymous\"></script>",
+    )
+
+    # GLSL vertex shader
+    write(resp, "<script id=\"vertex-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/vertex-shader.vert"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"legend-vertex-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/legend-vertex-shader.vert"))
+    write(resp, "</script>\n")
+
+    # GLSL fragment shaders
+    write(resp, "<script id=\"common-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/common-shader.frag"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"legend-common-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/legend-common-shader.frag"))
+    write(resp, "</script>\n")
+
+    # tone mappings    
+    write(resp, "<script id=\"legacy-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/legacy-shader.frag"))
+    write(resp, "</script>\n")
+
+    # colourmaps
+    write(resp, "<script id=\"greyscale-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/greyscale-shader.frag"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"negative-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/negative-shader.frag"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"amber-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/amber-shader.frag"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"red-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/red-shader.frag"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"green-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/green-shader.frag"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"blue-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/blue-shader.frag"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"hot-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/hot-shader.frag"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"rainbow-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/rainbow-shader.frag"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"parula-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/parula-shader.frag"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"inferno-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/inferno-shader.frag"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"magma-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/magma-shader.frag"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"plasma-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/plasma-shader.frag"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"viridis-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/viridis-shader.frag"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"cubehelix-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/cubehelix-shader.frag"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"jet-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/jet-shader.frag"))
+    write(resp, "</script>\n")
+
+    write(resp, "<script id=\"haxby-shader\" type=\"x-shader/x-vertex\">\n")
+    write(resp, read(HT_DOCS * "/fitswebql/haxby-shader.frag"))
+    write(resp, "</script>\n")
+
+    # XWebQL main JavaScript + CSS
+    write(resp, "<script src=\"xwebqlse.js\"></script>\n")
+    write(resp, "<link rel=\"stylesheet\" href=\"xwebqlse.css\"/>\n")
+
+    # HTML content
+    va_count = 1
+    write(resp, "<title>XWEBQL</title></head><body>\n")
+    write(resp, "<div id='votable' style='width: 0; height: 0;' data-va_count='$va_count' ")
+    write(resp, "data-datasetId='$datasetid' ")
+    write(resp, "data-root-path='/$root_path/' ")
+
+    if !LOCAL_VERSION
+        write(resp, "data-root-path='/$root_path/' ")
+    else
+        write(resp, "data-root-path='/' ")
+    end
+
+    write(
+        resp,
+        " data-server-version='",
+        VERSION_STRING,
+        "' data-server-string='",
+        SERVER_STRING,
+    )
+
+    if LOCAL_VERSION
+        write(resp, "' data-server-mode='LOCAL")
+    else
+        write(resp, "' data-server-mode='SERVER")
+    end
+
+    has_events_str = has_events ? "1" : "0"
+    write(resp, "' data-has-events='$has_events_str'></div>\n")
+
+    write(resp, "<script>var WS_PORT = $WS_PORT;</script>\n")
+
+    # the page entry point
+    write(
+        resp,
+        "<script>",
+        "const golden_ratio = 1.6180339887;",
+        "var XWS = null ;",
+        "var wsVideo = null ;",
+        "var wsConn = null;",
+        "var firstTime = true;",
+        "var has_image = false;",
+        "var ROOT_PATH = '/fitswebql/';",
+        "var idleSearch = -1;",
+        "var idleResize = -1;",
+        "var idleWindow = -1;",
+        "window.onresize = resizeMe;",
+        "window.onbeforeunload = close_websocket_connections;",
+        "mainRenderer(); </script>\n",
+    )
+
+    write(resp, "</body></html>")
+
+    try
+        return HTTP.Response(200, take!(resp))
+    catch e
+        return HTTP.Response(404, "Error: $e")
+    end
+
+    #return HTTP.Response(501, "Not Implemented")
 end
 
 const XROUTER = HTTP.Router()
