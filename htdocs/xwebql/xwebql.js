@@ -452,6 +452,103 @@ async function mainRenderer() {
 
         fps = 30;//target fps; 60 is OK in Chrome but a bit laggish in Firefox
         fpsInterval = 1000 / fps;
+
+        frame_multiplier = 1;
+        imageData = null;
+        initKalmanFilter = false;
+        windowLeft = false;
+        streaming = false;
+        video_playback = false;
+        video_offset = null;
+        video_timeout = -1;
+        idleMouse = -1;
+        idleVideo = -1;
+        moving = false;
+        data_band_lo = 0;
+        data_band_hi = 0;
+        latency = 0;
+        ping_latency = 0;
+        computed = 0;
+
+        //image
+        recv_seq_id = 0;
+        sent_seq_id = 0;
+        last_seq_id = 0;
+
+        //video
+        if (video_fps_control == 'auto')
+            vidFPS = 5;//10
+        else
+            vidFPS = parseInt(video_fps_control);
+
+        vidInterval = 1000 / vidFPS;
+
+        //track the bitrate with a Kalman Filter
+        target_bitrate = 1000; // was 1000
+        bitrate = target_bitrate;
+        eta = 0.1;
+        variance = 0.0;
+
+        recv_vid_id = 0;
+        sent_vid_id = 0;
+        last_vid_id = 0;
+        videoFrame = null;
+
+        viewport_zoom_settings = null;
+        invalidateViewport = false;
+        viewport = {};
+        zoom_dims = null;
+        zoom_location = 'lower';
+        zoom_scale = 25;
+        xradec = null;
+
+        tmp_data_min = 0;
+        tmp_data_max = 0;
+
+        user_data_min = null;
+        user_data_max = null;
+
+        x_mouse_start = 0;
+        xdrag = false;
+        session_x_start = 0;
+        session_x_end = 0;
+        session_frame_start = 0;
+        session_frame_end = 0;
+        frame_start = 0;
+        frame_end = 0;
+
+        mousedown = false;
+        begin_x = 0;
+        begin_y = 0;
+        end_x = 0;
+        end_y = 0;
+
+        realtime_spectrum = localStorage_read_boolean("realtime_spectrum", true);
+        realtime_video = localStorage_read_boolean("realtime_video", true);
+        displayDownloadConfirmation = localStorage_read_boolean("displayDownloadConfirmation", true);
+        welcome = localStorage_read_boolean("welcome_x_alpha", true);
+
+        autoscale = true;
+        displayScalingHelp = localStorage_read_boolean("displayScalingHelp", true);
+        last_spectrum = null;
+
+        displayContours = false;
+        displayLegend = localStorage_read_boolean("displayLegend", true);
+        displaySpectrum = localStorage_read_boolean("displaySpectrum", true);
+        displayGridlines = localStorage_read_boolean("displayGridlines", false);
+
+        has_contours = false;
+        has_preferences = false;
+
+        d3.select("body").append("div")
+            .attr("id", "mainDiv")
+            .attr("class", "main");
+
+        var rect = document.getElementById('mainDiv').getBoundingClientRect();
+        var width = Math.round(rect.width);
+        var height = Math.round(rect.height);
+        document.getElementById('mainDiv').setAttribute("style", "width:" + width.toString() + "px");
+        document.getElementById('mainDiv').setAttribute("style", "height:" + height.toString() + "px");
     };
 
     firstTime = false;

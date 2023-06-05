@@ -590,7 +590,7 @@ function serveXEvents(request::HTTP.Request)
     # HTML content
     va_count = 1
     write(resp, "<title>XWEBQL</title></head><body>\n")
-    write(resp, "<div id='htmlData' style='width: 0; height: 0;' data-va_count='$va_count' ")
+    write(resp, "<div id='htmlData' style='width: 0; height: 0;' ")
     write(resp, "data-datasetId='$dataset' ")
     write(resp, "data-root-path='/$root_path/' ")
 
