@@ -194,6 +194,12 @@ function localStorage_write_boolean(key, value) {
         localStorage.setItem(key, "false");
 }
 
+function setup_window_timeout() {
+    window.clearTimeout(idleWindow); // cancel any previous timeouts
+
+    let timeout = 60 * 60 * 1000; // 1h
+    idleWindow = window.setTimeout(show_timeout, timeout);
+};
 
 function close_websocket_connection() {
     if (XWS != null) {
@@ -210,6 +216,54 @@ function close_websocket_connection() {
     while (id--) {
         window.clearTimeout(id); // will do nothing if no timeout with id is present
     }
+}
+
+function show_unsupported_media_type() {
+    try {
+        $('#welcomeScreen').modal('hide');
+    }
+    catch (e) { };
+
+    var div = d3.select("body")
+        .append("div")
+        .attr("class", "container timeout");
+
+    div.append("h1")
+        .style("margin-top", "25%")
+        .style("color", "red")
+        .attr("align", "center")
+        .text("UNSUPPORTED MEDIA TYPE");
+
+    div.append("h2")
+        .attr("align", "center")
+        //.style("color", "red")
+        .text("XWEBQL ONLY SUPPORTS X-RAY EVENTS DATA");
+
+    close_websocket_connection();
+}
+
+function show_not_found() {
+    try {
+        $('#welcomeScreen').modal('hide');
+    }
+    catch (e) { };
+
+    var div = d3.select("body")
+        .append("div")
+        .attr("class", "container timeout");
+
+    div.append("h1")
+        .style("margin-top", "27.5%")
+        .style("color", "red")
+        .attr("align", "center")
+        .text("DATA NOT FOUND ON THE REMOTE SITE");
+
+    div.append("h2")
+        .attr("align", "center")
+        //.style("color", "red")
+        .text("THE X-RAY EVENTS FILE CANNOT BE FOUND");
+
+    close_websocket_connection();
 }
 
 function test_webgl1() {
@@ -361,6 +415,13 @@ function display_hourglass() {
         .attr("width", img_width)
         .attr("height", img_height)
         .attr("opacity", 1.0);
+}
+
+function hide_hourglass() {
+    try {
+        d3.selectAll('#hourglass').remove();
+    }
+    catch (e) { };
 }
 
 function donotshow() {
@@ -908,7 +969,113 @@ async function mainRenderer() {
         show_heartbeat();
         poll_heartbeat();
 
+        dataset_timeout = -1;
+        fetch_image_spectrum(datasetId, true, false);
+
     };
 
     firstTime = false;
+}
+
+async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
+    var rect = document.getElementById('mainDiv').getBoundingClientRect();
+    var width = rect.width - 20;
+    var height = rect.height - 20;
+
+    var xmlhttp = new XMLHttpRequest();
+
+    var url = 'image_spectrum?datasetId=' + encodeURIComponent(_datasetId) + '&width=' + width + '&height=' + height + '&quality=' + image_quality;
+
+    if (fetch_data)
+        url += '&fetch_data=true';
+
+    url += '&' + encodeURIComponent(get_js_version());
+
+    if (add_timestamp)
+        url += '&timestamp=' + Date.now();
+
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 404) {
+            if (dataset_timeout != -1) {
+                window.clearTimeout(dataset_timeout);
+                dataset_timeout = -1;
+            }
+
+            hide_hourglass();
+            show_not_found();
+        }
+
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 415) {
+            if (dataset_timeout != -1) {
+                window.clearTimeout(dataset_timeout);
+                dataset_timeout = -1;
+            }
+
+            hide_hourglass();
+            show_unsupported_media_type();
+        }
+
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 500) {
+            if (dataset_timeout != -1) {
+                window.clearTimeout(dataset_timeout);
+                dataset_timeout = -1;
+            }
+
+            hide_hourglass();
+            //show_critical_error();
+            show_not_found();
+        }
+
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 500) {
+            if (dataset_timeout != -1) {
+                window.clearTimeout(dataset_timeout);
+                dataset_timeout = -1;
+            }
+
+            console.log("Connection error:", xmlhttp.status, ", re - fetching image after 1 second.");
+            setTimeout(function () {
+                fetch_image_spectrum(_datasetId, fetch_data, true);
+            }, 1000);
+        }
+
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 202) {
+            if (dataset_timeout != -1) {
+                window.clearTimeout(dataset_timeout);
+                dataset_timeout = -1;
+            }
+
+            console.log("Server not ready, long-polling image again after 500ms.");
+            setTimeout(function () {
+                fetch_image_spectrum(_datasetId, fetch_data, false);
+            }, 500);
+        }
+
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 204) {
+            console.log("Server not ready / No Content, long-polling image again after 500ms.");
+            setTimeout(function () {
+                fetch_image_spectrum(_datasetId, fetch_data, false);
+            }, 500);
+
+            if (dataset_timeout == -1) {
+                dataset_timeout = setTimeout(function () {
+                    hide_hourglass();
+                    show_not_found();
+                }, 10000);
+            }
+        }
+
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+            if (dataset_timeout != -1) {
+                window.clearTimeout(dataset_timeout);
+                dataset_timeout = -1;
+            }
+
+            setup_window_timeout();
+        }
+    }
+
+    xmlhttp.open("GET", url, true);//or "POST" to disable caching
+    xmlhttp.responseType = 'arraybuffer';
+    xmlhttp.timeout = 0;
+    xmlhttp.send();
 }
