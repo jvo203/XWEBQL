@@ -336,6 +336,11 @@ function remove_symlinks()
     end
 end
 
+function serveHeartBeat(request::HTTP.Request)
+    timestamp = HTTP.URIs.splitpath(HTTP.unescapeuri(request.target))[3]
+    return HTTP.Response(200, timestamp)
+end
+
 function serveXEvents(request::HTTP.Request)
     global XOBJECTS, XLOCK
 
@@ -644,6 +649,7 @@ HTTP.register!(XROUTER, "GET", "/", serveDocument)
 HTTP.register!(XROUTER, "GET", "/exit", gracefullyShutdown)
 HTTP.register!(XROUTER, "GET", "/get_directory", serveDirectory)
 HTTP.register!(XROUTER, "GET", "/*/events.html", serveXEvents)
+HTTP.register!(XROUTER, "POST", "/*/heartbeat/*", serveHeartBeat)
 HTTP.register!(XROUTER, "GET", "*/*", serveDocument)
 HTTP.register!(XROUTER, "GET", "*", serveDocument)
 
