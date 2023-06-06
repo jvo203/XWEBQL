@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-06-05.0";
+    return "JS2023-06-06.0";
 }
 
 function uuidv4() {
@@ -339,6 +339,252 @@ function hide_navigation_bar() {
     } catch (e) { }
 }
 
+function display_hourglass() {
+    var c = document.getElementById('HTMLCanvas');
+    var width = c.width;
+    var height = c.height;
+
+    //hourglass
+    /*var img_width = 200 ;
+    var img_height = 200 ;*/
+
+    //squares
+    var img_width = 128;
+    var img_height = 128;
+
+    d3.select('#FrontSVG').append("svg:image")
+        .attr("id", "hourglass")
+        .attr("x", (width - img_width) / 2)
+        .attr("y", (height - img_height) / 2)
+        //.attr("xlink:href", ROOT_PATH + "loading.gif")
+        .attr("xlink:href", "https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/loading.gif")
+        .attr("width", img_width)
+        .attr("height", img_height)
+        .attr("opacity", 1.0);
+}
+
+function donotshow() {
+    var checkbox = document.getElementById('donotshowcheckbox');
+
+    localStorage_write_boolean("welcome_x_alpha", !checkbox.checked);
+};
+
+function show_welcome() {
+    var div = d3.select("body")
+        .append("div")
+        .attr("class", "container")
+        .append("div")
+        .attr("id", "welcomeScreen")
+        .attr("class", "modal modal-center")
+        .attr("role", "dialog")
+        .append("div")
+        .attr("class", "modal-dialog modal-dialog-centered");
+
+    var contentDiv = div.append("div")
+        .attr("class", "modal-content");
+
+    var headerDiv = contentDiv.append("div")
+        .attr("class", "modal-header");
+
+    headerDiv.append("button")
+        .attr("type", "button")
+        .attr("data-dismiss", "modal")
+        .attr("id", "welcomeclose")
+        .attr("class", "close")
+        .style("color", "red")
+        .text("×");
+
+    headerDiv.append("h2")
+        .attr("align", "center")
+        .html('WELCOME TO XWEBQL');
+
+    var bodyDiv = contentDiv.append("div")
+        .attr("id", "modal-body")
+        .attr("class", "modal-body");
+
+    bodyDiv.append("h3")
+        .text("FEATURES");
+
+    var ul = bodyDiv.append("ul")
+        .attr("class", "list-group");
+
+    sv = htmlData.getAttribute('data-server-version');
+
+    if (sv.charAt(0) == 'F') {
+        ul.append("li")
+            .attr("class", "list-group-item list-group-item-success")
+            .html("<h4>FORTRAN (computing) &amp; C (networking)</h4>");
+    };
+
+    if (sv.charAt(0) == 'J') {
+        ul.append("li")
+            .attr("class", "list-group-item list-group-item-success")
+            .html("<h4>Server powered by Julia</h4>");
+    };
+
+    /*ul.append("li")
+        .attr("class", "list-group-item list-group-item-success")
+        .html('<h4>HDR image rendering with WebGL</h4>');*/
+
+    /*ul.append("li")
+      .attr("class", "list-group-item list-group-item-success")
+      .html('<h4>32-bit floating-point High Dynamic Range images compressed with <a href="https://en.wikipedia.org/wiki/OpenEXR"><em>OpenEXR</em></a></h4>');*/
+
+    if (!isLocal) {
+        ul.append("li")
+            .attr("class", "list-group-item list-group-item-success")
+            .html('<h4>source code: <a href="https://github.com/jvo203/XWEBQL"><em>https://github.com/jvo203/XWEBQL</em></a></h4>');
+    }
+
+    bodyDiv.append("h3")
+        .text("Browser recommendation");
+
+    let textColour = 'yellow';
+
+    if (theme == 'bright')
+        textColour = 'red';
+
+    if (!wasm_supported) {
+        bodyDiv.append("p")
+            .html('A modern browser with <a href="https://en.wikipedia.org/wiki/WebAssembly" style="color:' + textColour + '"><b>WebAssembly (Wasm)</b></a> support is required.');
+    }
+
+    bodyDiv.append("p")
+        .html('For optimum experience we recommend  <a href="https://www.apple.com/safari/" style="color:' + textColour + '"><b>Apple Safari</b></a> or <a href="https://www.google.com/chrome/index.html" style="color:' + textColour + '"><b>Google Chrome</b></a>.');
+
+    var footer = contentDiv.append("div")
+        .attr("class", "modal-footer d-flex justify-content-around");
+
+    var href = "mailto:help_desk@jvo.nao.ac.jp?subject=" + htmlData.getAttribute('data-server-string') + " bug report [" + htmlData.getAttribute('data-server-version') + "/" + get_js_version() + "]";
+
+    footer.append("p")
+        .attr("align", "left")
+        .html('<label style="cursor: pointer"><input type="checkbox" value="" class="control-label" style="cursor: pointer" id="donotshowcheckbox" onchange="javascript:donotshow();">&nbsp;do not show this dialogue again</label>' + '&nbsp;&nbsp;&nbsp;<a style="color:red" href="' + href + '">page loading problems? </a>' + '<button type="submit" class="btn btn-danger btn-default pull-right" data-dismiss="modal"><span class="fas fa-times"></span> Close</button>');
+
+    $('#welcomeScreen').modal('show');
+}
+
+function show_heartbeat() {
+    var svg = d3.select("#BackSVG");
+    var svgWidth = parseFloat(svg.attr("width"));
+    var svgHeight = parseFloat(svg.attr("height"));
+    var offset = 2.0 * emFontSize;
+
+    //show ping
+    var group = svg.append("g")
+        .attr("id", "pingGroup");
+
+    group.append("text")
+        .attr("id", "heartbeat")
+        .attr('class', 'fas')
+        .attr("x", emFontSize / 4)
+        //.attr("y", offset)//"0.75em")
+        .attr("y", (svgHeight - 0.67 * offset))
+        .attr("font-family", "Helvetica")//Helvetica
+        //.attr("font-size", "0.75em")
+        .attr("font-size", "1.5em")
+        .attr("text-anchor", "start")
+        .attr("fill", "grey")
+        .attr("stroke", "none")
+        .attr("opacity", 0.0)
+        .text("");
+
+    let fillColour = 'yellow';
+
+    if (theme == 'bright')
+        fillColour = 'black';
+
+    let bottomY = svgHeight - offset / 4;
+
+    group.append("text")
+        .attr("id", "latency")
+        .attr("x", (0 * emFontSize / 4 + 0 * 1.75 * emFontSize))
+        //.attr("y", offset)//"0.85em")
+        .attr("y", bottomY)
+        .attr("font-family", "Inconsolata")
+        //.attr("font-weight", "bold")
+        .attr("font-size", "0.75em")//0.75 Helvetica
+        .attr("text-anchor", "start")
+        .attr("fill", fillColour)
+        .attr("stroke", "none")
+        .attr("opacity", 0.75)
+        .text("");
+}
+
+function poll_heartbeat() {
+    var xmlhttp = new XMLHttpRequest();
+    var url = 'heartbeat/' + performance.now();
+
+    xmlhttp.onreadystatechange = function () {
+        var RRT = 0;
+
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 404) { };
+
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+            var data = xmlhttp.response;
+
+            try {
+                var previous_t = parseFloat(data);
+                ping_latency = (performance.now() - previous_t);
+
+                if (ping_latency > 0) {
+                    if (realtime_spectrum) {
+                        fps = 1000 / ping_latency;
+                        fps = Math.min(30, fps);
+                        fps = Math.max(10, fps);
+                    }
+                    else
+                        fps = 30;
+
+                    fpsInterval = 1000 / fps;
+                }
+            }
+            catch (e) { };
+
+            d3.select("#heartbeat")
+                .attr("fill", "grey")
+                .attr("opacity", 1.0)
+                //.text('\ue143');// an empty heart
+                //.text('\ue005');// a full heart
+                .text('\uf004');// heart
+            //.text('📡');
+            //.text('📶');
+
+            setTimeout(function () {
+                d3.select("#heartbeat")
+                    .attr("fill", "grey")
+                    .attr("opacity", 1.0)
+                    //.text('\ue144');// link
+                    //.text('\uf004');// handshake
+                    // .text('\uf00c');// check
+                    .text('\uf21e');// heartbeat
+
+                setTimeout(function () {
+                    d3.select("#heartbeat")
+                        .attr("opacity", 0.0);
+
+                    setTimeout(poll_heartbeat, 1000 + RRT);
+                }, 500);
+            }, 500);
+        };
+
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 0) {
+            // display an error
+            d3.select("#heartbeat")
+                .attr("fill", "red")
+                .attr("opacity", 1.0)
+                .html("&#x274c;");// Cross Mark
+
+            setTimeout(poll_heartbeat, 10000 + RRT);
+        }
+    }
+
+    xmlhttp.open("POST", url, true);
+    xmlhttp.responseType = 'text';
+    xmlhttp.timeout = 0;
+    xmlhttp.send();
+}
+
 async function mainRenderer() {
     htmlData = document.getElementById('htmlData');
 
@@ -651,6 +897,15 @@ async function mainRenderer() {
             .attr("width", 265)
             .attr("height", 162)
             .attr("opacity", 0.5);
+
+        await res3d; // display_menu();
+
+        if (welcome)
+            show_welcome();
+
+        display_hourglass();
+        show_heartbeat();
+        poll_heartbeat();
 
     };
 
