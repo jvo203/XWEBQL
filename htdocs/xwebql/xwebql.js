@@ -556,8 +556,9 @@ function poll_heartbeat() {
                     .attr("opacity", 1.0)
                     //.text('\ue144');// link
                     //.text('\uf004');// handshake
-                    // .text('\uf00c');// check
+                    //.text('\uf00c');// check
                     .text('\uf21e');// heartbeat
+                //.text('📶');
 
                 setTimeout(function () {
                     d3.select("#heartbeat")
