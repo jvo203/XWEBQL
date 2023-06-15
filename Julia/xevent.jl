@@ -2,6 +2,9 @@ using Dates
 using Distributed
 using FITSIO
 
+@enum Quality low medium high
+@enum Beam CIRCLE SQUARE # "square" is a reserved Julia function
+
 finale(x) = @async println("Finalizing $(x.id).$(x.uri)")
 
 mutable struct XDataSet

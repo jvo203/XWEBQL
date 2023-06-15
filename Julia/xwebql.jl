@@ -61,7 +61,7 @@ include("xevent.jl")
 XOBJECTS = Dict{String,XDataSet}()
 XLOCK = ReentrantLock()
 
-function serveFile(path::String)
+function streamFile(http::HTTP.Streams.Stream, path::String)
     # strip out a question mark (if there is any)
     pos = findlast("?", path)
 
@@ -126,11 +126,28 @@ function serveFile(path::String)
     end
 
     try
-        return isfile(path) ? HTTP.Response(200, headers; body=read(path)) :
-               HTTP.Response(404, "$path Not Found.")
+        if isfile(path)
+            HTTP.setstatus(http, 200)
+
+            # enumerate each header
+            for (key, value) in headers
+                HTTP.setheader(http, key => value)
+            end
+
+            startwrite(http)
+            write(http, read(path))
+        else
+            HTTP.setstatus(http, 404)
+            startwrite(http)
+            write(http, "$path Not Found.")
+        end
     catch e
-        return HTTP.Response(404, "Error: $e")
+        HTTP.setstatus(http, 404)
+        startwrite(http)
+        write(http, "Error: $e")
     end
+
+    return nothing
 end
 
 function serveDirectory(request::HTTP.Request)
@@ -279,16 +296,19 @@ function gracefullyShutdown(request::HTTP.Request)
     return HTTP.Response(200, "Shutting down $(SERVER_STRING)")
 end
 
-function serveDocument(request::HTTP.Request)
-    # @show request
-    # @show request.method
-    # @show HTTP.header(request, "Content-Type")
-    # @show HTTP.payload(request)
+function streamDocument(http::HTTP.Streams.Stream)
+    request::HTTP.Request = http.message
+    request.body = read(http)
+    closeread(http)
+
     @show request.target
 
     # prevent a simple directory traversal
     if occursin("../", request.target) || occursin("..\\", request.target)
-        return HTTP.Response(404, "Not Found")
+        HTTP.setstatus(http, 404)
+        startwrite(http)
+        write(http, "Not Found")
+        return nothing
     end
 
     path = HT_DOCS * HTTP.unescapeuri(request.target)
@@ -297,7 +317,7 @@ function serveDocument(request::HTTP.Request)
         path *= "index.html"
     end
 
-    return serveFile(path)
+    return streamFile(http, path)
 end
 
 
@@ -644,14 +664,99 @@ function serveXEvents(request::HTTP.Request)
     return HTTP.Response(200, take!(resp))
 end
 
+function streamImageSpectrum(http::HTTP.Streams.Stream)
+    global XOBJECTS, XLOCK
+
+    request::HTTP.Request = http.message
+    request.body = read(http)
+    closeread(http)
+
+    params = HTTP.queryparams(HTTP.URI(request.target))
+    println(params)
+
+    ##########
+    #request.response::Response = handler(request)
+    #request.response.request = request
+
+    HTTP.setstatus(http, 202)
+    startwrite(http)
+    write(http, "Accepted")
+    return nothing
+    ##########
+
+    datasetid = ""
+    quality::Quality = medium
+    width::Integer = 0
+    height::Integer = 0
+    fetch_data::Bool = false
+
+    try
+        datasetid = params["datasetId"]
+        width = round(Integer, parse(Float64, params["width"]))
+        height = round(Integer, parse(Float64, params["height"]))
+    catch e
+        println(e)
+        HTTP.setstatus(http, 404)
+        startwrite(http)
+        write(http, "Not Found")
+        return nothing
+    end
+
+    try
+        quality = eval(Meta.parse(params["quality"]))
+    catch _
+    end
+
+    try
+        fetch_data = parse(Bool, params["fetch_data"])
+    catch _
+    end
+
+    HTTP.setheader(http, "Cache-Control" => "no-cache")
+    HTTP.setheader(http, "Cache-Control" => "no-store")
+    HTTP.setheader(http, "Pragma" => "no-cache")
+    HTTP.setheader(http, "Content-Type" => "application/octet-stream")
+
+    xobject = get_dataset(datasetid, XOBJECTS, XLOCK)
+
+    if xobject.datasetid == "" || width <= 0 || height <= 0
+        HTTP.setstatus(http, 404)
+        startwrite(http)
+        write(http, "Not Found")
+        return nothing
+    end
+
+
+    if has_error(xobject)
+        HTTP.setstatus(http, 500)
+        startwrite(http)
+        write(http, "Internal Server Error")
+        return nothing
+    end
+
+
+    if !has_events(xobject)
+        HTTP.setstatus(http, 202)
+        startwrite(http)
+        write(http, "Accepted")
+        return nothing
+    end
+
+    HTTP.setstatus(http, 501)
+    startwrite(http)
+    write(http, "Not Implemented")
+    return nothing
+end
+
 const XROUTER = HTTP.Router()
-HTTP.register!(XROUTER, "GET", "/", serveDocument)
+HTTP.register!(XROUTER, "GET", "/", streamDocument)
 HTTP.register!(XROUTER, "GET", "/exit", gracefullyShutdown)
 HTTP.register!(XROUTER, "GET", "/get_directory", serveDirectory)
 HTTP.register!(XROUTER, "GET", "/*/events.html", serveXEvents)
 HTTP.register!(XROUTER, "POST", "/*/heartbeat/*", serveHeartBeat)
 HTTP.register!(XROUTER, "GET", "*/*", serveDocument)
-HTTP.register!(XROUTER, "GET", "*", serveDocument)
+HTTP.register!(XROUTER, "GET", "*", streamDocument)
+HTTP.register!(XROUTER, "GET", "/*/image_spectrum/", streamImageSpectrum)
 
 println("$SERVER_STRING")
 println("DATASET TIMEOUT: $(TIMEOUT)s")
@@ -705,7 +810,7 @@ Threads.@spawn :interactive WebSockets.serve(ws_server, host, WS_PORT)
 # global gc_task = @async garbage_collector(XOBJECTS, XLOCK, TIMEOUT)
 
 try
-    HTTP.serve(XROUTER, host, UInt16(HTTP_PORT))
+    HTTP.serve(XROUTER, host, UInt16(HTTP_PORT), stream=true)
 catch e
     @warn(e)
     typeof(e) == InterruptException && rethrow(e)
