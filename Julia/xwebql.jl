@@ -391,8 +391,12 @@ function streamHeartBeat(http::HTTP.Streams.Stream)
     return nothing
 end
 
-function serveXEvents(request::HTTP.Request)
+function streamXEvents(http::HTTP.Streams.Stream)
     global XOBJECTS, XLOCK
+
+    request::HTTP.Request = http.message
+    request.body = read(http)
+    closeread(http)
 
     root_path = HTTP.URIs.splitpath(request.target)[1]
 
@@ -459,68 +463,69 @@ function serveXEvents(request::HTTP.Request)
         update_timestamp(xdataset)
     end
 
-    resp = IOBuffer()
+    HTTP.setstatus(http, 200)
+    startwrite(http)
 
-    write(resp, "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n")
+    write(http, "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n")
     write(
-        resp,
+        http,
         "<link href=\"https://fonts.googleapis.com/css?family=Inconsolata\" rel=\"stylesheet\"/>\n",
     )
     write(
-        resp,
+        http,
         "<link href=\"https://fonts.googleapis.com/css?family=Material+Icons\" rel=\"stylesheet\"/>\n",
     )
-    write(resp, "<script src=\"https://d3js.org/d3.v7.min.js\"></script>\n")
+    write(http, "<script src=\"https://d3js.org/d3.v7.min.js\"></script>\n")
     write(
-        resp,
+        http,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/reconnecting-websocket.min.js\"></script>\n",
     )
     write(
-        resp,
+        http,
         "<script src=\"//cdnjs.cloudflare.com/ajax/libs/numeral.js/2.0.6/numeral.min.js\"></script>\n",
     )
     write(
-        resp,
+        http,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/ra_dec_conversion.min.js\"></script>\n",
     )
     write(
-        resp,
+        http,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/sylvester.min.js\"></script>\n",
     )
     write(
-        resp,
+        http,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/shortcut.min.js\"></script>\n",
     )
     write(
-        resp,
+        http,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/colourmaps.min.js\"></script>\n",
     )
     write(
-        resp,
+        http,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/lz4.min.js\"></script>\n",
     )
     write(
-        resp,
+        http,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/marchingsquares-isocontours.min.js\" defer></script>\n",
     )
     write(
-        resp,
+        http,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/marchingsquares-isobands.min.js\" defer></script>\n",
     )
 
     # Font Awesome
     write(
-        resp,
+        http,
         "<script src=\"https://kit.fontawesome.com/8433b7dde2.js\" crossorigin=\"anonymous\"></script>\n",
     )
 
     # HTML5 FileSaver
-    write(resp, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/FileSaver.js\"></script>\n")
+    write(http, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/FileSaver.js\"></script>\n")
 
     # WebAssembly
-    #=write(resp, "<script src=\"client.", WASM_VERSION, ".js\"></script>\n")
+    #=write(http, "<script src=\"client.", WASM_VERSION, ".js\"></script>\n")
     write(
-        resp,
+        http,
         "<script>\n",
         "Module.ready\n",
         "\t.then(status => console.log(status))\n",
@@ -530,131 +535,130 @@ function serveXEvents(request::HTTP.Request)
 
     # Bootstrap viewport
     write(
-        resp,
+        http,
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no, minimum-scale=1, maximum-scale=1\">\n",
     )
 
     # Bootstrap v3.4.1
     write(
-        resp,
+        http,
         "<link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css\" integrity=\"sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu\" crossorigin=\"anonymous\">",
     )
     write(
-        resp,
+        http,
         "<script src=\"https://code.jquery.com/jquery-1.12.4.min.js\" integrity=\"sha384-nvAa0+6Qg9clwYCGGPpDQLVpLNn0fRaROjHqs13t4Ggj3Ez50XnGQqc/r8MhnRDZ\" crossorigin=\"anonymous\"></script>",
     )
     write(
-        resp,
+        http,
         "<script src=\"https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js\" integrity=\"sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd\" crossorigin=\"anonymous\"></script>",
     )
 
     # GLSL vertex shader
-    write(resp, "<script id=\"vertex-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/vertex-shader.vert"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"vertex-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/vertex-shader.vert"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"legend-vertex-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/legend-vertex-shader.vert"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"legend-vertex-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/legend-vertex-shader.vert"))
+    write(http, "</script>\n")
 
     # GLSL fragment shaders
-    write(resp, "<script id=\"common-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/common-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"common-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/common-shader.frag"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"legend-common-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/legend-common-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"legend-common-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/legend-common-shader.frag"))
+    write(http, "</script>\n")
 
     # tone mappings    
-    write(resp, "<script id=\"legacy-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/legacy-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"legacy-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/legacy-shader.frag"))
+    write(http, "</script>\n")
 
     # colourmaps
-    write(resp, "<script id=\"greyscale-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/greyscale-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"greyscale-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/greyscale-shader.frag"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"negative-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/negative-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"negative-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/negative-shader.frag"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"amber-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/amber-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"amber-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/amber-shader.frag"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"red-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/red-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"red-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/red-shader.frag"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"green-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/green-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"green-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/green-shader.frag"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"blue-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/blue-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"blue-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/blue-shader.frag"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"hot-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/hot-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"hot-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/hot-shader.frag"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"rainbow-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/rainbow-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"rainbow-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/rainbow-shader.frag"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"parula-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/parula-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"parula-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/parula-shader.frag"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"inferno-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/inferno-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"inferno-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/inferno-shader.frag"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"magma-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/magma-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"magma-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/magma-shader.frag"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"plasma-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/plasma-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"plasma-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/plasma-shader.frag"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"viridis-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/viridis-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"viridis-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/viridis-shader.frag"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"cubehelix-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/cubehelix-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"cubehelix-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/cubehelix-shader.frag"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"jet-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/jet-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"jet-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/jet-shader.frag"))
+    write(http, "</script>\n")
 
-    write(resp, "<script id=\"haxby-shader\" type=\"x-shader/x-vertex\">\n")
-    write(resp, read(HT_DOCS * "/xwebql/haxby-shader.frag"))
-    write(resp, "</script>\n")
+    write(http, "<script id=\"haxby-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/haxby-shader.frag"))
+    write(http, "</script>\n")
 
     # XWebQL main JavaScript + CSS
-    write(resp, "<script src=\"xwebql.js\"></script>\n")
-    write(resp, "<link rel=\"stylesheet\" href=\"xwebql.css\"/>\n")
+    write(http, "<script src=\"xwebql.js\"></script>\n")
+    write(http, "<link rel=\"stylesheet\" href=\"xwebql.css\"/>\n")
 
-    # HTML content
-    va_count = 1
-    write(resp, "<title>XWEBQL</title></head><body>\n")
-    write(resp, "<div id='htmlData' style='width: 0; height: 0;' ")
-    write(resp, "data-datasetId='$dataset' ")
-    write(resp, "data-root-path='/$root_path/' ")
+    # HTML content    
+    write(http, "<title>XWEBQL</title></head><body>\n")
+    write(http, "<div id='htmlData' style='width: 0; height: 0;' ")
+    write(http, "data-datasetId='$dataset' ")
+    write(http, "data-root-path='/$root_path/' ")
 
     if !LOCAL_VERSION
-        write(resp, "data-root-path='/$root_path/' ")
+        write(http, "data-root-path='/$root_path/' ")
     else
-        write(resp, "data-root-path='/' ")
+        write(http, "data-root-path='/' ")
     end
 
     write(
-        resp,
+        http,
         " data-server-version='",
         VERSION_STRING,
         "' data-server-string='",
@@ -662,18 +666,18 @@ function serveXEvents(request::HTTP.Request)
     )
 
     if LOCAL_VERSION
-        write(resp, "' data-server-mode='LOCAL")
+        write(http, "' data-server-mode='LOCAL")
     else
-        write(resp, "' data-server-mode='SERVER")
+        write(http, "' data-server-mode='SERVER")
     end
 
-    write(resp, "'></div>\n")
+    write(http, "'></div>\n")
 
-    write(resp, "<script>var WS_PORT = $WS_PORT;</script>\n")
+    write(http, "<script>var WS_PORT = $WS_PORT;</script>\n")
 
     # the page entry point
     write(
-        resp,
+        http,
         "<script>",
         "const golden_ratio = 1.6180339887;",
         "var XWS = null ;",
@@ -689,9 +693,8 @@ function serveXEvents(request::HTTP.Request)
         "mainRenderer(); </script>\n",
     )
 
-    write(resp, "</body></html>")
-
-    return HTTP.Response(200, take!(resp))
+    write(http, "</body></html>")
+    return nothing
 end
 
 function streamImageSpectrum(http::HTTP.Streams.Stream)
@@ -782,7 +785,7 @@ const XROUTER = HTTP.Router()
 HTTP.register!(XROUTER, "GET", "/", streamDocument)
 HTTP.register!(XROUTER, "GET", "/exit", gracefullyShutdown)
 HTTP.register!(XROUTER, "GET", "/get_directory", streamDirectory)
-HTTP.register!(XROUTER, "GET", "/*/events.html", serveXEvents)
+HTTP.register!(XROUTER, "GET", "/*/events.html", streamXEvents)
 HTTP.register!(XROUTER, "POST", "/*/heartbeat/*", streamHeartBeat)
 HTTP.register!(XROUTER, "GET", "*/*", streamDocument)
 HTTP.register!(XROUTER, "GET", "*", streamDocument)
