@@ -150,7 +150,13 @@ function streamFile(http::HTTP.Streams.Stream, path::String)
     return nothing
 end
 
-function serveDirectory(request::HTTP.Request)
+function streamDirectory(http::HTTP.Streams.Stream)
+    request::HTTP.Request = http.message
+    request.body = read(http)
+    closeread(http)
+
+    @show request.target
+
     headers = ["Content-Type" => "application/json"]
 
     params = HTTP.queryparams(HTTP.URI(request.target))
@@ -234,10 +240,22 @@ function serveDirectory(request::HTTP.Request)
     end
 
     try
-        return HTTP.Response(200, headers; body=resp)
+        HTTP.setstatus(http, 200)
+
+        # enumerate each header
+        for (key, value) in headers
+            HTTP.setheader(http, key => value)
+        end
+
+        startwrite(http)
+        write(http, resp)
     catch e
-        return HTTP.Response(404, "Error: $e")
+        HTTP.setstatus(http, 404)
+        startwrite(http)
+        write(http, "Error: $e")
     end
+
+    return nothing
 end
 
 function exitFunc(exception=false)
@@ -290,10 +308,15 @@ end
 running = true
 Base.exit_on_sigint(false)
 
-function gracefullyShutdown(request::HTTP.Request)
+function gracefullyShutdown(http::HTTP.Streams.Stream)
     @async exitFunc(true)
 
-    return HTTP.Response(200, "Shutting down $(SERVER_STRING)")
+    closeread(http)
+
+    HTTP.setstatus(http, 200)
+    startwrite(http)
+    write(http, "Shutting down $(SERVER_STRING)")
+    return nothing
 end
 
 function streamDocument(http::HTTP.Streams.Stream)
@@ -356,9 +379,16 @@ function remove_symlinks()
     end
 end
 
-function serveHeartBeat(request::HTTP.Request)
+function streamHeartBeat(http::HTTP.Streams.Stream)
+    request::HTTP.Request = http.message
+    request.body = read(http)
+    closeread(http)
+
     timestamp = HTTP.URIs.splitpath(HTTP.unescapeuri(request.target))[3]
-    return HTTP.Response(200, timestamp)
+    HTTP.setstatus(http, 200)
+    startwrite(http)
+    write(http, timestamp)
+    return nothing
 end
 
 function serveXEvents(request::HTTP.Request)
@@ -751,10 +781,10 @@ end
 const XROUTER = HTTP.Router()
 HTTP.register!(XROUTER, "GET", "/", streamDocument)
 HTTP.register!(XROUTER, "GET", "/exit", gracefullyShutdown)
-HTTP.register!(XROUTER, "GET", "/get_directory", serveDirectory)
+HTTP.register!(XROUTER, "GET", "/get_directory", streamDirectory)
 HTTP.register!(XROUTER, "GET", "/*/events.html", serveXEvents)
-HTTP.register!(XROUTER, "POST", "/*/heartbeat/*", serveHeartBeat)
-HTTP.register!(XROUTER, "GET", "*/*", serveDocument)
+HTTP.register!(XROUTER, "POST", "/*/heartbeat/*", streamHeartBeat)
+HTTP.register!(XROUTER, "GET", "*/*", streamDocument)
 HTTP.register!(XROUTER, "GET", "*", streamDocument)
 HTTP.register!(XROUTER, "GET", "/*/image_spectrum/", streamImageSpectrum)
 
