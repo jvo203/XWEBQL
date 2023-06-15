@@ -168,3 +168,15 @@ function load_events(xdataset::XDataSet, uri::String)
 
     close(f)
 end
+
+function getImage(xobject::XDataSet, width::Integer, height::Integer)
+    local scale::Float32, pixels, mask
+    local image_width::Integer, image_height::Integer
+    local inner_width::Integer, inner_height::Integer
+
+    inner_width = 0
+    inner_height = 0
+    bDownsize = false
+
+    println("getImage::$(xobject.id)/($width)/($height)")
+end
