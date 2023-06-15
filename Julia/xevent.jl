@@ -180,5 +180,5 @@ function getImage(xobject::XDataSet, width::Integer, height::Integer)
 
     println("getImage::$(xobject.id)/($width)/($height)")
 
-    # first prepare {pixels,mask}
+    # first prepare (pixels,mask) then downsize as and when necessary
 end
