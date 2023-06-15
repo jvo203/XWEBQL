@@ -38,6 +38,14 @@ function update_timestamp(xobject::XDataSet)
     xobject.last_accessed[] = datetime2unix(now())
 end
 
+function has_events(xobject::XDataSet)::Bool
+    return xobject.has_events[]
+end
+
+function has_error(xobject::XDataSet)::Bool
+    return xobject.has_error[]
+end
+
 function dataset_exists(datasetid::String, xobjects, xlock)::Bool
     key_exists = false
 

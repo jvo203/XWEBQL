@@ -705,17 +705,7 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
     closeread(http)
 
     params = HTTP.queryparams(HTTP.URI(request.target))
-    println(params)
-
-    ##########
-    #request.response::Response = handler(request)
-    #request.response.request = request
-
-    HTTP.setstatus(http, 202)
-    startwrite(http)
-    write(http, "Accepted")
-    return nothing
-    ##########
+    # println(params)    
 
     datasetid = ""
     quality::Quality = medium
@@ -752,7 +742,7 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
 
     xobject = get_dataset(datasetid, XOBJECTS, XLOCK)
 
-    if xobject.datasetid == "" || width <= 0 || height <= 0
+    if xobject.id == "" || width <= 0 || height <= 0
         HTTP.setstatus(http, 404)
         startwrite(http)
         write(http, "Not Found")
