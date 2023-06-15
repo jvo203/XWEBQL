@@ -52,8 +52,8 @@ int main()
         energy_sum += energy[i];
     }
 
-    printf("x_sum = %ld\n", x_sum);
-    printf("y_sum = %ld\n", y_sum);
+    printf("x_sum = %lld\n", x_sum);
+    printf("y_sum = %lld\n", y_sum);
     printf("energy_sum = %f\n", energy_sum);
 
     free(x);
