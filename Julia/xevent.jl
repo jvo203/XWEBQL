@@ -179,4 +179,6 @@ function getImage(xobject::XDataSet, width::Integer, height::Integer)
     bDownsize = false
 
     println("getImage::$(xobject.id)/($width)/($height)")
+
+    # first prepare {pixels,mask}
 end
