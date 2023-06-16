@@ -21,7 +21,7 @@ function get_spectrum(data::Vector{Float32}, E_min::Float32, E_max::Float32, ΔE
 
     max_energy = E_max
 
-    while ΔE >= ΔE_min
+    while true
         # prepare the histogram
         h1 = Hist1D(data, E_min:ΔE:max_energy, overflow=false)
         spectrum = bincounts(h1)
@@ -72,15 +72,16 @@ height = 2430
 
 pixel_counts = zeros(Int32, width, height)
 
-ΔE = Float32(500.0) # eV
+ΔE = log(Float32(500.0)) # eV
 E_min = Float32(minimum(energy)) # eV
-E_max = Float32(1000.0) * 2^10 # eV
+# E_max = Float32(1000.0) * 2^10 # eV
+E_max = Float32(maximum(energy)) # eV
 
 @time h1 = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
 spectrum = bincounts(h1)
 #println(spectrum)
 
-@time (spectrum, E_max) = get_spectrum(energy, E_min, E_max, Float32(10.0), Int32(512))
+@time (spectrum, E_max) = get_spectrum(log.(energy), log(E_min), log(E_max), log(Float32(10.0)), Int32(512))
 
 println("E_min = ", E_min)
 println("E_max = ", E_max)

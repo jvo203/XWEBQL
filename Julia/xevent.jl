@@ -185,10 +185,10 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     pixels = getImage(xobject)
 
     # the spectrum
-    (spectrum, E_min, E_max) = getSpectrum(xobject)
+    (spectrum, E_min, E_max) = getSpectrum(xobject, 512)
     println("E_min = ", E_min)
     println("E_max = ", E_max)
-    println("Spectrum:", spectrum)
+    println("spectrum:", spectrum)
 end
 
 function getImage(xobject::XDataSet)
@@ -202,59 +202,15 @@ function getImage(xobject::XDataSet)
     return pixels
 end
 
-function getSpectrum(xobject::XDataSet)
-    energy = xobject.energy
+function getSpectrum(xobject::XDataSet, dx::Integer)
+    energy = log.(xobject.energy)
 
-    E_min = Float32(minimum(energy)) # eV
-    E_max = Float32(1000.0) * 2^10 # eV
+    E_min = Float32(minimum(energy)) # eV    
+    E_max = Float32(maximum(energy)) # eV
+    ΔE = (E_max - E_min) / dx
 
-    @time (spectrum, E_max) = makeSpectrum(energy, E_min, E_max, Float32(10.0), Int32(512))
-    println("E_max = ", E_max)
+    @time h1 = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
+    spectrum = bincounts(h1)
 
     return (spectrum, E_min, E_max)
-end
-
-function truncate_spectrum(spectrum::Vector{Int64})
-    # find the first non-zero bin from the end
-    i = length(spectrum)
-    while i > 0 && spectrum[i] == 0
-        i -= 1
-    end
-
-    return spectrum[1:i]
-end
-
-function makeSpectrum(data::Vector{Float32}, E_min::Float32, E_max::Float32, ΔE_min::Float32, dx::Int32)
-    local new_spectrum, max_energy, ΔE::Float32
-
-    #ΔE = max(ΔE_min, (E_max - E_min) / dx)
-    ΔE = (E_max - E_min) / dx
-    println("ΔE = ", ΔE)
-
-    max_energy = E_max
-
-    while ΔE >= ΔE_min
-        # prepare the histogram
-        h1 = Hist1D(data, E_min:ΔE:max_energy, overflow=false)
-        spectrum = bincounts(h1)
-        new_spectrum = truncate_spectrum(spectrum)
-        new_length = length(new_spectrum)
-
-        if new_length == length(spectrum)
-            break
-        end
-
-        # get the upper energy limit based on the new spectrum
-        max_energy = E_min + ΔE * new_length
-        println("max_energy = ", max_energy)
-
-        #ΔE = max(ΔE_min, (max_energy - E_min) / dx)
-        ΔE = (max_energy - E_min) / dx
-        println("ΔE = ", ΔE)
-
-        h1 = Hist1D(data, E_min:ΔE:max_energy, overflow=false)
-        spectrum = bincounts(h1)
-    end
-
-    return (new_spectrum, max_energy)
 end
