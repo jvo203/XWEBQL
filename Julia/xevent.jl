@@ -14,6 +14,9 @@ mutable struct XDataSet
     # metadata
     num_events::Integer
 
+    # header    
+    header::Any
+
     # data
     x::Any
     y::Any
@@ -27,11 +30,11 @@ mutable struct XDataSet
     last_accessed::Threads.Atomic{Float64}
 
     function XDataSet()
-        new("", "", 0, Nothing, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(0.0))
+        new("", "", 0, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(0.0))
     end
 
     function XDataSet(id::String, uri::String)
-        new(id, uri, 0, Nothing, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(datetime2unix(now())))
+        new(id, uri, 0, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(datetime2unix(now())))
     end
 end
 
@@ -146,6 +149,9 @@ function load_events(xdataset::XDataSet, uri::String)
     f = FITS(uri)
 
     try
+        xdataset.header = read_header(f[2])
+        println("#keywords: ", length(xdataset.header))
+
         @time begin
             x = read(f[2], "X")
             y = read(f[2], "Y")
