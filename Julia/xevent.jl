@@ -182,7 +182,9 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     println("getImage::$(xobject.id)/($width)/($height)")
 
     # first prepare (pixels,mask) then downsize as and when necessary
-    pixels = getImage(xobject)
+    (pixels, xmin, xmax, ymin, ymax) = getImage(xobject)
+    println("size(pixels) = ", size(pixels))
+    println("x: ($xmin, $xmax); y: ($ymin, $ymax)")
 
     # the spectrum
     (spectrum, E_min, E_max) = getSpectrum(xobject, 512)
@@ -195,11 +197,15 @@ function getImage(xobject::XDataSet)
     x = xobject.x
     y = xobject.y
 
-    @time h = Hist2D((x, y), (minimum(x)-0.5:1:maximum(x)+0.5, minimum(y)-0.5:1:maximum(y)+0.5))
-    pixels = bincounts(h)
-    println("size(pixels) = ", size(pixels))
+    xmin = minimum(x)
+    xmax = maximum(x)
+    ymin = minimum(y)
+    ymax = maximum(y)
 
-    return pixels
+    @time h = Hist2D((x, y), (xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5))
+    pixels = bincounts(h)
+
+    return (pixels, xmin, xmax, ymin, ymax)
 end
 
 function getSpectrum(xobject::XDataSet, dx::Integer)
