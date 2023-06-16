@@ -765,6 +765,8 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
         return nothing
     end
 
+    getImageSpectrum(xobject, width, height)
+
     HTTP.setstatus(http, 501)
     startwrite(http)
     write(http, "Not Implemented")
