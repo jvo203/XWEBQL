@@ -203,10 +203,12 @@ function getImage(xobject::XDataSet)
 end
 
 function getSpectrum(xobject::XDataSet)
-    E_min = Float32(0.0) # eV
+    energy = xobject.energy
+
+    E_min = Float32(minimum(energy)) # eV
     E_max = Float32(1000.0) * 2^10 # eV
 
-    @time (spectrum, E_max) = makeSpectrum(xobject.energy, E_min, E_max, Float32(10.0), Int32(512))
+    @time (spectrum, E_max) = makeSpectrum(energy, E_min, E_max, Float32(10.0), Int32(512))
     println("E_max = ", E_max)
 
     return (spectrum, E_min, E_max)

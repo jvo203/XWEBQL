@@ -73,15 +73,16 @@ height = 2430
 pixel_counts = zeros(Int32, width, height)
 
 ΔE = Float32(500.0) # eV
-E_min = Float32(0.0) # eV
+E_min = Float32(minimum(energy)) # eV
 E_max = Float32(1000.0) * 2^10 # eV
 
 @time h1 = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
 spectrum = bincounts(h1)
 #println(spectrum)
 
-@time (spectrum, E_max) = get_spectrum(energy, E_min, E_max, Float32(10.0), Int32(1024))
+@time (spectrum, E_max) = get_spectrum(energy, E_min, E_max, Float32(10.0), Int32(512))
 
+println("E_min = ", E_min)
 println("E_max = ", E_max)
 
 @time h2 = Hist2D((x, y), (minimum(x)-0.5:1:maximum(x)+0.5, minimum(y)-0.5:1:maximum(y)+0.5))
