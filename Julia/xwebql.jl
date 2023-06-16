@@ -37,6 +37,7 @@ const SERVER_STRING =
     "." *
     string(VERSION_SUB)
 
+const WASM_VERSION = "23.06.XX.X"
 const VERSION_STRING = "J/SV2023-06-XX.X-ALPHA"
 
 const FITS_CHUNK = 2880
@@ -523,7 +524,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
     write(http, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/FileSaver.js\"></script>\n")
 
     # WebAssembly
-    #=write(http, "<script src=\"client.", WASM_VERSION, ".js\"></script>\n")
+    write(http, "<script src=\"client.", WASM_VERSION, ".js\"></script>\n")
     write(
         http,
         "<script>\n",
@@ -531,7 +532,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
         "\t.then(status => console.log(status))\n",
         "\t.catch(e => console.error(e));\n",
         "</script>\n",
-    )=#
+    )
 
     # Bootstrap viewport
     write(

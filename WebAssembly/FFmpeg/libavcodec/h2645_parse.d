@@ -1,0 +1,19 @@
+FFmpeg/libavcodec/h2645_parse.o: FFmpeg/libavcodec/h2645_parse.c \
+  FFmpeg/config.h FFmpeg/libavutil/intmath.h \
+  FFmpeg/libavutil/attributes.h FFmpeg/libavutil/intreadwrite.h \
+  FFmpeg/libavutil/avconfig.h FFmpeg/libavutil/bswap.h \
+  FFmpeg/libavutil/mem.h FFmpeg/libavutil/error.h \
+  FFmpeg/libavutil/avutil.h FFmpeg/libavutil/common.h \
+  FFmpeg/libavutil/macros.h FFmpeg/libavutil/version.h \
+  FFmpeg/libavutil/rational.h FFmpeg/libavutil/mathematics.h \
+  FFmpeg/libavutil/intfloat.h FFmpeg/libavutil/log.h \
+  FFmpeg/libavutil/pixfmt.h FFmpeg/libavcodec/bytestream.h \
+  FFmpeg/libavutil/avassert.h FFmpeg/libavcodec/hevc.h \
+  FFmpeg/libavcodec/h264.h FFmpeg/libavcodec/h2645_parse.h \
+  FFmpeg/libavcodec/avcodec.h FFmpeg/libavutil/samplefmt.h \
+  FFmpeg/libavutil/buffer.h FFmpeg/libavutil/cpu.h \
+  FFmpeg/libavutil/channel_layout.h FFmpeg/libavutil/dict.h \
+  FFmpeg/libavutil/frame.h FFmpeg/libavutil/hwcontext.h \
+  FFmpeg/libavcodec/version.h FFmpeg/libavcodec/get_bits.h \
+  FFmpeg/libavcodec/mathops.h FFmpeg/libavutil/reverse.h \
+  FFmpeg/libavcodec/vlc.h
