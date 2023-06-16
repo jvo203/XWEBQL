@@ -195,8 +195,8 @@ function getImage(xobject::XDataSet)
     x = xobject.x
     y = xobject.y
 
-    @time h2 = Hist2D((x, y), (minimum(x)-0.5:1:maximum(x)+0.5, minimum(y)-0.5:1:maximum(y)+0.5))
-    pixels = bincounts(h2)
+    @time h = Hist2D((x, y), (minimum(x)-0.5:1:maximum(x)+0.5, minimum(y)-0.5:1:maximum(y)+0.5))
+    pixels = bincounts(h)
     println("size(pixels) = ", size(pixels))
 
     return pixels
@@ -209,8 +209,8 @@ function getSpectrum(xobject::XDataSet, dx::Integer)
     E_max = Float32(maximum(energy)) # eV
     ΔE = (E_max - E_min) / dx
 
-    @time h1 = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
-    spectrum = bincounts(h1)
+    @time h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
+    spectrum = bincounts(h)
 
     return (spectrum, E_min, E_max)
 end
