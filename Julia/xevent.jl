@@ -271,4 +271,36 @@ function getJSON(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2::I
     end
 
     println("CRVAL1 = $CRVAL1, CDELT1 = $CDELT1, CRPIX1 = $CRPIX1, CUNIT1 = $CUNIT1, CTYPE1 = $CTYPE1")
+
+    try
+        CRVAL2 = xobject.header["TCRVL41"]
+    catch _
+        CRVAL2 = NaN
+    end
+
+    try
+        CDELT2 = xobject.header["TCDLT41"]
+    catch _
+        CDELT2 = NaN
+    end
+
+    try
+        CRPIX2 = xobject.header["TCRPX41"]
+    catch _
+        CRPIX2 = NaN
+    end
+
+    try
+        CUNIT2 = xobject.header["TCUNI41"]
+    catch _
+        CUNIT2 = NaN
+    end
+
+    try
+        CTYPE2 = xobject.header["TCTYP41"]
+    catch _
+        CTYPE2 = NaN
+    end
+
+    println("CRVAL2 = $CRVAL2, CDELT2 = $CDELT2, CRPIX2 = $CRPIX2, CUNIT2 = $CUNIT2, CTYPE2 = $CTYPE2")
 end
