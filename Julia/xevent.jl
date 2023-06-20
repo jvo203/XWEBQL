@@ -391,4 +391,8 @@ function getJSON(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2::I
         SPECSYS = "UNKNOWN"
     end
 
+    println("BITPIX = $BITPIX, OBSRA = $OBSRA, OBSDEC = $OBSDEC")
+    println("OBJECT = $OBJECT, DATEOBS = $DATEOBS, TIMESYS = $TIMESYS")
+    println("BUNIT = $BUNIT, BTYPE = $BTYPE, SPECSYS = $SPECSYS")
+
 end
