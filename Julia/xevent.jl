@@ -199,7 +199,7 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     println("spectrum:", spectrum)
 
     # JSON
-    getJSON(xobject, xmin, xmax, ymin, ymax, E_min, E_max)
+    getJSON(xobject, xmin, xmax, ymin, ymax, E_min, E_max, length(spectrum))
 end
 
 function getImage(xobject::XDataSet)
@@ -230,7 +230,7 @@ function getSpectrum(xobject::XDataSet, dx::Integer)
     return (spectrum, E_min, E_max)
 end
 
-function getJSON(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2::Integer, E1::Float32, E2::Float32)
+function getJSON(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2::Integer, E1::Float32, E2::Float32, NAXIS3::Integer)
     local CRVAL1, CDELT1, CRPIX1, CUNIT1, CTYPE1
     local CRVAL2, CDELT2, CRPIX2, CUNIT2, CTYPE2
     local CRVAL3, CDELT3, CRPIX3, CUNIT3, CTYPE3
@@ -303,4 +303,17 @@ function getJSON(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2::I
     end
 
     println("CRVAL2 = $CRVAL2, CDELT2 = $CDELT2, CRPIX2 = $CRPIX2, CUNIT2 = $CUNIT2, CTYPE2 = $CTYPE2")
+
+    # manually create the third axis
+    CRPIX3 = Float32(1.0) # first fix CRPIX3
+    CDELT3 = (E2 - E1) / (NAXIS3 - 1)
+    CRVAL3 = E1
+    CUNIT3 = "eV"
+    CTYPE3 = "ENERGY"
+
+    println("CRVAL3 = $CRVAL3, CDELT3 = $CDELT3, CRPIX3 = $CRPIX3, CUNIT3 = $CUNIT3, CTYPE3 = $CTYPE3")
+
+    # BITPIX: assume a 32-bit integer
+    BITPIX = 32
+
 end
