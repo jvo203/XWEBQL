@@ -197,6 +197,9 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     println("E_min = ", E_min)
     println("E_max = ", E_max)
     println("spectrum:", spectrum)
+
+    # JSON
+    getJSON(xobject, xmin, xmax, ymin, ymax, E_min, E_max)
 end
 
 function getImage(xobject::XDataSet)
@@ -225,4 +228,47 @@ function getSpectrum(xobject::XDataSet, dx::Integer)
     spectrum = bincounts(h)
 
     return (spectrum, E_min, E_max)
+end
+
+function getJSON(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2::Integer, E1::Float32, E2::Float32)
+    local CRVAL1, CDELT1, CRPIX1, CUNIT1, CTYPE1
+    local CRVAL2, CDELT2, CRPIX2, CUNIT2, CTYPE2
+    local CRVAL3, CDELT3, CRPIX3, CUNIT3, CTYPE3
+    local BUNIT, BTYPE, SPECSYS
+    local BITPIX, OBSRA, OBSDEC
+    local OBJECT, DATEOBS, TIMESYS, LINE, FILTER
+
+    # println(xobject.header)
+
+    try
+        CRVAL1 = xobject.header["TCRVL40"]
+    catch _
+        CRVAL1 = NaN
+    end
+
+    try
+        CDELT1 = xobject.header["TCDLT40"]
+    catch _
+        CDELT1 = NaN
+    end
+
+    try
+        CRPIX1 = xobject.header["TCRPX40"]
+    catch _
+        CRPIX1 = NaN
+    end
+
+    try
+        CUNIT1 = xobject.header["TCUNI40"]
+    catch _
+        CUNIT1 = NaN
+    end
+
+    try
+        CTYPE1 = xobject.header["TCTYP40"]
+    catch _
+        CTYPE1 = NaN
+    end
+
+    println("CRVAL1 = $CRVAL1, CDELT1 = $CDELT1, CRPIX1 = $CRPIX1, CUNIT1 = $CUNIT1, CTYPE1 = $CTYPE1")
 end
