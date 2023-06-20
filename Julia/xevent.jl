@@ -243,7 +243,7 @@ function getJSON(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2::I
     local CRVAL3, CDELT3, CRPIX3, CUNIT3, CTYPE3
     local BUNIT, BTYPE, SPECSYS
     local BITPIX, OBSRA, OBSDEC
-    local OBJECT, DATEOBS, TIMESYS, LINE, FILTER
+    local OBJECT, DATEOBS, TIMESYS
 
     # println(xobject.header)
 
@@ -311,6 +311,28 @@ function getJSON(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2::I
 
     println("CRVAL2 = $CRVAL2, CDELT2 = $CDELT2, CRPIX2 = $CRPIX2, CUNIT2 = $CUNIT2, CTYPE2 = $CTYPE2")
 
+    # adjust the CRPIX1 and CRPIX2
+    # CRPIX1 = CRPIX1 - x1 + 1
+    # CRPIX2 = CRPIX2 - y1 + 1
+
+    # re-base the axes 1 and 2
+
+    # get the ra at x1    
+    ra = CRVAL1 + (x1 - CRPIX1) * CDELT1
+
+    # get the dec at y1
+    dec = CRVAL2 + (y1 - CRPIX2) * CDELT2
+
+    println("ra = $ra, dec = $dec")
+
+    # re-base CRPIX1 and CRPIX2
+    CRPIX1 = (x2 - x1 + 1) / 2
+    CRPIX2 = (y2 - y1 + 1) / 2
+
+    # re-base CRVAL1 and CRVAL2
+    CRVAL1 = ra - (1 - CRPIX1) * CDELT1
+    CRVAL2 = dec - (1 - CRPIX2) * CDELT2
+
     # manually create the third axis
     CRPIX3 = Float32(1.0) # first fix CRPIX3
     CDELT3 = (E2 - E1) / (NAXIS3 - 1)
@@ -318,9 +340,55 @@ function getJSON(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2::I
     CUNIT3 = "eV"
     CTYPE3 = "LOG-ENERGY"
 
+    println("CRVAL1 = $CRVAL1, CDELT1 = $CDELT1, CRPIX1 = $CRPIX1, CUNIT1 = $CUNIT1, CTYPE1 = $CTYPE1")
+    println("CRVAL2 = $CRVAL2, CDELT2 = $CDELT2, CRPIX2 = $CRPIX2, CUNIT2 = $CUNIT2, CTYPE2 = $CTYPE2")
     println("CRVAL3 = $CRVAL3, CDELT3 = $CDELT3, CRPIX3 = $CRPIX3, CUNIT3 = $CUNIT3, CTYPE3 = $CTYPE3")
 
     # BITPIX: assume a 32-bit integer
     BITPIX = 32
+    OBSRA = CRVAL1
+    OBSDEC = CRVAL2
+
+    # OBJECT
+    try
+        OBJECT = xobject.header["OBJECT"]
+    catch _
+        OBJECT = "UNKNOWN"
+    end
+
+    # DATE-OBS
+    try
+        DATEOBS = xobject.header["DATE-OBS"]
+    catch _
+        DATEOBS = "UNKNOWN"
+    end
+
+    # TIMESYS
+    try
+        TIMESYS = xobject.header["TIMESYS"]
+    catch _
+        TIMESYS = "UNKNOWN"
+    end
+
+    # BUNIT
+    try
+        BUNIT = xobject.header["TUNIT43"]
+    catch _
+        BUNIT = "UNKNOWN"
+    end
+
+    # BTYPE
+    try
+        BTYPE = xobject.header["TTYPE43"]
+    catch _
+        BTYPE = "UNKNOWN"
+    end
+
+    # SPECSYS
+    try
+        SPECSYS = xobject.header["SPECSYS"]
+    catch _
+        SPECSYS = "UNKNOWN"
+    end
 
 end
