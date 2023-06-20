@@ -198,8 +198,8 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     println("E_max = ", E_max)
     println("spectrum:", spectrum)
 
-    # JSON
-    getJSON(xobject, xmin, xmax, ymin, ymax, E_min, E_max, length(spectrum))
+    # JSON + HEADER
+    getHeader(xobject, xmin, xmax, ymin, ymax, E_min, E_max, length(spectrum))
 end
 
 function getImage(xobject::XDataSet)
@@ -237,13 +237,14 @@ function getSpectrum(xobject::XDataSet, dx::Integer)
     return (spectrum, E_min, E_max)
 end
 
-function getJSON(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2::Integer, E1::Float32, E2::Float32, NAXIS3::Integer)
+function getHeader(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2::Integer, E1::Float32, E2::Float32, NAXIS3::Integer)
     local CRVAL1, CDELT1, CRPIX1, CUNIT1, CTYPE1
     local CRVAL2, CDELT2, CRPIX2, CUNIT2, CTYPE2
     local CRVAL3, CDELT3, CRPIX3, CUNIT3, CTYPE3
     local BUNIT, BTYPE, SPECSYS
     local BITPIX, OBSRA, OBSDEC
     local OBJECT, DATEOBS, TIMESYS
+    local TELESCOP, OBSERVER, EQUINOX, RADECSYS
 
     # println(xobject.header)
 
@@ -394,5 +395,35 @@ function getJSON(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2::I
     println("BITPIX = $BITPIX, OBSRA = $OBSRA, OBSDEC = $OBSDEC")
     println("OBJECT = $OBJECT, DATEOBS = $DATEOBS, TIMESYS = $TIMESYS")
     println("BUNIT = $BUNIT, BTYPE = $BTYPE, SPECSYS = $SPECSYS")
+
+    # TELESCOP
+    try
+        TELESCOP = xobject.header["TELESCOP"]
+    catch _
+        TELESCOP = "UNKNOWN"
+    end
+
+    # OBSERVER
+    try
+        OBSERVER = xobject.header["OBSERVER"]
+    catch _
+        OBSERVER = "UNKNOWN"
+    end
+
+    # EQUINOX
+    try
+        EQUINOX = xobject.header["EQUINOX"]
+    catch _
+        EQUINOX = "UNKNOWN"
+    end
+
+    # RADECSYS
+    try
+        RADECSYS = xobject.header["RADECSYS"]
+    catch _
+        RADECSYS = "UNKNOWN"
+    end
+
+    println("TELESCOP = $TELESCOP, OBSERVER = $OBSERVER, EQUINOX = $EQUINOX, RADECSYS = $RADECSYS")
 
 end
