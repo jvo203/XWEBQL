@@ -227,6 +227,13 @@ function getSpectrum(xobject::XDataSet, dx::Integer)
     @time h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
     spectrum = bincounts(h)
 
+    # get the bin centers
+    centers = bincenters(h)
+
+    # get the E_min and E_max from the bin centers
+    E_min = Float32(minimum(centers)) # eV
+    E_max = Float32(maximum(centers)) # eV
+
     return (spectrum, E_min, E_max)
 end
 
@@ -309,7 +316,7 @@ function getJSON(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2::I
     CDELT3 = (E2 - E1) / (NAXIS3 - 1)
     CRVAL3 = E1
     CUNIT3 = "eV"
-    CTYPE3 = "ENERGY"
+    CTYPE3 = "LOG-ENERGY"
 
     println("CRVAL3 = $CRVAL3, CDELT3 = $CDELT3, CRPIX3 = $CRPIX3, CUNIT3 = $CUNIT3, CTYPE3 = $CTYPE3")
 
