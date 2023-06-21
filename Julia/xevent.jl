@@ -200,7 +200,8 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     println("spectrum:", spectrum)
 
     # JSON + HEADER
-    getHeader(xobject, pixels, xmin, xmax, ymin, ymax, E_min, E_max, length(spectrum))
+    (header, json) = getHeader(xobject, pixels, xmin, xmax, ymin, ymax, E_min, E_max, length(spectrum))
+    println(json)
 end
 
 function getImage(xobject::XDataSet)
@@ -491,7 +492,10 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     new_header["ORIGIN"] = "JAXA/JVO"
     new_header["SOFTVER"] = SERVER_STRING
 
-    println("new header: $new_header")
+    header_buf = IOBuffer()
+    show(header_buf, new_header)
+    seek(header_buf, 0)
+    header_str = String(take!(header_buf))
 
     buf = IOBuffer()
 
@@ -502,13 +506,13 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     BITPIX = new_header["BITPIX"]
 
     # estimate the filesize
-    filesize = width * height * NAXIS3 * BITPIX / 8
+    filesize = convert(Int64, width * height * NAXIS3 * BITPIX / 8)
 
     dict = Dict(
         "width" => width,
         "height" => height,
         "depth" => NAXIS3,
-        "filesize" => filesize,
+        "filesize" => convert(Int64, filesize),
         "BITPIX" => BITPIX,
         "IGNRVAL" => -1,
         "CRVAL1" => CRVAL1,
@@ -539,6 +543,6 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     write(buf, JSON.json(dict))
     json = String(take!(buf))
 
-    return (new_header, json)
+    return (header_str, json)
 
 end
