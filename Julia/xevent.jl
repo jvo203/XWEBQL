@@ -201,6 +201,7 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
 
     # JSON + HEADER
     (header, json) = getHeader(xobject, pixels, xmin, xmax, ymin, ymax, E_min, E_max, length(spectrum))
+    println(header)
     println(json)
 end
 
