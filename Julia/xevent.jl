@@ -242,12 +242,14 @@ function getSpectrum(xobject::XDataSet, dx::Integer)
 end
 
 function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::Integer, y1::Integer, y2::Integer, E1::Float32, E2::Float32, NAXIS3::Integer)
+    global SERVER_STRING
+
     local CRVAL1, CDELT1, CRPIX1, CUNIT1, CTYPE1
     local CRVAL2, CDELT2, CRPIX2, CUNIT2, CTYPE2
     local CRVAL3, CDELT3, CRPIX3, CUNIT3, CTYPE3
     local BUNIT, BTYPE, SPECSYS
     local OBJECT, OBSRA, OBSDEC, DATEOBS, TIMESYS
-    local TELESCOP, OBSERVER, EQUINOX, RADECSYS
+    local TELESCOP, INSTRUME, OBSERVER, EQUINOX, RADECSYS
 
     # println(xobject.header)
 
@@ -414,6 +416,13 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
         TELESCOP = "UNKNOWN"
     end
 
+    # INSTRUME
+    try
+        INSTRUME = xobject.header["INSTRUME"]
+    catch _
+        INSTRUME = "UNKNOWN"
+    end
+
     # OBSERVER
     try
         OBSERVER = xobject.header["OBSERVER"]
@@ -435,12 +444,19 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
         RADECSYS = "UNKNOWN"
     end
 
-    println("TELESCOP = $TELESCOP, OBSERVER = $OBSERVER, EQUINOX = $EQUINOX, RADECSYS = $RADECSYS")
+    println("TELESCOP = $TELESCOP, INSTRUME = $INSTRUME, OBSERVER = $OBSERVER, EQUINOX = $EQUINOX, RADECSYS = $RADECSYS")
 
     # make a new header from pixels
     new_header = default_header(pixels)
+
+    # manually override the number of axes
+    new_header["NAXIS"] = 3
+    new_header["NAXIS3"] = NAXIS3
+
+    # information about the target
     new_header["OBJECT"] = OBJECT
     new_header["TELESCOP"] = TELESCOP
+    new_header["INSTRUME"] = INSTRUME
     new_header["OBSERVER"] = OBSERVER
     new_header["EQUINOX"] = EQUINOX
     new_header["RADECSYS"] = RADECSYS
@@ -472,8 +488,57 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     new_header["BUNIT"] = BUNIT
     new_header["BTYPE"] = BTYPE
     new_header["SPECSYS"] = SPECSYS
-    new_header["ORIGIN"] = "JAXA/JVO XWEBQL"
+    new_header["ORIGIN"] = "JAXA/JVO"
+    new_header["SOFTVER"] = SERVER_STRING
 
     println("new header: $new_header")
+
+    buf = IOBuffer()
+
+    # get pixels dimensions
+    width = size(pixels)[1]
+    height = size(pixels)[2]
+
+    BITPIX = new_header["BITPIX"]
+
+    # estimate the filesize
+    filesize = width * height * NAXIS3 * BITPIX / 8
+
+    dict = Dict(
+        "width" => width,
+        "height" => height,
+        "depth" => NAXIS3,
+        "filesize" => filesize,
+        "BITPIX" => BITPIX,
+        "IGNRVAL" => -1,
+        "CRVAL1" => CRVAL1,
+        "CDELT1" => CDELT1,
+        "CRPIX1" => CRPIX1,
+        "CUNIT1" => CUNIT1,
+        "CTYPE1" => CTYPE1,
+        "CRVAL2" => CRVAL2,
+        "CDELT2" => CDELT2,
+        "CRPIX2" => CRPIX2,
+        "CUNIT2" => CUNIT2,
+        "CTYPE2" => CTYPE2,
+        "CRVAL3" => CRVAL3,
+        "CDELT3" => CDELT3,
+        "CRPIX3" => CRPIX3,
+        "CUNIT3" => CUNIT3,
+        "CTYPE3" => CTYPE3,
+        "BUNIT" => BUNIT,
+        "BTYPE" => BTYPE,
+        "SPECSYS" => SPECSYS,
+        "OBSRA" => OBSRA,
+        "OBSDEC" => OBSDEC,
+        "OBJECT" => OBJECT,
+        "DATEOBS" => DATEOBS,
+        "TIMESYS" => TIMESYS,
+    )
+
+    write(buf, JSON.json(dict))
+    json = String(take!(buf))
+
+    return (new_header, json)
 
 end
