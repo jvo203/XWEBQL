@@ -188,8 +188,9 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     println("getImage::$(xobject.id)/($width)/($height)")
 
     # first prepare (pixels,mask) then downsize as and when necessary
-    (pixels, xmin, xmax, ymin, ymax) = getImage(xobject)
+    (pixels, mask, xmin, xmax, ymin, ymax) = getImage(xobject)
     println("size(pixels) = ", size(pixels))
+    println("size(mask) = ", size(mask))
     println("x: ($xmin, $xmax); y: ($ymin, $ymax)")
 
     # the spectrum
@@ -214,7 +215,10 @@ function getImage(xobject::XDataSet)
     @time h = Hist2D((x, y), (xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5))
     pixels = bincounts(h)
 
-    return (pixels, xmin, xmax, ymin, ymax)
+    # make a mask for the pixels
+    mask = pixels .> 0
+
+    return (pixels, mask, xmin, xmax, ymin, ymax)
 end
 
 function getSpectrum(xobject::XDataSet, dx::Integer)
@@ -468,6 +472,7 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     new_header["BUNIT"] = BUNIT
     new_header["BTYPE"] = BTYPE
     new_header["SPECSYS"] = SPECSYS
+    new_header["ORIGIN"] = "JAXA/JVO XWEBQL"
 
     println("new header: $new_header")
 
