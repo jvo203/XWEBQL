@@ -199,7 +199,7 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     println("spectrum:", spectrum)
 
     # JSON + HEADER
-    getHeader(xobject, xmin, xmax, ymin, ymax, E_min, E_max, length(spectrum))
+    getHeader(xobject, pixels, xmin, xmax, ymin, ymax, E_min, E_max, length(spectrum))
 end
 
 function getImage(xobject::XDataSet)
@@ -237,7 +237,7 @@ function getSpectrum(xobject::XDataSet, dx::Integer)
     return (spectrum, E_min, E_max)
 end
 
-function getHeader(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2::Integer, E1::Float32, E2::Float32, NAXIS3::Integer)
+function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::Integer, y1::Integer, y2::Integer, E1::Float32, E2::Float32, NAXIS3::Integer)
     local CRVAL1, CDELT1, CRPIX1, CUNIT1, CTYPE1
     local CRVAL2, CDELT2, CRPIX2, CUNIT2, CTYPE2
     local CRVAL3, CDELT3, CRPIX3, CUNIT3, CTYPE3
@@ -345,10 +345,19 @@ function getHeader(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2:
     println("CRVAL2 = $CRVAL2, CDELT2 = $CDELT2, CRPIX2 = $CRPIX2, CUNIT2 = $CUNIT2, CTYPE2 = $CTYPE2")
     println("CRVAL3 = $CRVAL3, CDELT3 = $CDELT3, CRPIX3 = $CRPIX3, CUNIT3 = $CUNIT3, CTYPE3 = $CTYPE3")
 
-    # BITPIX: assume a 32-bit integer
-    BITPIX = 32
-    OBSRA = CRVAL1
-    OBSDEC = CRVAL2
+    # OBSRA
+    try
+        OBSRA = xobject.header["RA_OBJ"]
+    catch _
+        OBSRA = CRVAL1
+    end
+
+    # OBSDEC
+    try
+        OBSDEC = xobject.header["DEC_OBJ"]
+    catch _
+        OBSDEC = CRVAL2
+    end
 
     # OBJECT
     try
@@ -392,8 +401,7 @@ function getHeader(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2:
         SPECSYS = "UNKNOWN"
     end
 
-    println("BITPIX = $BITPIX, OBSRA = $OBSRA, OBSDEC = $OBSDEC")
-    println("OBJECT = $OBJECT, DATEOBS = $DATEOBS, TIMESYS = $TIMESYS")
+    println("OBJECT = $OBJECT, OBSRA = $OBSRA, OBSDEC = $OBSDEC, DATEOBS = $DATEOBS, TIMESYS = $TIMESYS")
     println("BUNIT = $BUNIT, BTYPE = $BTYPE, SPECSYS = $SPECSYS")
 
     # TELESCOP
@@ -425,5 +433,17 @@ function getHeader(xobject::XDataSet, x1::Integer, x2::Integer, y1::Integer, y2:
     end
 
     println("TELESCOP = $TELESCOP, OBSERVER = $OBSERVER, EQUINOX = $EQUINOX, RADECSYS = $RADECSYS")
+
+    # make a new header from pixels
+    new_header = default_header(pixels)
+    new_header["TELESCOP"] = TELESCOP
+    new_header["OBSERVER"] = OBSERVER
+    new_header["EQUINOX"] = EQUINOX
+    new_header["RADECSYS"] = RADECSYS
+    new_header["OBSRA"] = OBSRA
+    new_header["OBSDEC"] = OBSDEC
+    new_header["OBJECT"] = OBJECT
+
+    println("new header: $new_header")
 
 end
