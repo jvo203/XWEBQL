@@ -2,6 +2,7 @@ using Dates
 using Distributed
 using FITSIO
 using FHist
+using ThreadsX
 
 @enum Quality low medium high
 @enum Beam CIRCLE SQUARE # "square" is a reserved Julia function
@@ -180,18 +181,23 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     local scale::Float32, pixels, mask
     local image_width::Integer, image_height::Integer
     local inner_width::Integer, inner_height::Integer
+    local min_count, max_count
 
-    inner_width = 0
-    inner_height = 0
     bDownsize = false
 
     println("getImage::$(xobject.id)/($width)/($height)")
 
     # first prepare (pixels,mask) then downsize as and when necessary
     (pixels, mask, xmin, xmax, ymin, ymax) = getImage(xobject)
+
+    # get the maximum count    
+    min_count = 1
+    max_count = ThreadsX.maximum(pixels)
+
     println("size(pixels) = ", size(pixels))
     println("size(mask) = ", size(mask))
     println("x: ($xmin, $xmax); y: ($ymin, $ymax)")
+    println("min_count = $min_count, max_count = ", max_count)
 
     # the spectrum
     (spectrum, E_min, E_max) = getSpectrum(xobject, 512)

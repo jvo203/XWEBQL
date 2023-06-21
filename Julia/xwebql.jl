@@ -1,8 +1,10 @@
 using ArgParse
+using CodecLz4
 using HTTP
 using JSON
 using Sockets
 using WebSockets
+using ZfpCompression
 
 function parse_commandline()
     s = ArgParseSettings()
@@ -39,6 +41,13 @@ const SERVER_STRING =
 
 const WASM_VERSION = "23.06.XX.X"
 const VERSION_STRING = "J/SV2023-06-XX.X-ALPHA"
+
+const ZFP_HIGH_PRECISION = 16
+const ZFP_MEDIUM_PRECISION = 11
+const ZFP_LOW_PRECISION = 8
+
+const SPECTRUM_HIGH_PRECISION = 24
+const SPECTRUM_MEDIUM_PRECISION = 16
 
 const FITS_CHUNK = 2880
 
