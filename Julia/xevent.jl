@@ -242,8 +242,7 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     local CRVAL2, CDELT2, CRPIX2, CUNIT2, CTYPE2
     local CRVAL3, CDELT3, CRPIX3, CUNIT3, CTYPE3
     local BUNIT, BTYPE, SPECSYS
-    local BITPIX, OBSRA, OBSDEC
-    local OBJECT, DATEOBS, TIMESYS
+    local OBJECT, OBSRA, OBSDEC, DATEOBS, TIMESYS
     local TELESCOP, OBSERVER, EQUINOX, RADECSYS
 
     # println(xobject.header)
@@ -339,7 +338,7 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     CDELT3 = (E2 - E1) / (NAXIS3 - 1)
     CRVAL3 = E1
     CUNIT3 = "eV"
-    CTYPE3 = "LOG-ENERGY"
+    CTYPE3 = "ENERGY"
 
     println("CRVAL1 = $CRVAL1, CDELT1 = $CDELT1, CRPIX1 = $CRPIX1, CUNIT1 = $CUNIT1, CTYPE1 = $CTYPE1")
     println("CRVAL2 = $CRVAL2, CDELT2 = $CDELT2, CRPIX2 = $CRPIX2, CUNIT2 = $CUNIT2, CTYPE2 = $CTYPE2")
@@ -436,13 +435,39 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
 
     # make a new header from pixels
     new_header = default_header(pixels)
+    new_header["OBJECT"] = OBJECT
     new_header["TELESCOP"] = TELESCOP
     new_header["OBSERVER"] = OBSERVER
     new_header["EQUINOX"] = EQUINOX
     new_header["RADECSYS"] = RADECSYS
     new_header["OBSRA"] = OBSRA
     new_header["OBSDEC"] = OBSDEC
-    new_header["OBJECT"] = OBJECT
+    new_header["DATE-OBS"] = DATEOBS
+    new_header["TIMESYS"] = TIMESYS
+
+    # WCS
+    new_header["CRVAL1"] = CRVAL1
+    new_header["CDELT1"] = CDELT1
+    new_header["CRPIX1"] = CRPIX1
+    new_header["CUNIT1"] = CUNIT1
+    new_header["CTYPE1"] = CTYPE1
+
+    new_header["CRVAL2"] = CRVAL2
+    new_header["CDELT2"] = CDELT2
+    new_header["CRPIX2"] = CRPIX2
+    new_header["CUNIT2"] = CUNIT2
+    new_header["CTYPE2"] = CTYPE2
+
+    new_header["CRVAL3"] = CRVAL3
+    new_header["CDELT3"] = CDELT3
+    new_header["CRPIX3"] = CRPIX3
+    new_header["CUNIT3"] = CUNIT3
+    new_header["CTYPE3"] = CTYPE3
+
+    # other    
+    new_header["BUNIT"] = BUNIT
+    new_header["BTYPE"] = BTYPE
+    new_header["SPECSYS"] = SPECSYS
 
     println("new header: $new_header")
 
