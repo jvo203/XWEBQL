@@ -1111,8 +1111,6 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
             // wait for WebAssembly to get compiled
             Module.ready
                 .then(_ => {
-                    document.getElementById('welcome').style.display = "none";
-
                     var received_msg = xmlhttp.response;
 
                     if (received_msg.byteLength == 0) {
