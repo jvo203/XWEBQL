@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-06-06.0";
+    return "JS2023-06-22.0";
 }
 
 function uuidv4() {
@@ -137,6 +137,20 @@ function getEndianness() {
     } else {
         throw new Error('Unrecognized endianness');
     }
+}
+
+function getUint64(dataview, byteOffset, littleEndian) {
+    // 64ビット数を2つの32ビット (4バイト) の部分に分割する
+    const left = dataview.getUint32(byteOffset, littleEndian);
+    const right = dataview.getUint32(byteOffset + 4, littleEndian);
+
+    // 2つの32ビットの値を結合する
+    const combined = littleEndian ? left + 2 ** 32 * right : 2 ** 32 * left + right;
+
+    if (!Number.isSafeInteger(combined))
+        console.warn(combined, 'exceeds MAX_SAFE_INTEGER. Precision may be lost');
+
+    return combined;
 }
 
 function resizeMe() {
@@ -429,6 +443,28 @@ function donotshow() {
 
     localStorage_write_boolean("welcome_x_alpha", !checkbox.checked);
 };
+
+function show_timeout() {
+    try {
+        $('#welcomeScreen').modal('hide');
+    }
+    catch (e) { };
+
+    var div = d3.select("body")
+        .append("div")
+        .attr("class", "container timeout");
+
+    div.append("h1")
+        .style("margin-top", "20%")
+        .attr("align", "center")
+        .text("60 min. inactivity time-out");
+
+    div.append("h2")
+        .attr("align", "center")
+        .text("PLEASE RELOAD THE PAGE");
+
+    close_websocket_connection();
+}
 
 function show_welcome() {
     var div = d3.select("body")
@@ -1071,6 +1107,29 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
             }
 
             setup_window_timeout();
+
+            // wait for WebAssembly to get compiled
+            Module.ready
+                .then(_ => {
+                    document.getElementById('welcome').style.display = "none";
+
+                    var received_msg = xmlhttp.response;
+
+                    if (received_msg.byteLength == 0) {
+                        hide_hourglass();
+                        show_not_found();
+                        return;
+                    }
+
+                    if (received_msg instanceof ArrayBuffer) {
+                        var fitsHeader, spectrum;
+
+                        var dv = new DataView(received_msg);
+                        console.log("FITSImage dataview byte length: ", dv.byteLength);
+                    }
+
+                })
+                .catch(e => console.error(e));
         }
     }
 

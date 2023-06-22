@@ -792,8 +792,8 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
         write(http, UInt32(length(flux)))
         write(http, flux)
 
-        write(http, Int64(min_count))
-        write(http, Int64(max_count))
+        write(http, UInt64(min_count))
+        write(http, UInt64(max_count))
 
         # next the image
         img_width = size(pixels, 1)
