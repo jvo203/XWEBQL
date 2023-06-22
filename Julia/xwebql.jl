@@ -777,10 +777,89 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
 
     @time (pixels, mask, spectrum, header, json, min_count, max_count) = getImageSpectrum(xobject, width, height)
 
-    HTTP.setstatus(http, 501)
-    startwrite(http)
-    write(http, "Not Implemented")
-    return nothing
+    try
+        HTTP.setstatus(http, 200)
+        startwrite(http)
+
+        flux = "LOG"
+
+        # pad flux with spaces so that the length is a multiple of 4
+        # this is needed for an array alignment in JavaScript
+        len = 4 * (length(flux) ÷ 4 + 1)
+        flux = lpad(flux, len, " ")
+
+        write(http, UInt32(length(flux)))
+        write(http, flux)
+
+        write(http, Int64(min_count))
+        write(http, Int64(max_count))
+
+        # next the image
+        img_width = size(pixels, 1)
+        img_height = size(pixels, 2)
+
+        write(http, Int32(img_width))
+        write(http, Int32(img_height))
+
+        # compress pixels with ZFP
+        prec = ZFP_MEDIUM_PRECISION
+
+        if quality == high
+            prec = ZFP_HIGH_PRECISION
+        elseif quality == medium
+            prec = ZFP_MEDIUM_PRECISION
+        elseif quality == low
+            prec = ZFP_LOW_PRECISION
+        end
+
+        println("typeof(pixels) = ", typeof(pixels))
+        compressed_pixels = zfp_compress(pixels, precision=prec)
+        write(http, Int32(length(compressed_pixels)))
+        write(http, compressed_pixels)
+
+        println("typeof(mask) = ", typeof(mask))
+        compressed_mask = lz4_hc_compress(collect(flatten(UInt8.(mask))))
+        write(http, Int32(length(compressed_mask)))
+        write(http, compressed_mask)
+
+        if fetch_data
+            # JSON
+            json_len = length(json)
+            compressed_json = lz4_hc_compress(Vector{UInt8}(json))
+            compressed_len = length(compressed_json)
+
+            write(http, Int32(json_len))
+            write(http, Int32(compressed_len))
+            write(http, compressed_json)
+
+            # FITS HEADER            
+            header_len = length(header)
+            compressed_header = lz4_hc_compress(Vector{UInt8}(header))
+            compressed_len = length(compressed_header)
+
+            write(http, Int32(header_len))
+            write(http, Int32(compressed_len))
+            write(http, compressed_header)
+
+            # spectrum
+            compressed_spectrum = zfp_compress(
+                spectrum,
+                precision=SPECTRUM_HIGH_PRECISION,
+            )
+
+            write(http, Int32(length(spectrum)))
+            write(http, Int32(length(compressed_spectrum)))
+            write(http, compressed_spectrum)
+        end
+
+        return nothing
+    catch e
+        println(e)
+        HTTP.setstatus(http, 404)
+        startwrite(http)
+        write(http, "Not Found")
+        return nothing
+    end
 end
 
 const XROUTER = HTTP.Router()

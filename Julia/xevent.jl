@@ -256,10 +256,6 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     # replace Infinity by 0.0
     pixels[isinf.(pixels)] .= Float32(0.0)
 
-    # print the type of pixels and mask
-    println("typeof(pixels) = ", typeof(pixels))
-    println("typeof(mask) = ", typeof(mask))
-
     # return the image
     return (pixels, mask, spectrum, header, json, min_count, max_count)
 end
