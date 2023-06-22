@@ -2,6 +2,7 @@ using Dates
 using Distributed
 using FITSIO
 using FHist
+using ImageTransformations, Interpolations
 using ThreadsX
 
 @enum Quality low medium high
@@ -209,6 +210,55 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     (header, json) = getHeader(xobject, pixels, xmin, xmax, ymin, ymax, E_min, E_max, length(spectrum))
     println(header)
     println(json)
+
+    # finally downsize the image (optional)
+    inner_width = size(pixels, 1)
+    inner_height = size(pixels, 2)
+
+    try
+        scale = get_image_scale(width, height, inner_width, inner_height)
+    catch e
+        println(e)
+        scale = 1.0
+    end
+
+    if scale < 1.0
+        image_width = round(Integer, scale * inner_width)
+        image_height = round(Integer, scale * inner_height)
+        bDownsize = true
+    else
+        image_width = inner_width
+        image_height = inner_height
+    end
+
+    println("scale = $scale, image: $image_width x $image_height, bDownsize: $bDownsize")
+
+    # downsize the pixels & mask    
+    if bDownsize
+        try
+            pixels = imresize(pixels, (image_width, image_height))
+            mask =
+                Bool.(
+                    imresize(
+                        mask,
+                        (image_width, image_height),
+                        method=Constant(),
+                    ),
+                ) # use Nearest-Neighbours for the mask
+        catch e
+            println(e)
+        end
+    end
+
+    # apply a logarithm to pixels
+    pixels = Float32.(log.(pixels))
+
+    # replace Infinity by 0.0
+    pixels[isinf.(pixels)] .= Float32(0.0)
+
+    # print the type of pixels and mask
+    println("typeof(pixels) = ", typeof(pixels))
+    println("typeof(mask) = ", typeof(mask))
 end
 
 function getImage(xobject::XDataSet)
@@ -511,8 +561,8 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     buf = IOBuffer()
 
     # get pixels dimensions
-    width = size(pixels)[1]
-    height = size(pixels)[2]
+    width = size(pixels, 1)
+    height = size(pixels, 2)
 
     BITPIX = new_header["BITPIX"]
 
@@ -556,4 +606,72 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
 
     return (header_str, json)
 
+end
+
+function get_screen_scale(x::Integer)
+
+    return floor(0.9 * Float32(x))
+
+end
+
+function get_image_scale_square(
+    width::Integer,
+    height::Integer,
+    img_width::Integer,
+    img_height::Integer,
+)
+
+    screen_dimension = get_screen_scale(min(width, height))
+    image_dimension = Float32(max(img_width, img_height))
+
+    return screen_dimension / image_dimension
+
+end
+
+function get_image_scale(
+    width::Integer,
+    height::Integer,
+    img_width::Integer,
+    img_height::Integer,
+)
+
+    scale = Float32(1.0)
+
+    if img_width == img_height
+        return get_image_scale_square(width, height, img_width, img_height)
+    end
+
+    if img_height < img_width
+        screen_dimension = 0.9 * Float32(height)
+        image_dimension = Float32(img_height)
+        scale = screen_dimension / image_dimension
+        new_image_width = scale * img_width
+
+        if new_image_width > 0.8 * Float32(width)
+            screen_dimension = 0.8 * Float32(width)
+            image_dimension = Float32(img_width)
+            scale = screen_dimension / image_dimension
+        end
+
+        return scale
+    end
+
+    if img_width < img_height
+
+        screen_dimension = 0.8 * Float32(width)
+        image_dimension = Float32(img_width)
+        scale = screen_dimension / image_dimension
+        new_image_height = scale * img_height
+
+        if new_image_height > 0.9 * Float32(height)
+            screen_dimension = 0.9 * Float32(height)
+            image_dimension = img_height
+            scale = screen_dimension / image_dimension
+        end
+
+        return scale
+    end
+
+    # default scale
+    return scale
 end
