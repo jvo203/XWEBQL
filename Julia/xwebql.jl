@@ -1,3 +1,4 @@
+import Base.Iterators: flatten
 using ArgParse
 using CodecLz4
 using HTTP
