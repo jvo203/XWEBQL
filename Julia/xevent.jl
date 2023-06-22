@@ -259,6 +259,9 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     # print the type of pixels and mask
     println("typeof(pixels) = ", typeof(pixels))
     println("typeof(mask) = ", typeof(mask))
+
+    # return the image
+    return (pixels, mask, spectrum, header, json, min_count, max_count)
 end
 
 function getImage(xobject::XDataSet)
@@ -513,7 +516,10 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     # manually override the number of axes
     new_header["NAXIS"] = 3
     new_header["NAXIS3"] = NAXIS3
-    set_comment!(new_header, "NAXIS3", "number of channels (energy bins)")
+
+    set_comment!(new_header, "NAXIS1", "width")
+    set_comment!(new_header, "NAXIS2", "height")
+    set_comment!(new_header, "NAXIS3", "energy bins")
 
     # information about the target
     new_header["OBJECT"] = OBJECT

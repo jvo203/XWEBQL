@@ -775,7 +775,7 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
         return nothing
     end
 
-    getImageSpectrum(xobject, width, height)
+    @time (pixels, mask, spectrum, header, json, min_count, max_count) = getImageSpectrum(xobject, width, height)
 
     HTTP.setstatus(http, 501)
     startwrite(http)
