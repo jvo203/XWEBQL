@@ -463,6 +463,7 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     # manually override the number of axes
     new_header["NAXIS"] = 3
     new_header["NAXIS3"] = NAXIS3
+    set_comment!(new_header, "NAXIS3", "number of channels (energy bins)")
 
     # information about the target
     new_header["OBJECT"] = OBJECT
