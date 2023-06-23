@@ -1313,48 +1313,9 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
                             frame_end = fitsData.depth - 1;
 
                             if (fitsData.depth > 1) {
-                                //insert a spectrum object to the spectrumContainer at <index-1>
-                                mean_spectrumContainer[index - 1] = fitsData.mean_spectrum;
-                                integrated_spectrumContainer[index - 1] = fitsData.integrated_spectrum;
+                                setup_axes();
 
-                                spectrum_count++;
-
-                                if (va_count == 1) {
-                                    setup_axes();
-
-                                    if (intensity_mode == "mean")
-                                        plot_spectrum([fitsData.mean_spectrum]);
-
-                                    if (intensity_mode == "integrated")
-                                        plot_spectrum([fitsData.integrated_spectrum]);
-
-                                    if (molecules.length > 0)
-                                        display_molecules();
-                                }
-                                else {
-                                    if (spectrum_count == va_count) {
-                                        //console.log("mean spectrumContainer:", mean_spectrumContainer);
-                                        //console.log("integrated spectrumContainer:", integrated_spectrumContainer);
-
-                                        //display an RGB legend in place of REF FRQ			
-                                        display_composite_legend();
-
-                                        // TO-DO
-                                        /*if (composite_view)
-                                            display_rgb_legend();*/
-
-                                        setup_axes();
-
-                                        if (intensity_mode == "mean")
-                                            plot_spectrum(mean_spectrumContainer);
-
-                                        if (intensity_mode == "integrated")
-                                            plot_spectrum(integrated_spectrumContainer);
-
-                                        if (molecules.length > 0)
-                                            display_molecules();
-                                    }
-                                }
+                                plot_spectrum([fitsData.spectrum]);
                             }
                         }
 
@@ -1857,6 +1818,7 @@ function display_dataset_info() {
 
     data_band_lo = Math.min(val1, val2);
     data_band_hi = Math.max(val1, val2);
+    console.log("data_band_lo: " + data_band_lo + " data_band_hi: " + data_band_hi);
 
     //add video playback control
     if (fitsData.depth > 1) {
