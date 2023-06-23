@@ -996,7 +996,7 @@ async function mainRenderer() {
             .attr("height", 162)
             .attr("opacity", 0.5);
 
-        await res3d; // display_menu();
+        await res3d; display_menu();
 
         if (welcome)
             show_welcome();
@@ -1244,6 +1244,122 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
                             console.log(fitsHeader);
                         }
 
+                        if (has_json) {
+                            // decompress the FITS data etc.
+                            var LZ4 = require('lz4');
+
+                            var uncompressed = new Uint8Array(json_len);
+                            uncompressedSize = LZ4.decodeBlock(json, uncompressed);
+                            uncompressed = uncompressed.slice(0, uncompressedSize);
+
+                            try {
+                                fitsData = new TextDecoder().decode(uncompressed);
+                            }
+                            catch (err) {
+                                fitsData = '';
+                                for (var i = 0; i < uncompressed.length; i++)
+                                    fitsData += String.fromCharCode(uncompressed[i]);
+                            };
+
+                            //console.log(fitsData);
+                            fitsData = JSON.parse(fitsData);
+
+                            // replace the dummy FITS header
+                            if (has_header) {
+                                fitsData.HEADER = fitsHeader;
+                            } else {
+                                fitsData.HEADER = 'N/A';
+                            };
+
+                            // replace the dummy spectrum
+                            if (has_spectrum) {
+                                fitsData.spectrum = spectrum;
+                            }
+
+                            console.log(fitsData);
+
+                            if (!isLocal) {
+                                let filesize = fitsData.filesize;
+                                let strFileSize = numeral(filesize).format('0.0b');
+                                d3.select("#FITS").html("full download (" + strFileSize + ")");
+                            }
+
+                            {
+                                frame_reference_unit();
+
+                                //rescale CRVAL3 and CDELT3
+                                fitsData.CRVAL3 *= frame_multiplier;
+                                fitsData.CDELT3 *= frame_multiplier;
+                            }
+
+                            display_dataset_info();
+
+                            if (va_count == 1 || composite_view) {
+                                try {
+                                    if (index == va_count) {
+                                        display_scale_info();
+                                    }
+                                }
+                                catch (err) {
+                                };
+                            };
+
+                            display_preferences(index);
+
+                            display_FITS_header(index);
+
+                            if (!composite_view)
+                                add_line_label(index);
+
+                            frame_start = 0;
+                            frame_end = fitsData.depth - 1;
+
+                            if (fitsData.depth > 1) {
+                                //insert a spectrum object to the spectrumContainer at <index-1>
+                                mean_spectrumContainer[index - 1] = fitsData.mean_spectrum;
+                                integrated_spectrumContainer[index - 1] = fitsData.integrated_spectrum;
+
+                                spectrum_count++;
+
+                                if (va_count == 1) {
+                                    setup_axes();
+
+                                    if (intensity_mode == "mean")
+                                        plot_spectrum([fitsData.mean_spectrum]);
+
+                                    if (intensity_mode == "integrated")
+                                        plot_spectrum([fitsData.integrated_spectrum]);
+
+                                    if (molecules.length > 0)
+                                        display_molecules();
+                                }
+                                else {
+                                    if (spectrum_count == va_count) {
+                                        //console.log("mean spectrumContainer:", mean_spectrumContainer);
+                                        //console.log("integrated spectrumContainer:", integrated_spectrumContainer);
+
+                                        //display an RGB legend in place of REF FRQ			
+                                        display_composite_legend();
+
+                                        // TO-DO
+                                        /*if (composite_view)
+                                            display_rgb_legend();*/
+
+                                        setup_axes();
+
+                                        if (intensity_mode == "mean")
+                                            plot_spectrum(mean_spectrumContainer);
+
+                                        if (intensity_mode == "integrated")
+                                            plot_spectrum(integrated_spectrumContainer);
+
+                                        if (molecules.length > 0)
+                                            display_molecules();
+                                    }
+                                }
+                            }
+                        }
+
                     }
 
                 })
@@ -1255,4 +1371,826 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
     xmlhttp.responseType = 'arraybuffer';
     xmlhttp.timeout = 0;
     xmlhttp.send();
+}
+
+function frame_reference_unit() {
+    if (fitsData.CUNIT3.toLowerCase() === "eV".toLowerCase()) {
+        frame_multiplier = 1;
+        return;
+    }
+
+    if (fitsData.CUNIT3.toLowerCase() === "keV".toLowerCase()) {
+        frame_multiplier = 1e3;
+        return;
+    }
+
+    if (fitsData.CUNIT3.toLowerCase() === "MeV".toLowerCase()) {
+        frame_multiplier = 1e6;
+        return;
+    }
+
+    if (fitsData.CUNIT3.toLowerCase() === "GeV".toLowerCase()) {
+        frame_multiplier = 1e9;
+        return;
+    }
+
+    if (fitsData.CUNIT3.toLowerCase() === "TeV".toLowerCase()) {
+        frame_multiplier = 1e12;
+        return;
+    }
+}
+
+function show_fits_header() {
+    $("#fitsHeader").modal("show");
+
+    var modal = document.getElementById('fitsHeader');
+    var span = document.getElementById('fitsHeaderClose');
+
+    // When the user clicks on <span> (x), close the modal
+    span.onclick = function () {
+        $("#fitsHeader").modal("hide");
+    }
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function (event) {
+        if (event.target == modal) {
+            $("#fitsHeader").modal("hide");
+        }
+    }
+}
+
+function show_help() {
+    $("#help").modal("show");
+
+    var modal = document.getElementById('help');
+    var span = document.getElementById('helpclose');
+
+    // When the user clicks on <span> (x), close the modal
+    span.onclick = function () {
+        $("#help").modal("hide");
+    }
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function (event) {
+        if (event.target == modal) {
+            $("#help").modal("hide");
+        }
+    }
+}
+
+function display_menu() {
+    var div = d3.select("body").append("div")
+        .attr("id", "menu")
+        .attr("class", "menu");
+    //.on("mouseleave", hide_navigation_bar);
+
+    var nav = div.append("nav").attr("class", "navbar navbar-inverse navbar-fixed-top fixed-top navbar-expand-sm navbar-dark");
+
+    var main = nav.append("div")
+        .attr("class", "container-fluid");
+
+    var header = main.append("div")
+        .attr("class", "navbar-header");
+
+    header.append("a")
+        .attr("href", "https://www.nao.ac.jp/")
+        .append("img")
+        .attr("class", "navbar-left")
+        .attr("src", "https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/logo_naoj_nothing_s.png")
+        .attr("alt", "NAOJ")
+        .attr("max-height", "100%")
+        .attr("height", 50);//2.5*emFontSize);//50
+
+    var mainUL = main.append("ul")
+        .attr("class", "nav navbar-nav");
+
+    //FITS
+    var fitsMenu = mainUL.append("li")
+        .attr("class", "dropdown");
+
+    fitsMenu.append("a")
+        .attr("class", "dropdown-toggle")
+        .attr("data-toggle", "dropdown")
+        .style('cursor', 'pointer')
+        .html('FITS <span class="fas fa-folder-open"></span> <span class="caret"></span>');
+
+    var fitsDropdown = fitsMenu.append("ul")
+        .attr("class", "dropdown-menu");
+
+    fitsDropdown.append("li")
+        .append("a")
+        .style('cursor', 'pointer')
+        .on("click", show_fits_header)
+        .html('display header');
+
+    if (!isLocal && va_count == 1 && (window.location.search.indexOf('ALMA') > 0 || window.location.search.indexOf('ALMB') > 0)) {
+        var url = "";
+
+        if (datasetId.localeCompare("ALMA01000000") < 0)
+            url = "http://jvo.nao.ac.jp/portal/alma/sv.do?action=download.fits&dataId=";
+        else
+            url = "http://jvo.nao.ac.jp/portal/alma/archive.do?action=download.fits&dataId=";
+
+        fitsDropdown.append("li")
+            .append("a")
+            .attr("id", "FITS")
+            .attr("href", url + datasetId + '_00_00_00')
+            .html('full FITS download <span class="fas fa-save"></span>');
+    }
+    else {
+        let filename = datasetId + ".fits";
+        let _url = "get_fits?datasetId=" + encodeURIComponent(datasetId);
+        _url += "&filename=" + encodeURIComponent(filename);
+
+        fitsDropdown.append("li")
+            .append("a")
+            .attr("id", "FITS")
+            .attr("href", _url)
+            .attr("target", "_blank")
+            .attr('download', '')
+            .html('full FITS download <span class="fas fa-save"></span>');
+    }
+
+    //IMAGE
+    var imageMenu = mainUL.append("li")
+        .attr("class", "dropdown");
+
+    imageMenu.append("a")
+        .attr("class", "dropdown-toggle")
+        .attr("data-toggle", "dropdown")
+        .style('cursor', 'pointer')
+        .html('Image <span class="caret"></span>');
+
+    var imageDropdown = imageMenu.append("ul")
+        .attr("id", "imageDropdown")
+        .attr("class", "dropdown-menu");
+    //.style("background-color", "rgba(0,0,0,0.4)");    
+
+    //PREFERENCES
+    var prefMenu = mainUL.append("li")
+        .attr("class", "dropdown");
+
+    prefMenu.append("a")
+        .attr("class", "dropdown-toggle")
+        .attr("data-toggle", "dropdown")
+        .style('cursor', 'pointer')
+        .html('Preferences <span class="caret"></span>');
+
+    var prefDropdown = prefMenu.append("ul")
+        .attr("id", "prefDropdown")
+        .attr("class", "dropdown-menu");
+
+    //VIEW
+    var viewMenu = mainUL.append("li")
+        .attr("class", "dropdown");
+
+    viewMenu.append("a")
+        .attr("class", "dropdown-toggle")
+        .attr("data-toggle", "dropdown")
+        .style('cursor', 'pointer')
+        .html('View <span class="caret"></span>');
+
+    var viewDropdown = viewMenu.append("ul")
+        .attr("class", "dropdown-menu");
+
+    if (has_webgl) {
+        var htmlStr = '<i class="material-icons">3d_rotation</i> 3D surface';
+        viewDropdown.append("li")
+            .append("a")
+            .style('cursor', 'pointer')
+            .on("click", function () {
+                init_surface();
+
+            })
+            .html(htmlStr);
+    }
+    else {
+        viewDropdown.append("li")
+            .append("a")
+            .attr("disabled", "disabled")
+            .style("font-style", "italic")
+            .style('cursor', 'not-allowed')
+            .html('<span class="fas fa-eye-slash"></span> WebGL not enabled, disabling 3D surface');
+    }
+
+    // contours
+    htmlStr = displayContours ? '<span class="fas fa-check-square"></span> contour lines' : '<span class="far fa-square"></span> contour lines';
+    viewDropdown.append("li")
+        .append("a")
+        .attr("id", "displayContours")
+        .style('cursor', 'pointer')
+        .on("click", function () {
+            displayContours = !displayContours;
+            var htmlStr = displayContours ? '<span class="fas fa-check-square"></span> contour lines' : '<span class="far fa-square"></span> contour lines';
+            d3.select(this).html(htmlStr);
+            //var elem = d3.selectAll("#contourPlot");
+
+            if (displayContours) {
+                d3.select('#contour_control_li').style("display", "block");
+            }
+            else {
+                d3.select('#contour_control_li').style("display", "none");
+            }
+
+            if (displayContours) {
+                document.getElementById("ContourSVG").style.display = "block";
+                //elem.attr("opacity",1);
+
+                //if(document.getElementById('contourPlot') == null)
+                if (!has_contours)
+                    update_contours();
+            }
+            else {
+                document.getElementById("ContourSVG").style.display = "none";
+                //elem.attr("opacity",0);
+            }
+        })
+        .html(htmlStr);
+
+    // gridlines
+    htmlStr = displayGridlines ? '<span class="fas fa-check-square"></span> lon/lat grid lines' : '<span class="far fa-square"></span> lon/lat grid lines';
+    viewDropdown.append("li")
+        .append("a")
+        .attr("id", "displayGridlines")
+        .style('cursor', 'pointer')
+        .on("click", function () {
+            displayGridlines = !displayGridlines;
+            localStorage_write_boolean("displayGridlines", displayGridlines);
+            var htmlStr = displayGridlines ? '<span class="fas fa-check-square"></span> lon/lat grid lines' : '<span class="far fa-square"></span> lon/lat grid lines';
+            d3.select(this).html(htmlStr);
+            var elem = d3.select("#gridlines");
+            if (displayGridlines)
+                elem.attr("opacity", 1);
+            else
+                elem.attr("opacity", 0);
+        })
+        .html(htmlStr);
+
+    htmlStr = displayLegend ? '<span class="fas fa-check-square"></span> image legend' : '<span class="far fa-square"></span> image legend';
+    viewDropdown.append("li")
+        .append("a")
+        .style('cursor', 'pointer')
+        .on("click", function () {
+            displayLegend = !displayLegend;
+            localStorage_write_boolean("displayLegend", displayLegend);
+            var htmlStr = displayLegend ? '<span class="fas fa-check-square"></span> image legend' : '<span class="far fa-square"></span> image legend';
+            d3.select(this).html(htmlStr);
+
+            if (va_count == 1) {
+                var elem = d3.select("#legend");
+
+                if (displayLegend)
+                    elem.attr("opacity", 1);
+                else
+                    elem.attr("opacity", 0);
+            }
+            else {
+                for (let index = 1; index <= va_count; index++) {
+                    var elem = d3.select("#legend" + index);
+
+                    if (displayLegend)
+                        elem.attr("opacity", 1);
+                    else
+                        elem.attr("opacity", 0);
+                }
+            }
+        })
+        .html(htmlStr);
+
+    htmlStr = displaySpectrum ? '<span class="fas fa-check-square"></span> spectrum' : '<span class="far fa-square"></span> spectrum';
+    viewDropdown.append("li")
+        .append("a")
+        .style('cursor', 'pointer')
+        .on("click", function () {
+            displaySpectrum = !displaySpectrum;
+            localStorage_write_boolean("displaySpectrum", displaySpectrum);
+            var htmlStr = displaySpectrum ? '<span class="fas fa-check-square"></span> spectrum' : '<span class="far fa-square"></span> spectrum';
+            d3.select(this).html(htmlStr);
+            var elem = document.getElementById("SpectrumCanvas");
+            if (displaySpectrum) {
+                elem.style.display = "block";
+                d3.select("#yaxis").attr("opacity", 1);
+                d3.select("#ylabel").attr("opacity", 1);
+            }
+            else {
+                elem.style.display = "none";
+                d3.select("#yaxis").attr("opacity", 0);
+                d3.select("#ylabel").attr("opacity", 0);
+            }
+        })
+        .html(htmlStr);
+
+    //HELP
+    var rightUL = main.append("ul")
+        .attr("class", "nav navbar-nav navbar-right");
+
+    var helpMenu = rightUL.append("li")
+        .attr("class", "dropdown");
+
+    helpMenu.append("a")
+        .attr("class", "dropdown-toggle")
+        .attr("data-toggle", "dropdown")
+        .style('cursor', 'pointer')
+        .html('<span class="fas fa-question-circle"></span> Help <span class="caret"></span>');
+
+    var helpDropdown = helpMenu.append("ul")
+        .attr("class", "dropdown-menu");
+
+    helpDropdown.append("li")
+        .append("a")
+        .style('cursor', 'pointer')
+        .on("click", show_help)
+        .html('<span class="fas fa-wrench"></span> user guide');
+
+    helpDropdown.append("li")
+        .append("a")
+        .attr("href", "mailto:help_desk@jvo.nao.ac.jp?subject=" + htmlData.getAttribute('data-server-string') + " feedback [" + htmlData.getAttribute('data-server-version') + "/" + get_js_version() + "]")
+        .html('<span class="fas fa-comment-dots"></span> send feedback');
+
+    helpDropdown.append("li")
+        .append("a")
+        .style("color", "#336699")
+        .html("[" + htmlData.getAttribute('data-server-version') + "/" + get_js_version() + "]");
+}
+
+function display_dataset_info() {
+    var svg = d3.select("#FrontSVG");
+    var width = parseFloat(svg.attr("width"));
+    var height = parseFloat(svg.attr("height"));
+
+    xradec = new Array(null, null);
+
+    /*console.log("RA:", fitsData.OBSRA, fitsData.CTYPE1, "DEC:", fitsData.OBSDEC, fitsData.CTYPE2);
+  	
+    if (fitsData.OBSRA != '' && fitsData.OBSDEC != '') {
+      var ra = ParseRA('+' + fitsData.OBSRA.toString());
+      var dec = ParseDec(fitsData.OBSDEC.toString());
+      xradec = new Array((ra / 3600.0) / toDegrees, (dec / 3600.0) / toDegrees);
+    }
+    else
+      xradec = new Array(null, null);*/
+
+    if (fitsData.CTYPE1.indexOf("RA") > -1 || fitsData.CTYPE1.indexOf("GLON") > -1 || fitsData.CTYPE1.indexOf("ELON") > -1)
+        xradec[0] = (fitsData.CRVAL1 + (fitsData.width / 2 - fitsData.CRPIX1) * fitsData.CDELT1) / toDegrees;
+
+    if (fitsData.CTYPE2.indexOf("DEC") > -1 || fitsData.CTYPE2.indexOf("GLAT") > -1 || fitsData.CTYPE2.indexOf("ELAT") > -1)
+        xradec[1] = (fitsData.CRVAL2 + (fitsData.height - fitsData.height / 2 - fitsData.CRPIX2) * fitsData.CDELT2) / toDegrees;
+
+    try {
+        d3.select("#information").remove();
+    }
+    catch (e) {
+    }
+
+    var group = svg.append("g")
+        .attr("id", "information");
+
+    var object = fitsData.OBJECT.replace(/_/g, " ").trim();
+
+    group.append("text")
+        .attr("x", width)
+        .attr("y", 4.5 * emFontSize)//7*
+        .attr("font-family", "Helvetica")//Arial
+        .attr("font-weight", "normal")
+        .attr("font-size", "2.5em")
+        .attr("text-anchor", "end")
+        .attr("stroke", "none")
+        .text(object)
+        .append("svg:title")
+        .text("object name");
+
+    let titleStr = object;
+
+    if (titleStr != "") {
+        document.title = titleStr;
+    };
+
+    var dateobs = fitsData.DATEOBS;
+
+    if (dateobs == '')
+        dateobs = '';//'DATEOBS N/A' ;
+    else {
+        var pos = dateobs.indexOf('.');
+
+        if (pos >= 0)
+            dateobs = dateobs.substr(0, pos);
+
+        dateobs = dateobs.replace(/T/g, " ") + ' ' + fitsData.TIMESYS;
+    }
+
+    group.append("text")
+        .attr("x", width)
+        .attr("y", 6.5 * emFontSize)//6.5 6.0
+        .attr("font-family", "Helvetica")
+        .attr("font-size", "1.3em")//1.75
+        .attr("text-anchor", "end")
+        .attr("stroke", "none")
+        .attr("opacity", 0.75)
+        .text(dateobs)
+        .append("svg:title")
+        .text("observation date");
+
+    let raText = 'RA N/A';
+
+    if (fitsData.CTYPE1.indexOf("RA") > -1) {
+        if (coordsFmt == 'DMS')
+            raText = 'α: ' + RadiansPrintDMS(xradec[0]);
+        else
+            raText = 'α: ' + RadiansPrintHMS(xradec[0]);
+    }
+
+    if (fitsData.CTYPE1.indexOf("GLON") > -1)
+        raText = 'l: ' + RadiansPrintDMS(xradec[0]);
+
+    if (fitsData.CTYPE1.indexOf("ELON") > -1)
+        raText = 'λ: ' + RadiansPrintDMS(xradec[0]);
+
+    group.append("text")
+        .attr("id", "ra")
+        .attr("x", width)
+        .attr("y", 8.5 * emFontSize)//8.5 7.5
+        .attr("font-family", "Inconsolata")
+        //.attr("font-style", "italic")
+        .attr("font-size", "1.5em")
+        .attr("text-anchor", "end")
+        .attr("stroke", "none")
+        .text(raText);
+    /*.append("svg:title")
+    .text(fitsData.CTYPE1.trim());*/
+
+    let decText = 'DEC N/A';
+
+    if (fitsData.CTYPE2.indexOf("DEC") > -1)
+        decText = 'δ: ' + RadiansPrintDMS(xradec[1]);
+
+    if (fitsData.CTYPE2.indexOf("GLAT") > -1)
+        decText = 'b: ' + RadiansPrintDMS(xradec[1]);
+
+    if (fitsData.CTYPE2.indexOf("ELAT") > -1)
+        decText = 'β: ' + RadiansPrintDMS(xradec[1]);
+
+    group.append("text")
+        .attr("id", "dec")
+        .attr("x", width)
+        .attr("y", 10 * emFontSize)//10 8.75
+        .attr("font-family", "Inconsolata")
+        //.attr("font-style", "italic")
+        .attr("font-size", "1.5em")
+        .attr("text-anchor", "end")
+        .attr("stroke", "none")
+        .text(decText);
+    /*.append("svg:title")
+    .text(fitsData.CTYPE2.trim());*/
+
+    group.append("text")
+        .attr("id", "pixel")
+        .attr("x", width)
+        .attr("y", 11.5 * emFontSize)//11.5 10
+        .attr("font-family", "Inconsolata")
+        //.attr("font-style", "italic")
+        .attr("font-size", "1.5em")
+        .attr("text-anchor", "end")
+        .attr("stroke", "none")
+        .attr("opacity", 0.0)
+        .text("")
+        .append("svg:title")
+        .text("pixel value (intensity)");
+
+    var val1 = fitsData.CRVAL3 + fitsData.CDELT3 * (1 - fitsData.CRPIX3);
+    var val2 = fitsData.CRVAL3 + fitsData.CDELT3 * (fitsData.depth - fitsData.CRPIX3);
+
+    data_band_lo = Math.min(val1, val2);
+    data_band_hi = Math.max(val1, val2);
+    RESTFRQ = fitsData.RESTFRQ;
+
+    //disable frequency display in multiple-view mode
+    if (va_count > 1)
+        RESTFRQ = 0;
+    else {
+        if (RESTFRQ > 0.0)
+            has_frequency_info = true;
+    }
+
+    if (has_velocity_info && has_frequency_info) {
+        var c = 299792.458;//speed of light [km/s]
+
+        var v1 = fitsData.CRVAL3 + fitsData.CDELT3 * (1 - fitsData.CRPIX3);
+        v1 /= 1000;//[km/s]
+
+        var v2 = fitsData.CRVAL3 + fitsData.CDELT3 * (fitsData.depth - fitsData.CRPIX3);
+        v2 /= 1000;//[km/s]
+
+        var f1 = RESTFRQ * Math.sqrt((1 - v1 / c) / (1 + v1 / c));
+        var f2 = RESTFRQ * Math.sqrt((1 - v2 / c) / (1 + v2 / c));
+
+        data_band_lo = Math.min(f1, f2);
+        data_band_hi = Math.max(f1, f2);
+
+        //console.log("v1:", v1, "v2:", v2);
+        //console.log("f1:", f1, "f2:", f2);
+    }
+    else if (has_frequency_info) {
+        /*if(fitsData.CTYPE3 != "")
+        {	    
+          //an override due to ALMA data errors: use the no middle-point
+          RESTFRQ = (val1+val2)/2 ;//expects [Hz]	
+        }*/
+
+        RESTFRQ = (RESTFRQ / 1.0e9).toPrecision(7) * 1.0e9;//slightly rounded, expected unit is [Hz]
+
+        data_band_lo = Math.min(val1, val2);
+        data_band_hi = Math.max(val1, val2);
+    }
+
+    //console.log("CTYPE3 = ", fitsData.CTYPE3, "has_freq:", has_frequency_info, "has_vel:", has_velocity_info);
+
+    if (has_frequency_info > 0.0 && va_count == 1) {
+
+        var bandStr = '';
+
+        if (fitsData.depth > 1)
+            bandStr = '<span style="float:left; font-weight:bold">REF FRQ</span><br><input type="number" id="frequencyInput" min="0" step="0.1" style="width: 6em; color: black; background-color: lightgray; font-size: 1.0em" value="' + (RESTFRQ / 1.0e9).toPrecision(7) + '"> GHz';
+        else
+            bandStr = '<span style="float:left; font-weight:bold">REF FRQ</span><br><input type="number" id="frequencyInput" min="0" step="0.1" style="width: 6em; color: black; background-color: lightgray; font-size: 1.0em" value="' + (RESTFRQ / 1.0e9).toPrecision(7) + '" disabled> GHz';
+
+        group.append("g")
+            .attr("id", "foreignBandG")
+            .style("opacity", 0.25)
+            .append("foreignObject")
+            .attr("id", "foreignBand")
+            .attr("x", (width - 20 * emFontSize))
+            .attr("y", 12.5 * emFontSize)//12.5
+            .attr("width", 20 * emFontSize)
+            .attr("height", 7 * emFontSize)
+            .on("mouseenter", function () {
+                d3.select("#foreignBandG").style("opacity", 1.0);
+            })
+            .on("mouseleave", function () {
+                d3.select("#foreignBandG").style("opacity", 0.25);
+            })
+            .append("xhtml:div")
+            .attr("id", "bandDiv")
+            .attr("class", "container-fluid input")
+            .style("float", "right")
+            .style("padding", "2.5%")
+            .append("span")
+            .attr("id", "band")
+            .html(bandStr);
+
+        var elem = document.getElementById('frequencyInput');
+        elem.onblur = submit_corrections;
+        elem.onmouseleave = submit_corrections;
+        elem.onkeyup = function (e) {
+            var event = e || window.event;
+            var charCode = event.which || event.keyCode;
+
+            if (charCode == '13') {
+                //console.log('REF FRQ ENTER');
+                // Enter pressed
+                submit_corrections();
+                return false;
+            }
+        }
+    }
+
+    if (fitsData.depth > 1 && (/*has_velocity_info ||*/ has_frequency_info)) {
+        var velStr = '<span id="redshift" class="redshift" style="float:left; font-weight:bold">SRC&nbsp;</span><input type="radio" id="velV" name="velocity" value="v" style="vertical-align: middle; margin: 0px;" onclick="javascript:toggle_redshift_input_source(this);"> V&nbsp;<input type="radio" id="velZ" name="velocity" value="z" style="vertical-align: middle; margin: 0px;" onclick="javascript:toggle_redshift_input_source(this);"> z&nbsp;<br><span><input type="number" id="velocityInput" step="0.1" style="width: 4.5em; color: black; background-color: lightgray; font-size: 1.0em" value="' + USER_DELTAV + '"></span> <span id="unit">km/s</span><br>';
+
+        if (has_frequency_info)
+            velStr += '<label class="small" style="cursor: pointer; font-weight:bold"><input type="checkbox" value="" class="control-label" style="cursor: pointer" id="restcheckbox" onmouseenter="javascript:this.focus();" onchange="javascript:toggle_rest_frequency();">&nbsp;<I>F<SUB>REST</SUB></I></label>'
+
+        var yoffset = 21 * emFontSize;
+
+        if (composite_view)
+            yoffset += 1 * emFontSize;
+
+        group.append("g")
+            .attr("id", "foreignVelG")
+            .style("opacity", 0.25)
+            .append("foreignObject")
+            .attr("id", "foreignVel")
+            .attr("x", (width - 20 * emFontSize))
+            .attr("y", yoffset)//(17.5*emFontSize)//19
+            .attr("width", 20 * emFontSize)
+            .attr("height", 10.0 * emFontSize)
+            .on("mouseenter", function () {
+                d3.select("#foreignVelG").style("opacity", 1.0);
+            })
+            .on("mouseleave", function () {
+                d3.select("#foreignVelG").style("opacity", 0.25);
+            })
+            .append("xhtml:div")
+            .attr("id", "velDiv")
+            .attr("class", "container-fluid input")
+            .style("float", "right")
+            .style("padding", "2.5%")
+            .append("span")
+            .attr("id", "vel")
+            .html(velStr);
+
+        if (has_frequency_info) {
+            var checkbox = document.getElementById('restcheckbox');
+
+            if (sessionStorage.getItem("rest") === null)
+                checkbox.checked = false;
+            else {
+                var checked = sessionStorage.getItem("rest");
+
+                if (checked == "true")
+                    checkbox.checked = true;
+                else
+                    checkbox.checked = false;
+            }
+        }
+
+        if (sessionStorage.getItem("redshift") === null)
+            document.getElementById('velV').setAttribute("checked", "");
+        else {
+            var value = sessionStorage.getItem("redshift");
+
+            if (value == "z") {
+                document.getElementById('velZ').setAttribute("checked", "");
+                document.getElementById('unit').style.opacity = "0.0";
+            }
+            else
+                document.getElementById('velV').setAttribute("checked", "");
+        }
+
+        //add onblur
+        var m = document.getElementById('velocityInput');
+        m.onblur = submit_delta_v;
+        m.onmouseleave = submit_delta_v;
+        m.onkeyup = function (e) {
+            var event = e || window.event;
+            var charCode = event.which || event.keyCode;
+
+            if (charCode == '13') {
+                // Enter pressed
+                submit_delta_v();
+                return false;
+            }
+        }
+
+    }
+
+    //add video playback control
+    if (fitsData.depth > 1) {
+        var yoffset = 32 * emFontSize;
+
+        if (composite_view)
+            yoffset += 1 * emFontSize;
+
+        var videoStr = '<span id="videoPlay" class="fas fa-play" style="display:inline-block; cursor: pointer"></span><span id="videoPause" class="fas fa-pause" style="display:none; cursor: pointer"></span>&nbsp; <span id="videoStop" class="fas fa-stop" style="cursor: pointer"></span>&nbsp; <span id="videoForward" class="fas fa-forward" style="cursor: pointer"></span>&nbsp; <span id="videoFastForward" class="fas fa-fast-forward" style="cursor: pointer"></span>';
+
+        group.append("g")
+            .attr("id", "videoControlG")
+            .style("opacity", 0.25)
+            .append("foreignObject")
+            .attr("id", "videoControl")
+            .attr("x", (width - 20 * emFontSize))
+            .attr("y", yoffset)//(17.5*emFontSize)//19
+            .attr("width", 20 * emFontSize)
+            .attr("height", 5.0 * emFontSize)
+            .on("mouseenter", function () {
+                d3.select("#videoControlG").style("opacity", 1.0);
+
+                //hide the molecular list (spectral lines) so that it does not obscure the controls!
+                displayMolecules_bak = displayMolecules;
+                displayMolecules = false;
+                document.getElementById('molecularlist').style.display = "none";
+            })
+            .on("mouseleave", function () {
+                d3.select("#videoControlG").style("opacity", 0.25);
+
+                displayMolecules = displayMolecules_bak;
+
+                video_playback = false;
+                clearTimeout(video_timeout);
+                video_timeout = -1;
+
+                document.getElementById('videoPlay').style.display = "inline-block";
+                document.getElementById('videoPause').style.display = "none";
+
+                if (streaming)
+                    x_axis_mouseleave();
+            })
+            .append("xhtml:div")
+            .attr("id", "videoDiv")
+            .attr("class", "container-fluid input")
+            .style("float", "right")
+            .style("padding", "2.5%")
+            .append("span")
+            .attr("id", "vel")
+            .html(videoStr);
+
+        document.getElementById('videoPlay').onclick = function () {
+            video_playback = true;
+            video_period = 10.0;
+
+            if (video_offset == null)
+                video_offset = [parseFloat(d3.select("#frequency").attr("x")), parseFloat(d3.select("#frequency").attr("y"))];
+
+            document.getElementById('videoPlay').style.display = "none";
+            document.getElementById('videoPause').style.display = "inline-block";
+
+            if (!streaming)
+                x_axis_mouseenter(video_offset);
+
+            if (video_timeout < 0)
+                replay_video();
+        };
+
+        document.getElementById('videoPause').onclick = function () {
+            video_playback = false;
+            clearTimeout(video_timeout);
+            video_timeout = -1;
+
+            document.getElementById('videoPlay').style.display = "inline-block";
+            document.getElementById('videoPause').style.display = "none";
+        };
+
+        document.getElementById('videoStop').onclick = function () {
+            video_playback = false;
+            video_offset = null;
+            clearTimeout(video_timeout);
+            video_timeout = -1;
+
+            document.getElementById('videoPlay').style.display = "inline-block";
+            document.getElementById('videoPause').style.display = "none";
+
+            if (streaming)
+                x_axis_mouseleave();
+        };
+
+        document.getElementById('videoForward').onclick = function () {
+            video_playback = true;
+            video_period = 5.0;
+
+            if (video_offset == null)
+                video_offset = [parseFloat(d3.select("#frequency").attr("x")), parseFloat(d3.select("#frequency").attr("y"))];
+
+            document.getElementById('videoPlay').style.display = "none";
+            document.getElementById('videoPause').style.display = "inline-block";
+
+            if (!streaming)
+                x_axis_mouseenter(video_offset);
+
+            if (video_timeout < 0)
+                replay_video();
+        };
+
+        document.getElementById('videoFastForward').onclick = function () {
+            video_playback = true;
+            video_period = 2.5;
+
+            if (video_offset == null)
+                video_offset = [parseFloat(d3.select("#frequency").attr("x")), parseFloat(d3.select("#frequency").attr("y"))];
+
+            document.getElementById('videoPlay').style.display = "none";
+            document.getElementById('videoPause').style.display = "inline-block";
+
+            if (!streaming)
+                x_axis_mouseenter(video_offset);
+
+            if (video_timeout < 0)
+                replay_video();
+        };
+    }
+
+    var range = get_axes_range(width, height);
+
+    svg.append("text")
+        .attr("x", emFontSize / 4 /*width / 2*/)
+        //.attr("y", 0.67 * range.yMin)
+        .attr("y", 0.70 * range.yMin)
+        .attr("font-family", "Helvetica")
+        .attr("font-weight", "normal")
+        //.attr("font-style", "italic")
+        .attr("font-size", 0.75 * range.yMin)
+        //.attr("text-anchor", "middle")
+        .attr("stroke", "none")
+        .attr("opacity", 0.5)//0.25
+        //.text("☰ SETTINGS");
+        //.text("⚙");
+        .text("☰");
+
+    let strokeColour = 'white';
+
+    if (theme == 'bright')
+        strokeColour = 'black';
+
+    //add a menu activation area
+    svg.append("rect")
+        .attr("id", "menu_activation_area")
+        .attr("x", 0/*emStrokeWidth*/)
+        .attr("y", emStrokeWidth - 1)
+        //.attr("width", (width - 2 * emStrokeWidth))
+        .attr("width", (width))
+        .attr("height", (range.yMin - 2 * emStrokeWidth))
+        .attr("fill", "transparent")
+        .attr("opacity", 0.1)//was 0.7
+        .attr("stroke", strokeColour)//strokeColour or "transparent"
+        .style("stroke-dasharray", ("1, 5"))
+        .on("mouseenter", function () {
+            d3.select(this).attr("opacity", 0);
+            document.getElementById('menu').style.display = "block";
+        });
 }
