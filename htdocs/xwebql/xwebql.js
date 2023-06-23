@@ -1178,7 +1178,7 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
 
                             var json = new Uint8Array(received_msg, offset, buffer_len);
                             offset += buffer_len;
-                            console.log("FITS json length:", json_len);
+                            console.log("X-ray json length:", json_len);
                         } catch (_) {
                             has_json = false;
                         }
@@ -1218,9 +1218,30 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
                             var spectrum = Module.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
                             let elapsed = Math.round(performance.now() - start);
 
-                            console.log("spectrum size: ", spectrum.size(), "elapsed: ", elapsed, "[ms]");
+                            console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
+                            console.log("spectrum: ", spectrum);
                         } catch (_) {
                             has_spectrum = false;
+                        }
+
+                        if (has_header) {
+                            // decompress the FITS data etc.
+                            var LZ4 = require('lz4');
+
+                            var uncompressed = new Uint8Array(header_len);
+                            uncompressedSize = LZ4.decodeBlock(header, uncompressed);
+                            uncompressed = uncompressed.slice(0, uncompressedSize);
+
+                            try {
+                                fitsHeader = new TextDecoder().decode(uncompressed);
+                            }
+                            catch (err) {
+                                fitsHeader = '';
+                                for (var i = 0; i < uncompressed.length; i++)
+                                    fitsHeader += String.fromCharCode(uncompressed[i]);
+                            };
+
+                            console.log(fitsHeader);
                         }
 
                     }
