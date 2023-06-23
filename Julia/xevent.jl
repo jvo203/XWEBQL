@@ -558,7 +558,6 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
 
     header_buf = IOBuffer()
     write_html_header(header_buf, new_header)
-    # seek(header_buf, 0)
     header_str = String(take!(header_buf))
 
     buf = IOBuffer()
