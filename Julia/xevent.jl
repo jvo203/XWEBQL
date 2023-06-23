@@ -3,6 +3,7 @@ using Distributed
 using FITSIO
 using FHist
 using ImageTransformations, Interpolations
+using Printf
 using ThreadsX
 
 @enum Quality low medium high
@@ -556,8 +557,8 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     new_header["SOFTVER"] = SERVER_STRING
 
     header_buf = IOBuffer()
-    show(header_buf, new_header)
-    seek(header_buf, 0)
+    write_html_header(header_buf, new_header)
+    # seek(header_buf, 0)
     header_str = String(take!(header_buf))
 
     buf = IOBuffer()
@@ -676,4 +677,33 @@ function get_image_scale(
 
     # default scale
     return scale
+end
+
+# functions for displaying header values in show(io, header)
+hdrval_repr(v::Bool) = v ? "T" : "F"
+hdrval_repr(v::String) = @sprintf "'%-8s'" v
+hdrval_repr(v::Union{AbstractFloat,Integer}) = string(v)
+
+function write_html_header(io::IO, hdr::FITSHeader)
+    n = length(hdr)
+    for i = 1:n
+        @printf io "%-8s" hdr.keys[i]
+        if hdr.values[i] === nothing
+            print(io, "                      ")
+            rc = 50  # remaining characters on line
+        elseif hdr.values[i] isa String
+            val = hdrval_repr(hdr.values[i])
+            @printf io "= %-20s" val
+            rc = length(val) <= 20 ? 50 : 70 - length(val)
+        else
+            val = hdrval_repr(hdr.values[i])
+            @printf io "= %20s" val
+            rc = length(val) <= 20 ? 50 : 70 - length(val)
+        end
+
+        if length(hdr.comments[i]) > 0
+            @printf io " / %s" hdr.comments[i][1:min(rc - 3, end)]
+        end
+        i != n && println(io, "<br/>") # HTML line break
+    end
 end

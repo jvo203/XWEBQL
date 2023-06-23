@@ -2870,28 +2870,11 @@ function setup_FITS_header_page() {
         .text("FITS HEADER data not transmitted yet. Please try later.");
 }
 
-function foldChars(input, lineSize, lineArray) {
-    lineArray = lineArray || [];
-    if (input.length <= lineSize) {
-        lineArray.push(input);
-        console.log("|" + input + "|");
-        return lineArray;
-    }
-    lineArray.push(input.substring(0, lineSize));
-    console.log("|" + input.substring(0, lineSize) + "|");
-    var tail = input.substring(lineSize);
-    return foldChars(tail, lineSize, lineArray);
-}
-
 function display_FITS_header() {
     try {
         var fitsHeader = fitsData.HEADER;
         var headerText = document.getElementById('headerText');
-        headerText.innerHTML = fitsHeader.trim().replace(/(.{80})/g, "$1<br>");
-
-        /*var arrayOfLines = foldChars(fitsHeader.trim(), 68);
-        var foldedString = arrayOfLines.join('<br/>');
-        headerText.innerHTML = foldedString;*/
+        headerText.innerHTML = fitsHeader.trim();//.replace(/(.{80})/g, "$1<br/>");        
     }
     catch (e) {
         console.log(e);
