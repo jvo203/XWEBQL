@@ -336,7 +336,7 @@ pub fn main() !void {
 
     const start = std.time.nanoTimestamp();
     const events = try read_sxs_events(event_filename, allocator);
-    var duration: f64 = @intToFloat(f64, std.time.nanoTimestamp() - start);
+    var duration: f64 = @floatFromInt(f64, std.time.nanoTimestamp() - start);
     duration /= 1_000_000;
 
     std.debug.print("num_events = {d}, Zig elapsed time: {d:.6} ms\n", .{ events.num_events, duration });
