@@ -305,7 +305,7 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     local CRVAL1, CDELT1, CRPIX1, CUNIT1, CTYPE1
     local CRVAL2, CDELT2, CRPIX2, CUNIT2, CTYPE2
     local CRVAL3, CDELT3, CRPIX3, CUNIT3, CTYPE3
-    local BUNIT, BTYPE, SPECSYS
+    local BUNIT, BTYPE
     local OBJECT, OBSRA, OBSDEC, DATEOBS, TIMESYS
     local TELESCOP, INSTRUME, OBSERVER, EQUINOX, RADECSYS
 
@@ -443,29 +443,7 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
         TIMESYS = "UNKNOWN"
     end
 
-    # BUNIT
-    try
-        BUNIT = xobject.header["TUNIT43"]
-    catch _
-        BUNIT = "UNKNOWN"
-    end
-
-    # BTYPE
-    try
-        BTYPE = xobject.header["TTYPE43"]
-    catch _
-        BTYPE = "UNKNOWN"
-    end
-
-    # SPECSYS
-    try
-        SPECSYS = xobject.header["SPECSYS"]
-    catch _
-        SPECSYS = "UNKNOWN"
-    end
-
     println("OBJECT = $OBJECT, OBSRA = $OBSRA, OBSDEC = $OBSDEC, DATEOBS = $DATEOBS, TIMESYS = $TIMESYS")
-    println("BUNIT = $BUNIT, BTYPE = $BTYPE, SPECSYS = $SPECSYS")
 
     # TELESCOP
     try
@@ -501,6 +479,9 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     catch _
         RADECSYS = "UNKNOWN"
     end
+
+    BUNIT = "counts"
+    BTYPE = "COUNTS"
 
     println("TELESCOP = $TELESCOP, INSTRUME = $INSTRUME, OBSERVER = $OBSERVER, EQUINOX = $EQUINOX, RADECSYS = $RADECSYS")
 
@@ -552,7 +533,8 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     # other    
     new_header["BUNIT"] = BUNIT
     new_header["BTYPE"] = BTYPE
-    new_header["SPECSYS"] = SPECSYS
+    set_comment!(new_header, "BTYPE", "Counts per channel")
+
     new_header["ORIGIN"] = "JAXA/JVO"
     new_header["SOFTVER"] = SERVER_STRING
 
@@ -595,7 +577,6 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
         "CTYPE3" => CTYPE3,
         "BUNIT" => BUNIT,
         "BTYPE" => BTYPE,
-        "SPECSYS" => SPECSYS,
         "OBSRA" => OBSRA,
         "OBSDEC" => OBSDEC,
         "OBJECT" => OBJECT,
