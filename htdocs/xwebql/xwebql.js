@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-06-22.0";
+    return "JS2023-06-23.0";
 }
 
 function uuidv4() {
@@ -1120,10 +1120,109 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
                     }
 
                     if (received_msg instanceof ArrayBuffer) {
-                        var fitsHeader, spectrum;
+                        var fitsHeader;
 
                         var dv = new DataView(received_msg);
                         console.log("FITSImage dataview byte length: ", dv.byteLength);
+
+                        var offset = 0;
+                        var str_length = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        let flux = new Uint8Array(received_msg, offset, str_length);
+                        flux = (new TextDecoder("utf-8").decode(flux)).trim();
+                        offset += str_length;
+
+                        console.log("flux: ", flux);
+
+                        let min_count = getUint64(dv, offset, endianness);
+                        offset += 8;
+
+                        let max_count = getUint64(dv, offset, endianness);
+                        offset += 8;
+
+                        console.log("min_count: ", min_count, "max_count: ", max_count);
+
+                        let img_width = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        let img_height = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        console.log('img_width:', img_width, 'img_height:', img_height);
+
+                        let pixels_length = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        console.log('pixels length:', pixels_length);
+
+                        let frame_pixels = new Uint8Array(received_msg, offset, pixels_length);
+                        offset += pixels_length;
+
+                        let mask_length = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        console.log('mask length:', mask_length);
+
+                        let frame_mask = new Uint8Array(received_msg, offset, mask_length);
+                        offset += mask_length;
+
+                        var has_json = true;
+
+                        try {
+                            var json_len = dv.getUint32(offset, endianness);
+                            offset += 4;
+
+                            var buffer_len = dv.getUint32(offset, endianness);
+                            offset += 4;
+
+                            var json = new Uint8Array(received_msg, offset, buffer_len);
+                            offset += buffer_len;
+                            console.log("FITS json length:", json_len);
+                        } catch (_) {
+                            has_json = false;
+                        }
+
+                        var has_header = true;
+
+                        try {
+                            var header_len = dv.getUint32(offset, endianness);
+                            offset += 4;
+
+                            var buffer_len = dv.getUint32(offset, endianness);
+                            offset += 4;
+
+                            var header = new Uint8Array(received_msg, offset, buffer_len);
+                            offset += buffer_len;
+                            console.log("FITS header length:", header_len);
+                        } catch (_) {
+                            has_header = false;
+                        }
+
+                        var has_spectrum = true;
+
+                        try {
+                            var spectrum_len = dv.getUint32(offset, endianness);
+                            offset += 4;
+
+                            var buffer_len = dv.getUint32(offset, endianness);
+                            offset += 4;
+
+                            var buffer = new Uint8Array(received_msg, offset, buffer_len);
+                            offset += buffer_len;
+                            console.log("X-ray spectrum length:", spectrum_len);
+
+                            // ZFP decoder part                            
+                            let start = performance.now();
+                            var res = Module.decompressZFPspectrum(spectrum_len, buffer);
+                            var spectrum = Module.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
+                            let elapsed = Math.round(performance.now() - start);
+
+                            console.log("spectrum size: ", spectrum.size(), "elapsed: ", elapsed, "[ms]");
+                        } catch (_) {
+                            has_spectrum = false;
+                        }
+
                     }
 
                 })
