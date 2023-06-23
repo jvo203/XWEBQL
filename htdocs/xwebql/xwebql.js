@@ -1315,7 +1315,7 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
                             if (fitsData.depth > 1) {
                                 setup_axes();
 
-                                plot_spectrum([fitsData.spectrum]);
+                                plot_spectrum(fitsData.spectrum);
                             }
                         }
 
