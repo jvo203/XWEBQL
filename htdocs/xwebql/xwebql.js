@@ -874,6 +874,7 @@ async function mainRenderer() {
         end_x = 0;
         end_y = 0;
 
+        coordsFmt = localStorage_read_string("coordsFmt", "HMS");//DMS or HMS
         realtime_spectrum = localStorage_read_boolean("realtime_spectrum", true);
         realtime_video = localStorage_read_boolean("realtime_video", true);
         displayDownloadConfirmation = localStorage_read_boolean("displayDownloadConfirmation", true);
@@ -997,6 +998,10 @@ async function mainRenderer() {
             .attr("opacity", 0.5);
 
         await res3d; display_menu();
+
+        setup_help();
+
+        setup_FITS_header_page();
 
         if (welcome)
             show_welcome();
@@ -1294,22 +1299,15 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
 
                             display_dataset_info();
 
-                            if (va_count == 1 || composite_view) {
-                                try {
-                                    if (index == va_count) {
-                                        display_scale_info();
-                                    }
-                                }
-                                catch (err) {
-                                };
+                            try {
+                                display_scale_info();
+                            }
+                            catch (err) {
                             };
 
-                            display_preferences(index);
+                            display_preferences();
 
-                            display_FITS_header(index);
-
-                            if (!composite_view)
-                                add_line_label(index);
+                            display_FITS_header();
 
                             frame_start = 0;
                             frame_end = fitsData.depth - 1;
@@ -1859,184 +1857,10 @@ function display_dataset_info() {
 
     data_band_lo = Math.min(val1, val2);
     data_band_hi = Math.max(val1, val2);
-    RESTFRQ = fitsData.RESTFRQ;
-
-    //disable frequency display in multiple-view mode
-    if (va_count > 1)
-        RESTFRQ = 0;
-    else {
-        if (RESTFRQ > 0.0)
-            has_frequency_info = true;
-    }
-
-    if (has_velocity_info && has_frequency_info) {
-        var c = 299792.458;//speed of light [km/s]
-
-        var v1 = fitsData.CRVAL3 + fitsData.CDELT3 * (1 - fitsData.CRPIX3);
-        v1 /= 1000;//[km/s]
-
-        var v2 = fitsData.CRVAL3 + fitsData.CDELT3 * (fitsData.depth - fitsData.CRPIX3);
-        v2 /= 1000;//[km/s]
-
-        var f1 = RESTFRQ * Math.sqrt((1 - v1 / c) / (1 + v1 / c));
-        var f2 = RESTFRQ * Math.sqrt((1 - v2 / c) / (1 + v2 / c));
-
-        data_band_lo = Math.min(f1, f2);
-        data_band_hi = Math.max(f1, f2);
-
-        //console.log("v1:", v1, "v2:", v2);
-        //console.log("f1:", f1, "f2:", f2);
-    }
-    else if (has_frequency_info) {
-        /*if(fitsData.CTYPE3 != "")
-        {	    
-          //an override due to ALMA data errors: use the no middle-point
-          RESTFRQ = (val1+val2)/2 ;//expects [Hz]	
-        }*/
-
-        RESTFRQ = (RESTFRQ / 1.0e9).toPrecision(7) * 1.0e9;//slightly rounded, expected unit is [Hz]
-
-        data_band_lo = Math.min(val1, val2);
-        data_band_hi = Math.max(val1, val2);
-    }
-
-    //console.log("CTYPE3 = ", fitsData.CTYPE3, "has_freq:", has_frequency_info, "has_vel:", has_velocity_info);
-
-    if (has_frequency_info > 0.0 && va_count == 1) {
-
-        var bandStr = '';
-
-        if (fitsData.depth > 1)
-            bandStr = '<span style="float:left; font-weight:bold">REF FRQ</span><br><input type="number" id="frequencyInput" min="0" step="0.1" style="width: 6em; color: black; background-color: lightgray; font-size: 1.0em" value="' + (RESTFRQ / 1.0e9).toPrecision(7) + '"> GHz';
-        else
-            bandStr = '<span style="float:left; font-weight:bold">REF FRQ</span><br><input type="number" id="frequencyInput" min="0" step="0.1" style="width: 6em; color: black; background-color: lightgray; font-size: 1.0em" value="' + (RESTFRQ / 1.0e9).toPrecision(7) + '" disabled> GHz';
-
-        group.append("g")
-            .attr("id", "foreignBandG")
-            .style("opacity", 0.25)
-            .append("foreignObject")
-            .attr("id", "foreignBand")
-            .attr("x", (width - 20 * emFontSize))
-            .attr("y", 12.5 * emFontSize)//12.5
-            .attr("width", 20 * emFontSize)
-            .attr("height", 7 * emFontSize)
-            .on("mouseenter", function () {
-                d3.select("#foreignBandG").style("opacity", 1.0);
-            })
-            .on("mouseleave", function () {
-                d3.select("#foreignBandG").style("opacity", 0.25);
-            })
-            .append("xhtml:div")
-            .attr("id", "bandDiv")
-            .attr("class", "container-fluid input")
-            .style("float", "right")
-            .style("padding", "2.5%")
-            .append("span")
-            .attr("id", "band")
-            .html(bandStr);
-
-        var elem = document.getElementById('frequencyInput');
-        elem.onblur = submit_corrections;
-        elem.onmouseleave = submit_corrections;
-        elem.onkeyup = function (e) {
-            var event = e || window.event;
-            var charCode = event.which || event.keyCode;
-
-            if (charCode == '13') {
-                //console.log('REF FRQ ENTER');
-                // Enter pressed
-                submit_corrections();
-                return false;
-            }
-        }
-    }
-
-    if (fitsData.depth > 1 && (/*has_velocity_info ||*/ has_frequency_info)) {
-        var velStr = '<span id="redshift" class="redshift" style="float:left; font-weight:bold">SRC&nbsp;</span><input type="radio" id="velV" name="velocity" value="v" style="vertical-align: middle; margin: 0px;" onclick="javascript:toggle_redshift_input_source(this);"> V&nbsp;<input type="radio" id="velZ" name="velocity" value="z" style="vertical-align: middle; margin: 0px;" onclick="javascript:toggle_redshift_input_source(this);"> z&nbsp;<br><span><input type="number" id="velocityInput" step="0.1" style="width: 4.5em; color: black; background-color: lightgray; font-size: 1.0em" value="' + USER_DELTAV + '"></span> <span id="unit">km/s</span><br>';
-
-        if (has_frequency_info)
-            velStr += '<label class="small" style="cursor: pointer; font-weight:bold"><input type="checkbox" value="" class="control-label" style="cursor: pointer" id="restcheckbox" onmouseenter="javascript:this.focus();" onchange="javascript:toggle_rest_frequency();">&nbsp;<I>F<SUB>REST</SUB></I></label>'
-
-        var yoffset = 21 * emFontSize;
-
-        if (composite_view)
-            yoffset += 1 * emFontSize;
-
-        group.append("g")
-            .attr("id", "foreignVelG")
-            .style("opacity", 0.25)
-            .append("foreignObject")
-            .attr("id", "foreignVel")
-            .attr("x", (width - 20 * emFontSize))
-            .attr("y", yoffset)//(17.5*emFontSize)//19
-            .attr("width", 20 * emFontSize)
-            .attr("height", 10.0 * emFontSize)
-            .on("mouseenter", function () {
-                d3.select("#foreignVelG").style("opacity", 1.0);
-            })
-            .on("mouseleave", function () {
-                d3.select("#foreignVelG").style("opacity", 0.25);
-            })
-            .append("xhtml:div")
-            .attr("id", "velDiv")
-            .attr("class", "container-fluid input")
-            .style("float", "right")
-            .style("padding", "2.5%")
-            .append("span")
-            .attr("id", "vel")
-            .html(velStr);
-
-        if (has_frequency_info) {
-            var checkbox = document.getElementById('restcheckbox');
-
-            if (sessionStorage.getItem("rest") === null)
-                checkbox.checked = false;
-            else {
-                var checked = sessionStorage.getItem("rest");
-
-                if (checked == "true")
-                    checkbox.checked = true;
-                else
-                    checkbox.checked = false;
-            }
-        }
-
-        if (sessionStorage.getItem("redshift") === null)
-            document.getElementById('velV').setAttribute("checked", "");
-        else {
-            var value = sessionStorage.getItem("redshift");
-
-            if (value == "z") {
-                document.getElementById('velZ').setAttribute("checked", "");
-                document.getElementById('unit').style.opacity = "0.0";
-            }
-            else
-                document.getElementById('velV').setAttribute("checked", "");
-        }
-
-        //add onblur
-        var m = document.getElementById('velocityInput');
-        m.onblur = submit_delta_v;
-        m.onmouseleave = submit_delta_v;
-        m.onkeyup = function (e) {
-            var event = e || window.event;
-            var charCode = event.which || event.keyCode;
-
-            if (charCode == '13') {
-                // Enter pressed
-                submit_delta_v();
-                return false;
-            }
-        }
-
-    }
 
     //add video playback control
     if (fitsData.depth > 1) {
-        var yoffset = 32 * emFontSize;
-
-        if (composite_view)
-            yoffset += 1 * emFontSize;
+        var yoffset = 12.5 * emFontSize;
 
         var videoStr = '<span id="videoPlay" class="fas fa-play" style="display:inline-block; cursor: pointer"></span><span id="videoPause" class="fas fa-pause" style="display:none; cursor: pointer"></span>&nbsp; <span id="videoStop" class="fas fa-stop" style="cursor: pointer"></span>&nbsp; <span id="videoForward" class="fas fa-forward" style="cursor: pointer"></span>&nbsp; <span id="videoFastForward" class="fas fa-fast-forward" style="cursor: pointer"></span>';
 
@@ -2051,16 +1875,9 @@ function display_dataset_info() {
             .attr("height", 5.0 * emFontSize)
             .on("mouseenter", function () {
                 d3.select("#videoControlG").style("opacity", 1.0);
-
-                //hide the molecular list (spectral lines) so that it does not obscure the controls!
-                displayMolecules_bak = displayMolecules;
-                displayMolecules = false;
-                document.getElementById('molecularlist').style.display = "none";
             })
             .on("mouseleave", function () {
                 d3.select("#videoControlG").style("opacity", 0.25);
-
-                displayMolecules = displayMolecules_bak;
 
                 video_playback = false;
                 clearTimeout(video_timeout);
@@ -2193,4 +2010,890 @@ function display_dataset_info() {
             d3.select(this).attr("opacity", 0);
             document.getElementById('menu').style.display = "block";
         });
+}
+
+function get_axes_range(width, height) {
+    var xMin = 0.025 * width;
+    var xMax = width - xMin - 1;
+
+    var yMin = 0.05 * height;
+    var yMax = height - yMin - 1;
+
+    var range = {
+        xMin: Math.round(xMin),
+        xMax: Math.round(xMax),
+        yMin: Math.round(yMin),
+        yMax: Math.round(yMax)
+    };
+
+    return range;
+}
+
+function display_scale_info() {
+    // add the markers anyway (they are needed by the P-V diagram)
+    var svg = d3.select("#BackgroundSVG");
+    var width = parseFloat(svg.attr("width"));
+    var defs = svg.append("defs");
+
+    defs.append("marker")
+        .attr("id", "head")
+        .attr("orient", "auto")
+        .attr("markerWidth", (emStrokeWidth))
+        .attr("markerHeight", (0.5 * emFontSize))
+        .attr("refX", 0)
+        .attr("refY", (0.5 * emFontSize / 2))
+        .append("path")
+        .style("stroke-width", 1)
+        .attr("d", "M0,0 V" + 0.5 * emFontSize);
+
+    defs.append("marker")
+        .attr("id", "arrow")
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 5)
+        .attr("refY", 0)
+        .attr("markerWidth", 0.67 * emFontSize)
+        .attr("markerHeight", 0.67 * emFontSize)
+        .attr("orient", "auto")
+        .append("path")
+        .style("stroke-width", 1)
+        .style("fill", "none")
+        .attr("d", "M-5,-5 L5,0 L-5,5");
+
+    if (fitsData.depth > 1)
+        return;
+
+    var elem = document.getElementById("image_rectangle");
+    if (elem == null)
+        return;
+
+    var img_width = parseFloat(elem.getAttribute("width"));
+    var img_height = parseFloat(elem.getAttribute("height"));
+    var img_x = parseFloat(elem.getAttribute("x"));
+    var img_y = parseFloat(elem.getAttribute("y"));
+
+    var image = imageContainer[va_count - 1];
+    var image_bounding_dims = image.image_bounding_dims;
+    var scale = image.height / image_bounding_dims.height;
+
+    //scale
+    var arcmins = 60;
+    var gridScale = inverse_CD_matrix(arcmins, arcmins);
+
+    for (let i = 0; i < gridScale.length; i++)
+        if (isNaN(gridScale[i]))
+            throw "NaN gridScale";
+
+    if (Math.abs(gridScale[1]) * scale > 1) {
+        //reduce the scale
+        //console.log("Vertical height:", Math.abs(gridScale[1]) * scale);
+
+        arcmins = 10;
+        gridScale = inverse_CD_matrix(arcmins, arcmins);
+
+        for (let i = 0; i < gridScale.length; i++)
+            if (isNaN(gridScale[i]))
+                throw "NaN gridScale";
+
+        //console.log("Reduced vertical height:", Math.abs(gridScale[1]) * scale);
+    }
+
+    //vertical scale	
+    var L = Math.abs(gridScale[1]) * scale * img_height;
+    var X = 1 * emFontSize;
+    if (composite_view)
+        X += img_x + img_width;
+    //var Y = L + img_y;//1.75 * emFontSize;
+    var Y = img_y + img_height;
+
+    var vert = svg.append("g")
+        .attr("id", "verticalScale");
+
+    vert.append("path")
+        .attr("marker-end", "url(#head)")
+        .attr("marker-start", "url(#head)")
+        .style("stroke-width", (emStrokeWidth))
+        .style("fill", "none")
+        .attr("d", "M" + X + "," + Y + " L" + X + "," + (Y - L));
+
+    vert.append("text")
+        .attr("x", (X + emFontSize))
+        .attr("y", (Y - L / 2 + emFontSize / 3))
+        .attr("font-family", "Monospace")
+        .attr("font-size", "1.0em")
+        .attr("text-anchor", "middle")
+        .attr("stroke", "none")
+        .text(arcmins + "\"");
+
+    //N-E compass
+    var L = 3 * emFontSize;//*Math.sign(gridScale[0]) ;
+    var X = 0.02 * width + L + 1.5 * emFontSize;
+    var Y = Y - L / 2;
+    if (composite_view)
+        X += img_x + img_width;
+    //var Y = 0.01*width + L + emFontSize;
+    //var Y = L + img_y;//Math.max(Y - 1.5 * emFontSize, 0.01 * width + L + emFontSize);
+
+    //rotation
+    var compass = svg.append("g")
+        .attr("id", "compass")
+        .attr("transform", 'rotate(' + gridScale[2] * Math.sign(gridScale[0]) + ' ' + X + ' ' + Y + ')');
+
+    var east = compass.append("g")
+        .attr("id", "east");
+
+    east.append("path")
+        .attr("marker-end", "url(#arrow)")
+        .style("stroke-width", (emStrokeWidth))
+        .style("fill", "none")
+        .attr("d", "M" + X + "," + Y + " L" + (X + L * Math.sign(gridScale[0])) + "," + Y);
+
+    east.append("text")
+        .attr("x", (X + L * Math.sign(gridScale[0]) + Math.sign(gridScale[0]) * emFontSize / 2))
+        .attr("y", (Y + emFontSize / 2.5))
+        .attr("font-family", "Monospace")
+        .attr("font-size", "1.0em")
+        .attr("text-anchor", "middle")
+        .attr("stroke", "none")
+        .text("E");
+
+    var north = compass.append("g")
+        .attr("id", "north");
+
+    L *= Math.sign(gridScale[1]);
+
+    north.append("path")
+        .attr("marker-end", "url(#arrow)")
+        .style("stroke-width", (emStrokeWidth))
+        .style("fill", "none")
+        .attr("d", "M" + X + "," + Y + " L" + X + "," + (Y - L));
+
+    if (L > 0)
+        north.append("text")
+            .attr("x", (X))
+            .attr("y", (Y - L - emFontSize / 4))
+            .attr("font-family", "Monospace")
+            .attr("font-size", "1.1em")
+            .attr("text-anchor", "middle")
+            .attr("stroke", "none")
+            .text("N");
+    else
+        north.append("text")
+            .attr("x", (X))
+            .attr("y", (Y - L + emFontSize))
+            .attr("font-family", "Monospace")
+            .attr("font-size", "1.0em")
+            .attr("text-anchor", "middle")
+            .attr("stroke", "none")
+            .text("N");
+}
+
+function display_preferences() {
+    if (has_preferences)
+        return;
+
+    var svg = d3.select("#BackSVG");
+    var svgWidth = parseFloat(svg.attr("width"));
+    var svgHeight = parseFloat(svg.attr("height"));
+    var offset = 2.0 * emFontSize;
+
+    //show ping
+    var group = svg.append("g")
+        .attr("id", "pingGroup");
+
+    group.append("text")
+        .attr("id", "heartbeat")
+        .attr('class', 'fas')
+        .attr("x", emFontSize / 4)
+        //.attr("y", offset)//"0.75em")
+        .attr("y", (svgHeight - 0.67 * offset))
+        .attr("font-family", "Helvetica")//Helvetica
+        //.attr("font-size", "0.75em")
+        .attr("font-size", "1.5em")
+        .attr("text-anchor", "start")
+        .attr("fill", "grey")
+        .attr("stroke", "none")
+        .attr("opacity", 0.0)
+        .text("");
+
+    let fillColour = 'yellow';
+
+    if (theme == 'bright')
+        fillColour = 'black';
+
+    let bottomY = svgHeight - offset / 4;
+
+    group.append("text")
+        .attr("id", "latency")
+        .attr("x", (0 * emFontSize / 4 + 0 * 1.75 * emFontSize))
+        //.attr("y", offset)//"0.85em")
+        .attr("y", bottomY)
+        .attr("font-family", "Inconsolata")
+        //.attr("font-weight", "bold")
+        .attr("font-size", "0.75em")//0.75 Helvetica
+        .attr("text-anchor", "start")
+        .attr("fill", fillColour)
+        .attr("stroke", "none")
+        .attr("opacity", 0.75)
+        .text("");
+
+    var range = get_axes_range(svgWidth, svgHeight);
+
+    group.append("text")
+        .attr("id", "fps")
+        .attr("x", range.xMax - 0.25 * emFontSize)
+        //.attr("y", offset)
+        .attr("y", bottomY)
+        .attr("font-family", "Inconsolata")
+        //.attr("font-weight", "bold")
+        .attr("font-size", "0.75em")//0.75 Helvetica
+        .attr("text-anchor", "end")
+        .attr("fill", fillColour)
+        .attr("stroke", "none")
+        .attr("opacity", 0.75)
+        .text("");
+
+    var prefDropdown = d3.select("#prefDropdown");
+
+    var htmlStr = autoscale ? '<span class="fas fa-check-square"></span> autoscale y-axis' : '<span class="far fa-square"></span> autoscale y-axis';
+    prefDropdown.append("li")
+        .append("a")
+        .attr("id", "autoscale")
+        .style('cursor', 'pointer')
+        .on("click", function () {
+            autoscale = !autoscale;
+            //localStorage_write_boolean("autoscale", autoscale) ;
+
+            d3.select("#yaxis")
+                .style("fill", "white")
+                .style("stroke", "white")
+                .transition()
+                .duration(500)
+                .style("fill", axisColour)
+                .style("stroke", axisColour);
+
+            if (!autoscale)
+                set_autoscale_range(true);
+            else
+                enable_autoscale();
+        })
+        .html(htmlStr);
+
+    var htmlStr = displayDownloadConfirmation ? '<span class="fas fa-check-square"></span> download confirmation' : '<span class="far fa-square"></span> download confirmation';
+    prefDropdown.append("li")
+        .append("a")
+        .style('cursor', 'pointer')
+        .on("click", function () {
+            displayDownloadConfirmation = !displayDownloadConfirmation;
+            localStorage_write_boolean("displayDownloadConfirmation", displayDownloadConfirmation);
+            var htmlStr = displayDownloadConfirmation ? '<span class="fas fa-check-square"></span> download confirmation' : '<span class="far fa-square"></span> download confirmation';
+            d3.select(this).html(htmlStr);
+        })
+        .html(htmlStr);
+
+    var htmlStr = displayScalingHelp ? '<span class="fas fa-check-square"></span> display pop-up help' : '<span class="far fa-square"></span> display pop-up help';
+    prefDropdown.append("li")
+        .append("a")
+        .style('cursor', 'pointer')
+        .on("click", function () {
+            displayScalingHelp = !displayScalingHelp;
+            localStorage_write_boolean("displayScalingHelp", displayScalingHelp);
+            var htmlStr = displayScalingHelp ? '<span class="fas fa-check-square"></span> display pop-up help' : '<span class="far fa-square"></span> display pop-up help';
+            d3.select(this).html(htmlStr);
+        })
+        .html(htmlStr);
+
+    var htmlStr = realtime_spectrum ? '<span class="fas fa-check-square"></span> realtime spectrum updates' : '<span class="far fa-square"></span> realtime spectrum updates';
+    prefDropdown.append("li")
+        .append("a")
+        .style('cursor', 'pointer')
+        .on("click", function () {
+            realtime_spectrum = !realtime_spectrum;
+            localStorage_write_boolean("realtime_spectrum", realtime_spectrum);
+            var htmlStr = realtime_spectrum ? '<span class="fas fa-check-square"></span> realtime spectrum updates' : '<span class="far fa-square"></span> realtime spectrum updates';
+            d3.select(this).html(htmlStr);
+        })
+        .html(htmlStr);
+
+    var htmlStr = realtime_video ? '<span class="fas fa-check-square"></span> realtime video updates' : '<span class="far fa-square"></span> realtime video updates';
+    prefDropdown.append("li")
+        .append("a")
+        .style('cursor', 'pointer')
+        .on("click", function () {
+            realtime_video = !realtime_video;
+            localStorage_write_boolean("realtime_video", realtime_video);
+            var htmlStr = realtime_video ? '<span class="fas fa-check-square"></span> realtime video updates' : '<span class="far fa-square"></span> realtime video updates';
+            d3.select(this).html(htmlStr);
+
+            if (realtime_video) {
+                d3.select('#video_fps_control_li').style("display", "block");
+            }
+            else {
+                d3.select('#video_fps_control_li').style("display", "none");
+            }
+        })
+        .html(htmlStr);
+
+    //----------------------------------------
+    var tmpA;
+
+    tmpA = prefDropdown.append("li")
+        .attr("id", "image_quality_li")
+        //.style("background-color", "#FFF")
+        .append("a")
+        .style("class", "form-group")
+        .attr("class", "form-horizontal");
+
+    tmpA.append("label")
+        .attr("for", "image_quality")
+        .attr("class", "control-label")
+        .html("image quality:&nbsp; ");
+
+    tmpA.append("select")
+        .attr("id", "image_quality")
+        .attr("onchange", "javascript:change_image_quality();")
+        .html("<option>high</option><option>medium</option><option>low</option>");
+
+    document.getElementById('image_quality').value = image_quality;
+
+    if (realtime_video) {
+        d3.select('#video_fps_control_li').style("display", "block");
+    }
+    else {
+        d3.select('#video_fps_control_li').style("display", "none");
+    }
+
+    //----------------------------------------	
+    tmpA = prefDropdown.append("li")
+        .attr("id", "video_fps_control_li")
+        //.style("background-color", "#FFF")
+        .append("a")
+        .style("class", "form-group")
+        .attr("class", "form-horizontal");
+
+    tmpA.append("label")
+        .attr("for", "video_fps_control")
+        .attr("class", "control-label")
+        .html("video fps control:&nbsp; ");
+
+    tmpA.append("select")
+        .attr("id", "video_fps_control")
+        .attr("onchange", "javascript:change_video_fps_control();")
+        .html("<option value='auto'>auto</option><option value='5'>5 fps</option><option value='10'>10 fps</option><option value='20'>20 fps</option><option value='30'>30 fps</option>");
+
+    document.getElementById('video_fps_control').value = video_fps_control;
+
+    if (realtime_video) {
+        d3.select('#video_fps_control_li').style("display", "block");
+    }
+    else {
+        d3.select('#video_fps_control_li').style("display", "none");
+    }
+
+    //ui_theme
+    {
+        tmpA = prefDropdown.append("li")
+            //.style("background-color", "#FFF")	
+            .append("a")
+            .style("class", "form-group")
+            .attr("class", "form-horizontal");
+
+        tmpA.append("label")
+            .attr("for", "ui_theme")
+            .attr("class", "control-label")
+            .html("ui theme:&nbsp; ");
+
+        tmpA.append("select")
+            //.attr("class", "form-control")	
+            .attr("id", "ui_theme")
+            .attr("onchange", "javascript:change_ui_theme();")
+            .html("<option>dark</option><option>bright</option>");
+
+        document.getElementById('ui_theme').value = theme;
+    }
+
+    //coords_fmt
+    {
+        tmpA = prefDropdown.append("li")
+            //.style("background-color", "#FFF")	
+            .append("a")
+            .style("class", "form-group")
+            .attr("class", "form-horizontal");
+
+        tmpA.append("label")
+            .attr("for", "coords_fmt")
+            .attr("class", "control-label")
+            .html("RA (<i>α</i>) display:&nbsp; ");
+
+        tmpA.append("select")
+            //.attr("class", "form-control")	
+            .attr("id", "coords_fmt")
+            .attr("onchange", "javascript:change_coords_fmt();")
+            .html("<option>HMS</option><option>DMS</option>");
+
+        document.getElementById('coords_fmt').value = coordsFmt;
+    }
+
+    tmpA = prefDropdown.append("li")
+        .attr("id", "contour_control_li")
+        //.style("background-color", "#FFF")
+        .append("a")
+        .style("class", "form-group")
+        .attr("class", "form-horizontal");
+
+    tmpA.append("label")
+        .attr("for", "contour_lines")
+        .attr("class", "control-label")
+        .html("#contour levels:&nbsp; ");
+
+    previous_contour_lines = 5;
+
+    tmpA.append("input")
+        //.attr("class", "form-control")	
+        .attr("id", "contour_lines")
+        .attr("type", "number")
+        .style("width", "3em")
+        .attr("min", 1)
+        .attr("step", 1)
+        .attr("value", previous_contour_lines);
+    //.attr("onchange", "javascript:update_contours();");    
+
+    var elem = document.getElementById('contour_lines');
+    elem.onblur = validate_contour_lines;
+    elem.onmouseleave = validate_contour_lines;
+    elem.onkeyup = function (e) {
+        var event = e || window.event;
+        var charCode = event.which || event.keyCode;
+
+        if (charCode == '13') {
+            // Enter pressed
+            validate_contour_lines();
+            return false;
+        }
+    }
+
+    if (displayContours) {
+        d3.select('#contour_control_li').style("display", "block");
+    }
+    else {
+        d3.select('#contour_control_li').style("display", "none");
+    }
+
+    //----------------------------------------
+    if (fitsData.depth > 1) {
+        tmpA = prefDropdown.append("li")
+            //.style("background-color", "#FFF")
+            .append("a")
+            .style("class", "form-group")
+            .attr("class", "form-horizontal");
+
+        tmpA.append("label")
+            .attr("for", "intensity_mode")
+            .attr("class", "control-label")
+            .html("intensity mode:&nbsp; ");
+
+        tmpA.append("select")
+            .attr("id", "intensity_mode")
+            .attr("onchange", "javascript:change_intensity_mode();")
+            .html("<option>mean</option><option>integrated</option>");
+
+        document.getElementById('intensity_mode').value = intensity_mode;
+    }
+
+    tmpA = prefDropdown.append("li")
+        //.style("background-color", "#FFF")	
+        .append("a")
+        .style("class", "form-group")
+        .attr("class", "form-horizontal");
+
+    tmpA.append("label")
+        .attr("for", "zoom_shape")
+        .attr("class", "control-label")
+        .html("zoom shape:&nbsp; ");
+
+    tmpA.append("select")
+        //.attr("class", "form-control")	
+        .attr("id", "zoom_shape")
+        .attr("onchange", "javascript:change_zoom_shape();")
+        .html("<option>circle</option><option>square</option>");
+
+    document.getElementById('zoom_shape').value = zoom_shape;
+    //----------------------------------------
+
+    has_preferences = true;
+}
+
+
+function validate_contour_lines() {
+    var value = document.getElementById('contour_lines').valueAsNumber;
+
+    if (isNaN(value))
+        document.getElementById('contour_lines').value = previous_contour_lines;
+
+    if (value < 2)
+        document.getElementById('contour_lines').value = 2;
+
+    if (value > 10)
+        document.getElementById('contour_lines').value = 10;
+
+    value = document.getElementById('contour_lines').valueAsNumber;
+
+    if (value != previous_contour_lines) {
+        previous_contour_lines = value;
+        update_contours();
+    }
+}
+
+function setup_help() {
+    var div = d3.select("body")
+        .append("div")
+        .attr("class", "container")
+        .append("div")
+        .attr("id", "help")
+        .attr("class", "modal fade")
+        .attr("role", "dialog")
+        .append("div")
+        .attr("class", "modal-dialog");
+
+    var contentDiv = div.append("div")
+        .attr("class", "modal-content");
+
+    var headerDiv = contentDiv.append("div")
+        .attr("class", "modal-header");
+
+    headerDiv.append("span")
+        .attr("id", "helpclose")
+        .attr("class", "close")
+        .style("color", "red")
+        .text("×");
+
+    headerDiv.append("h2")
+        .text("FITSWEBQLSE HOW-TO");
+
+    var bodyDiv = contentDiv.append("div")
+        .attr("id", "modal-body")
+        .attr("class", "modal-body");
+
+    bodyDiv.append("h3")
+        .attr("id", "h3")
+        .text("P-V Diagram");
+
+    bodyDiv.append("p")
+        .html("An interactive <b>Position-Velocity Diagram</b> can be displayed for the current image. First left-click on the image to select a starting position.");
+
+    bodyDiv.append("p")
+        .html("Then move a mouse around and left-click again to complete the <i>P-V line</i> selection. The <i>P-V diagram</i> will display shortly.");
+
+    bodyDiv.append("p")
+        .html("In the <b>P-V Diagram view</b> ①, ② and the middle point can be dragged freely to change the <i>P-V line</i>. The <i>P-V diagram</i> will be updated automatically.");
+
+    var pv = bodyDiv.append("video")
+        .attr("width", "100%")
+        .attr("controls", "")
+        .attr("preload", "metadata");
+
+    pv.append("source")
+        .attr("src", "https://cdn.jsdelivr.net/gh/jvo203/FITSWEBQLSE/htdocs/fitswebql/pv_diagram.mp4");
+
+    bodyDiv.append("hr");
+
+    bodyDiv.append("h3")
+        .attr("id", "csv_h3")
+        .text("Spectrum Export");
+
+    bodyDiv.append("p")
+        .html("The current image/viewport spectrum can be exported to a <b>CSV</b> file");
+
+    var csv = bodyDiv.append("video")
+        .attr("width", "100%")
+        .attr("controls", "")
+        .attr("preload", "metadata");
+
+    csv.append("source")
+        .attr("src", "https://cdn.jsdelivr.net/gh/jvo203/FITSWEBQLSE/htdocs/fitswebql/spectrum_export.mp4");
+
+    csv.append("p")
+        .html("Your browser does not support the video tag.");
+
+    bodyDiv.append("hr");
+
+    bodyDiv.append("h3")
+        .text("3D View");
+
+    bodyDiv.append("p")
+        .html("An <span style=\"color:#a94442\">experimental</span> WebGL feature resulting in high memory consumption. After using it a few times a browser may run out of memory.");
+
+    bodyDiv.append("p")
+        .html("Reloading a page should fix the problem");
+
+    /*bodyDiv.append("p")
+    .html("To enable it check <i>Preferences</i>/<i>3D View (experimental)</i> and a \"3D View\" button should appear towards the bottom of the page") ;*/
+
+    bodyDiv.append("p")
+        .html("To view a 3D surface of the FITS cube image, click <i>3D surface</i> in the <i>View</i> menu");
+
+    bodyDiv.append("hr");
+
+    bodyDiv.append("h3")
+        .attr("id", "realtime_h3")
+        .text("Realtime Spectrum Updates");
+
+    bodyDiv.append("p")
+        .html("<i>Preferences/realtime spectrum updates</i> works best over <i>low-latency</i> network connections");
+
+    bodyDiv.append("p")
+        .html("<i>Kalman Filter</i> is used to predict the mouse movement after taking into account a latency of a network connection to Japan");
+
+    bodyDiv.append("p")
+        .html("when disabled the spectrum refresh will be requested after a 250ms delay since the last movement of the mouse");
+
+    bodyDiv.append("hr");
+
+    bodyDiv.append("h3")
+        .attr("id", "h3")
+        .text("Realtime FITS Cube Video Updates");
+
+    bodyDiv.append("p")
+        .html("<i>Preferences/realtime video updates</i> works best over <i>low-latency</i> network connections with available bandwidth <i>over 1 mbps</i>");
+
+    bodyDiv.append("p")
+        .html("when disabled the FITS cube video frame will be requested after a 250ms delay since the last movement of the mouse");
+
+    bodyDiv.append("p")
+        .html('<span class="fas fa-play"></span>&nbsp; replay period 10s');
+
+    bodyDiv.append("p")
+        .html('<span class="fas fa-forward"></span>&nbsp; replay period 5s');
+
+    bodyDiv.append("p")
+        .html('<span class="fas fa-fast-forward"></span>&nbsp; replay period 2.5s');
+
+    bodyDiv.append("hr");
+
+    bodyDiv.append("h3")
+        .text("Zoom In/Out of region");
+
+    bodyDiv.append("p")
+        .html("scroll mouse wheel up/down (<i>mouse</i>)");
+
+    bodyDiv.append("p")
+        .html("move two fingers up/down (<i>touchpad</i>)");
+
+    bodyDiv.append("hr");
+
+    bodyDiv.append("h3")
+        .text("Copy RA/DEC");
+
+    bodyDiv.append("p")
+        .html("<b>Ctrl + C</b>");
+
+    bodyDiv.append("hr");
+
+    bodyDiv.append("h3")
+        .text("Save region as FITS");
+
+    bodyDiv.append("p")
+        .html("<b>Ctrl + S</b> (<i>keyboard</i>)");
+
+    bodyDiv.append("p")
+        .html("drag over main image (<i>mouse</i>)");
+
+    bodyDiv.append("hr");
+
+    bodyDiv.append("h3")
+        .text("Show Frequency/Velocity/Molecular Information");
+
+    bodyDiv.append("p")
+        .html("<b>hover</b> a mouse over X-axis");
+
+    bodyDiv.append("hr");
+
+    bodyDiv.append("h3")
+        .text("Skip to the Next Molecular Line");
+
+    bodyDiv.append("p")
+        .html("press <b>&larr;</b> or <b>&rarr;</b> whilst <b>hovering</b> over X-axis");
+
+    bodyDiv.append("hr");
+
+    bodyDiv.append("h3")
+        .text("Jump to Splatalogue");
+
+    bodyDiv.append("p")
+        .html("press <b>Enter</b> whilst <b>hovering</b> over X-axis");
+
+    bodyDiv.append("hr");
+
+    bodyDiv.append("h3")
+        .text("Select Frequency Range");
+
+    bodyDiv.append("p")
+        .html("<b>drag</b> over X-axis");
+
+    bodyDiv.append("hr");
+
+    bodyDiv.append("h3")
+        .text("Set REST Frequency");
+
+    bodyDiv.append("p")
+        .html("press <b>f</b> over X-axis; for detailed information see the&nbsp;")
+        .append("a")
+        .attr("class", "links")
+        .attr("href", "relative velocity.pdf")
+        .attr("target", "_blank")
+        .style("target-new", "tab")
+        .html("<u>relative velocity guide</u>");
+
+    bodyDiv.append("hr");
+
+    bodyDiv.append("h3")
+        .text("Temporarily Fix Y-Axis Range");
+
+    bodyDiv.append("p")
+        .html("press <b>s</b> over main image");
+
+    bodyDiv.append("h4")
+        .text("adjust the fixed Y-Axis range");
+
+    bodyDiv.append("p")
+        .html("move mouse cursor over to the Y-Axis whilst holding the 「Shift」 key");
+
+    bodyDiv.append("p")
+        .html("drag the mouse over the Y-Axis to <i>shift</i> it <em>UP</em> and <em>DOWN</em>");
+
+    bodyDiv.append("p")
+        .html("use the mouse <i>scroll wheel</i> or a two-finger <i>touch gesture</i> to <i>re-scale</i> the Y-Axis range");
+
+    var vid = bodyDiv.append("video")
+        .attr("width", "100%")
+        .attr("controls", "")
+        .attr("preload", "metadata");
+
+    vid.append("source")
+        .attr("src", "https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/fixed_scale_y_axis.mp4");
+
+    vid.append("p")
+        .html("Your browser does not support the video tag.");
+
+    bodyDiv.append("hr");
+
+    bodyDiv.append("h3")
+        .text("Hold current view region");
+
+    bodyDiv.append("p")
+        .html("keep pressing <b>↑Shift</b>");
+
+    bodyDiv.append("hr");
+
+    bodyDiv.append("h3")
+        .text("Print");
+
+    bodyDiv.append("p")
+        .html("in a browser <i>File/Print Preview</i>, adjust scale as needed (i.e. 25% or 50%)");
+
+    bodyDiv.append("hr");
+
+    bodyDiv.append("h3")
+        .text("browser support:");
+
+    bodyDiv.append("p")
+        .text("Chrome ◯, Firefox △, Safari ◯, MS Edge △, IE11 ×");
+
+    var footer = contentDiv.append("div")
+        .attr("class", "modal-footer");
+
+    if (!isLocal) {
+        footer.append("h3")
+            .text("FITSWebQL Personal Edition:");
+
+        let textColour = 'yellow';
+
+        if (theme == 'bright')
+            textColour = 'red';
+
+        footer.append("p")
+            .html("A local version is available on GitHub: ")
+            .append("a")
+            .style("color", textColour)
+            .attr("href", "https://github.com/jvo203/fits_web_ql")
+            .attr("target", "_blank")
+            .style("target-new", "tab")
+            .html("<b>fits_web_ql installation instructions</b>");
+    }
+
+    footer.append("h3")
+        .text("CREDITS:");
+
+    footer.append("p")
+        .text("Site design Ⓒ Christopher A. Zapart @ NAOJ, 2015 - 2023. JavaScript RA/DEC conversion Ⓒ Robert Martin Ayers, 2009, 2011, 2014.");
+
+    footer.append("h3")
+        .text("VERSION:");
+
+    footer.append("p")
+        .text(htmlData.getAttribute('data-server-version') + "/" + get_js_version());
+}
+
+function setup_FITS_header_page() {
+    var div = d3.select("body")
+        .append("div")
+        .attr("class", "container")
+        .append("div")
+        .attr("id", "fitsHeader")
+        .attr("class", "modal fade")
+        .attr("role", "dialog")
+        .append("div")
+        .attr("class", "modal-dialog");
+
+    var contentDiv = div.append("div")
+        .attr("class", "modal-content");
+
+    var headerDiv = contentDiv.append("div")
+        .attr("class", "modal-header");
+
+    headerDiv.append("span")
+        .attr("id", "fitsHeaderClose")
+        .attr("class", "close")
+        .style("color", "red")
+        .text("×");
+
+    var title = headerDiv.append("h3")
+        .text("FITS HEADER");
+
+    var bodyDiv = contentDiv.append("div")
+        .attr("id", "modal-body")
+        .attr("class", "modal-body");
+
+    var p = bodyDiv.append("p")
+        .attr("id", "headerText");
+
+    var it = p.append("I")
+        .text("FITS HEADER data not transmitted yet. Please try later.");
+}
+
+function foldChars(input, lineSize, lineArray) {
+    lineArray = lineArray || [];
+    if (input.length <= lineSize) {
+        lineArray.push(input);
+        console.log("|" + input + "|");
+        return lineArray;
+    }
+    lineArray.push(input.substring(0, lineSize));
+    console.log("|" + input.substring(0, lineSize) + "|");
+    var tail = input.substring(lineSize);
+    return foldChars(tail, lineSize, lineArray);
+}
+
+function display_FITS_header() {
+    try {
+        var fitsHeader = fitsData.HEADER;
+        var headerText = document.getElementById('headerText');
+        headerText.innerHTML = fitsHeader.trim().replace(/(.{80})/g, "$1<br>");
+
+        /*var arrayOfLines = foldChars(fitsHeader.trim(), 68);
+        var foldedString = arrayOfLines.join('<br/>');
+        headerText.innerHTML = foldedString;*/
+    }
+    catch (e) {
+        console.log(e);
+    };
 }
