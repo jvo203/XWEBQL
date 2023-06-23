@@ -257,7 +257,7 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     pixels[isinf.(pixels)] .= Float32(0.0)
 
     # return the image
-    return (pixels, mask, spectrum, header, json, min_count, max_count)
+    return (pixels, mask, Float32.(spectrum), header, json, min_count, max_count)
 end
 
 function getImage(xobject::XDataSet)
