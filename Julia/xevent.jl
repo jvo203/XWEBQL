@@ -282,8 +282,8 @@ end
 function getSpectrum(xobject::XDataSet, dx::Integer)
     energy = log.(xobject.energy)
 
-    E_min = Float32(minimum(energy)) # eV    
-    E_max = Float32(maximum(energy)) # eV
+    E_min = Float32(minimum(energy)) # log eV    
+    E_max = Float32(maximum(energy)) # log eV
     ΔE = (E_max - E_min) / dx
 
     @time h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
@@ -293,8 +293,8 @@ function getSpectrum(xobject::XDataSet, dx::Integer)
     centers = bincenters(h)
 
     # get the E_min and E_max from the bin centers
-    E_min = Float32(minimum(centers)) # eV
-    E_max = Float32(maximum(centers)) # eV
+    E_min = Float32(minimum(centers)) # log eV
+    E_max = Float32(maximum(centers)) # log eV
 
     return (spectrum, E_min, E_max)
 end

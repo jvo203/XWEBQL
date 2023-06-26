@@ -2898,11 +2898,11 @@ function setup_axes() {
 
     var range = get_axes_range(width, height);
 
-    var iR = d3.scaleLog()
+    var iR = d3.scaleLinear()
         .range([range.xMin, range.xMax])
         .domain([data_band_lo, data_band_hi]);
 
-    var xR = d3.scaleLinear()
+    var xR = d3.scaleLog()
         .range([range.xMin, range.xMax])
         .domain([data_band_lo, data_band_hi]);
 
