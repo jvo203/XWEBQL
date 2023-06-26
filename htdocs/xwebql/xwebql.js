@@ -3076,11 +3076,11 @@ function setup_axes() {
             if (offset[0] >= 0) {
                 x_axis_mousemove(offset);
             };
-        })
-        .call(d3.drag()
-            .on("start", dragstart)
-            .on("drag", dragmove)
-            .on("end", dragend));
+        });
+    /*.call(d3.drag()
+        .on("start", dragstart)
+        .on("drag", dragmove)
+        .on("end", dragend));*/
 
     //shift/zoom Y-Axis
     group = svg.append("g").attr("id", "y_axis_stretching");
@@ -3128,4 +3128,58 @@ function setup_axes() {
                 .style("fill", fillColour)
                 .style("stroke", fillColour);
         });
+}
+
+function shifted(event) {
+    if (autoscale)
+        return;
+
+    if (last_spectrum == null)
+        return;
+
+    console.log("y-axis shift:", event.dy);
+
+    var height = parseFloat(d3.select("#scaling").attr("height"));
+    var interval = user_data_max - user_data_min;
+    var shift = event.dy * interval / height;
+
+    user_data_max += shift;
+    user_data_min += shift;
+
+    plot_spectrum(last_spectrum);
+    replot_y_axis();
+}
+
+function scaled(event) {
+    if (autoscale)
+        return;
+
+    if (last_spectrum == null)
+        return;
+
+    console.log("y-axis scale:", event.transform.k, "previous:", prev_scale);
+
+    var factor = event.transform.k;
+
+    if (event.transform.k > prev_scale)
+        factor = 1.2;
+
+    if (event.transform.k < prev_scale)
+        factor = 0.8;
+
+    prev_scale = event.transform.k;
+
+    /*var interval = factor * (tmp_data_max - tmp_data_min) ;
+    var middle = (tmp_data_max + tmp_data_min) / 2 ;*/
+
+    var interval = factor * (user_data_max - user_data_min);
+    var middle = (user_data_max + user_data_min) / 2;
+
+    user_data_max = middle + interval / 2;
+    user_data_min = middle - interval / 2;
+
+    console.log("AFTER:", user_data_min, user_data_max);
+
+    plot_spectrum(last_spectrum);
+    replot_y_axis();
 }
