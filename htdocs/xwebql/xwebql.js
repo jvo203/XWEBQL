@@ -2866,7 +2866,7 @@ function setup_axes() {
     svg = svg.append("g").attr("id", "axes");
 
     let spectrum = fitsData.spectrum;
-    data_min = d3.min(spectrum);
+    data_min = Math.max(d3.min(spectrum), 1); // omit zero counts
     data_max = d3.max(spectrum);
 
     var dmin = data_min;
@@ -2901,9 +2901,9 @@ function setup_axes() {
         .range([range.xMin, range.xMax])
         .domain([data_band_lo, data_band_hi]);
 
-    var yR = d3.scaleLinear()
+    var yR = d3.scaleLog()
         .range([range.yMax, range.yMin])
-        .domain([dmin - get_spectrum_margin() * interval, dmax + get_spectrum_margin() * interval]);
+        .domain([dmin, dmax + get_spectrum_margin() * interval]);
 
     var iAxis = d3.axisTop(iR)
         .tickSizeOuter([3])
