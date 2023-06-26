@@ -33,6 +33,21 @@ const wasm_supported = (() => {
 
 console.log(wasm_supported ? "WebAssembly is supported" : "WebAssembly is not supported");
 
+d3.selection.prototype.moveToFront = function () {
+    return this.each(function () {
+        this.parentNode.appendChild(this);
+    });
+};
+
+d3.selection.prototype.moveToBack = function () {
+    return this.each(function () {
+        var firstChild = this.parentNode.firstChild;
+        if (firstChild) {
+            this.parentNode.insertBefore(this, firstChild);
+        }
+    });
+};
+
 String.prototype.insert_at = function (index, string) {
     return this.substr(0, index) + string + this.substr(index);
 }
@@ -1865,7 +1880,7 @@ function display_dataset_info() {
             video_period = 10.0;
 
             if (video_offset == null)
-                video_offset = [parseFloat(d3.select("#frequency").attr("x")), parseFloat(d3.select("#frequency").attr("y"))];
+                video_offset = [parseFloat(d3.select("#energy").attr("x")), parseFloat(d3.select("#energy").attr("y"))];
 
             document.getElementById('videoPlay').style.display = "none";
             document.getElementById('videoPause').style.display = "inline-block";
@@ -1904,7 +1919,7 @@ function display_dataset_info() {
             video_period = 5.0;
 
             if (video_offset == null)
-                video_offset = [parseFloat(d3.select("#frequency").attr("x")), parseFloat(d3.select("#frequency").attr("y"))];
+                video_offset = [parseFloat(d3.select("#energy").attr("x")), parseFloat(d3.select("#energy").attr("y"))];
 
             document.getElementById('videoPlay').style.display = "none";
             document.getElementById('videoPause').style.display = "inline-block";
@@ -1921,7 +1936,7 @@ function display_dataset_info() {
             video_period = 2.5;
 
             if (video_offset == null)
-                video_offset = [parseFloat(d3.select("#frequency").attr("x")), parseFloat(d3.select("#frequency").attr("y"))];
+                video_offset = [parseFloat(d3.select("#energy").attr("x")), parseFloat(d3.select("#energy").attr("y"))];
 
             document.getElementById('videoPlay').style.display = "none";
             document.getElementById('videoPause').style.display = "inline-block";
@@ -2662,7 +2677,7 @@ function setup_help() {
     bodyDiv.append("hr");
 
     bodyDiv.append("h3")
-        .text("Show Frequency/Velocity/Molecular Information");
+        .text("Show Energy Information");
 
     bodyDiv.append("p")
         .html("<b>hover</b> a mouse over X-axis");
@@ -2686,24 +2701,10 @@ function setup_help() {
     bodyDiv.append("hr");
 
     bodyDiv.append("h3")
-        .text("Select Frequency Range");
+        .text("Select Energy Range");
 
     bodyDiv.append("p")
         .html("<b>drag</b> over X-axis");
-
-    bodyDiv.append("hr");
-
-    bodyDiv.append("h3")
-        .text("Set REST Frequency");
-
-    bodyDiv.append("p")
-        .html("press <b>f</b> over X-axis; for detailed information see the&nbsp;")
-        .append("a")
-        .attr("class", "links")
-        .attr("href", "relative velocity.pdf")
-        .attr("target", "_blank")
-        .style("target-new", "tab")
-        .html("<u>relative velocity guide</u>");
 
     bodyDiv.append("hr");
 
@@ -2942,114 +2943,62 @@ function setup_axes() {
             return number;
         });
 
-    if (has_frequency_info) {
-        //x-axis label
-        var strXLabel = "";
+    //x-axis label
+    var strXLabel = '<I>E<SUB>' + 'log' + '</SUB></I> [log eV]';
 
-        try {
-            if (!checkbox.checked)
-                strXLabel = '<I>F<SUB>' + fitsData.SPECSYS.trim() + '</SUB></I> [GHz]';
-            else
-                strXLabel = '<I>F<SUB>REST</SUB></I> [GHz]';
-        }
-        catch (e) {
-            strXLabel = '<I>F<SUB>' + 'LSRK' + '</SUB></I> [GHz]';
-        };
+    svg.append("foreignObject")
+        .attr("x", (2 * range.xMin + 1.5 * emFontSize))
+        .attr("y", (height - 3.5 * emFontSize))
+        .attr("width", 20 * emFontSize)
+        .attr("height", 2 * emFontSize)
+        .append("xhtml:div")
+        .attr("id", "energy_display")
+        .style("display", "inline-block")
+        .attr("class", "axis-label")
+        .html(strXLabel);
 
-        svg.append("foreignObject")
-            .attr("x", (2 * range.xMin + 1.5 * emFontSize))
-            .attr("y", (height - 3.5 * emFontSize))
-            .attr("width", 20 * emFontSize)
-            .attr("height", 2 * emFontSize)
-            .append("xhtml:div")
-            .attr("id", "frequency_display")
-            .style("display", "inline-block")
-            .attr("class", "axis-label")
-            .html(strXLabel);
+    // Add the X Axis
+    svg.append("g")
+        .attr("class", "axis")
+        .attr("id", "xaxis")
+        .style("fill", axisColour)
+        .style("stroke", axisColour)
+        //.style("stroke-width", emStrokeWidth)
+        .attr("transform", "translate(0," + (height - 1) + ")")
+        .call(xAxis);
 
-        // Add the X Axis
-        svg.append("g")
-            .attr("class", "axis")
-            .attr("id", "xaxis")
-            .style("fill", axisColour)
-            .style("stroke", axisColour)
-            //.style("stroke-width", emStrokeWidth)
-            .attr("transform", "translate(0," + (height - 1) + ")")
-            .call(xAxis);
+    //y-axis label
+    var yLabel = "EVENTS";
+
+    var bunit = '';
+    if (fitsData.BUNIT != '') {
+        bunit = fitsData.BUNIT.trim();
+
+        bunit = "[" + bunit + "]";
     }
 
-    if (!optical_view) {
-        //y-axis label
-        var yLabel = "Integrated";
+    svg.append("text")
+        .attr("id", "ylabel")
+        .attr("x", (-height + 2 * range.xMin + 1.5 * emFontSize)/*-0.75*height*/)
+        .attr("y", 1.25 * emFontSize + 0 * range.xMin)
+        .attr("font-family", "Inconsolata")
+        .attr("font-size", "1.25em")
+        .attr("text-anchor", "start")
+        .style("fill", "darkgray")
+        //.style("opacity", 0.7)
+        .attr("stroke", "none")
+        .attr("transform", "rotate(-90)")
+        .text(yLabel + " " + bunit);
 
-        if (intensity_mode == "mean")
-            yLabel = "Mean";
-
-        var bunit = '';
-        if (fitsData.BUNIT != '') {
-            bunit = fitsData.BUNIT.trim();
-
-            if (intensity_mode == "integrated" && has_velocity_info)
-                bunit += '•km/s';
-
-            bunit = "[" + bunit + "]";
-        }
-
-        svg.append("text")
-            .attr("id", "ylabel")
-            .attr("x", (-height + 2 * range.xMin + 1.5 * emFontSize)/*-0.75*height*/)
-            .attr("y", 1.25 * emFontSize + 0 * range.xMin)
-            .attr("font-family", "Inconsolata")
-            .attr("font-size", "1.25em")
-            .attr("text-anchor", "start")
-            .style("fill", "darkgray")
-            //.style("opacity", 0.7)
-            .attr("stroke", "none")
-            .attr("transform", "rotate(-90)")
-            .text(yLabel + ' ' + fitsData.BTYPE.trim() + " " + bunit);
-
-        // Add the Y Axis
-        svg.append("g")
-            .attr("class", "axis")
-            .attr("id", "yaxis")
-            .style("fill", axisColour)
-            .style("stroke", axisColour)
-            //.style("stroke-width", emStrokeWidth)
-            .attr("transform", "translate(" + (0.75 * range.xMin - 1) + ",0)")
-            .call(yAxis);
-
-        // Add a CSV export link
-        if (has_velocity_info || has_frequency_info) {
-            var front_svg = d3.select("#FrontSVG");
-            var width = parseFloat(front_svg.attr("width"));
-            var height = parseFloat(front_svg.attr("height"));
-
-            strCSV = '<span id="exportCSV" class="fas fa-file-csv" style="display:inline-block; cursor: pointer" title="click to export spectrum to a local file"></span>'
-
-            var colour_style = "csv-dark";
-            if (theme == 'bright')
-                colour_style = "csv-light";
-
-            let x1 = range.xMax + 0.75 * emFontSize;
-            let x2 = (range.xMax + width) / 2.0 - 0.5 * emFontSize;
-
-            front_svg.append("foreignObject")
-                .attr("id", "foreignCSV")
-                .attr("x", Math.min(x1, x2))
-                .attr("y", (height - 2.0 * emFontSize))
-                .attr("width", 2 * emFontSize)
-                .attr("height", 2 * emFontSize)
-                .append("xhtml:div")
-                .attr("id", "csv")
-                .attr("class", colour_style)
-                .attr("pointer-events", "auto")
-                .html(strCSV);
-
-            setup_csv_export();
-
-            d3.select("#csv").moveToFront();
-        };
-    }
+    // Add the Y Axis
+    svg.append("g")
+        .attr("class", "axis")
+        .attr("id", "yaxis")
+        .style("fill", axisColour)
+        .style("stroke", axisColour)
+        //.style("stroke-width", emStrokeWidth)
+        .attr("transform", "translate(" + (0.75 * range.xMin - 1) + ",0)")
+        .call(yAxis);
 
     {
         svg.append("line")
@@ -3064,7 +3013,7 @@ function setup_axes() {
             .attr("opacity", 0.0);
     }
 
-    //add the x-axis frequency range selection shadow rectangle
+    //add the x-axis energy range selection shadow rectangle
     svg.append("rect")
         .attr("id", "fregion")
         .attr("x", range.xMin)
@@ -3102,37 +3051,36 @@ function setup_axes() {
         .style("stroke", "gray")
         .style("stroke-width", 1);
 
-    if (has_frequency_info || has_velocity_info || optical_view)
-        group.append("rect")
-            .attr("id", "frequency")
-            .attr("x", range.xMin)
-            .attr("y", range.yMax + 1)
-            .attr("width", (range.xMax - range.xMin))
-            .attr("height", (height - 1 - range.yMax - 1))
-            .attr("fill", "url(#diagonalHatch)")
-            //.attr("stroke", "white")
-            //.style("stroke-dasharray", ("1, 5"))
-            .attr("opacity", 0.0)
-            .style('cursor', 'pointer')
-            .on("mouseleave", (event) => {
-                x_axis_mouseleave();
-            })
-            .on("mouseenter", (event) => {
-                var offset = d3.pointer(event);
-                x_axis_mouseenter(offset);
+    group.append("rect")
+        .attr("id", "energy")
+        .attr("x", range.xMin)
+        .attr("y", range.yMax + 1)
+        .attr("width", (range.xMax - range.xMin))
+        .attr("height", (height - 1 - range.yMax - 1))
+        .attr("fill", "url(#diagonalHatch)")
+        //.attr("stroke", "white")
+        //.style("stroke-dasharray", ("1, 5"))
+        .attr("opacity", 0.0)
+        .style('cursor', 'pointer')
+        .on("mouseleave", (event) => {
+            x_axis_mouseleave();
+        })
+        .on("mouseenter", (event) => {
+            var offset = d3.pointer(event);
+            x_axis_mouseenter(offset);
 
-            })
-            .on("mousemove", (event) => {
-                var offset = d3.pointer(event);
+        })
+        .on("mousemove", (event) => {
+            var offset = d3.pointer(event);
 
-                if (offset[0] >= 0) {
-                    x_axis_mousemove(offset);
-                };
-            })
-            .call(d3.drag()
-                .on("start", dragstart)
-                .on("drag", dragmove)
-                .on("end", dragend));
+            if (offset[0] >= 0) {
+                x_axis_mousemove(offset);
+            };
+        })
+        .call(d3.drag()
+            .on("start", dragstart)
+            .on("drag", dragmove)
+            .on("end", dragend));
 
     //shift/zoom Y-Axis
     group = svg.append("g").attr("id", "y_axis_stretching");
