@@ -5,7 +5,9 @@ using HTTP
 using JSON
 using Sockets
 using WebSockets
-using ZfpCompression
+#using ZfpCompression
+
+include("ZfpCompression.jl")
 
 function parse_commandline()
     s = ArgParseSettings()
@@ -814,7 +816,7 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
         end
 
         println("typeof(pixels) = ", typeof(pixels))
-        compressed_pixels = zfp_compress(pixels, precision=prec)
+        compressed_pixels = ZfpCompression.zfp_compress(pixels, precision=prec)
         write(http, Int32(length(compressed_pixels)))
         write(http, compressed_pixels)
 
@@ -844,7 +846,7 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
 
             # spectrum
             println("typeof(spectrum) = ", typeof(spectrum))
-            compressed_spectrum = zfp_compress(
+            compressed_spectrum = ZfpCompression.zfp_compress(
                 spectrum,
                 precision=SPECTRUM_HIGH_PRECISION,
             )
