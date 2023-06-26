@@ -1833,7 +1833,12 @@ function display_dataset_info() {
 
     data_band_lo = Math.min(val1, val2);
     data_band_hi = Math.max(val1, val2);
-    console.log("data_band_lo: " + data_band_lo + " data_band_hi: " + data_band_hi);
+    console.log("[log] data_band_lo: " + data_band_lo + " data_band_hi: " + data_band_hi);
+
+    // convert data_band_lo and data_band_hi from natural log scale to linear scale [keV]
+    data_band_lo = Math.exp(data_band_lo) / 1000;
+    data_band_hi = Math.exp(data_band_hi) / 1000;
+    console.log("[linear] data_band_lo: " + data_band_lo + " data_band_hi: " + data_band_hi + " [keV]");
 
     //add video playback control
     if (fitsData.depth > 1) {
@@ -2893,7 +2898,7 @@ function setup_axes() {
 
     var range = get_axes_range(width, height);
 
-    var iR = d3.scaleLinear()
+    var iR = d3.scaleLog()
         .range([range.xMin, range.xMax])
         .domain([data_band_lo, data_band_hi]);
 
@@ -2944,7 +2949,8 @@ function setup_axes() {
         });
 
     //x-axis label
-    var strXLabel = '<I>E<SUB>' + 'log' + '</SUB></I> [log eV]';
+    //var strXLabel = '<I>E<SUB>' + 'log' + '</SUB></I> [log eV]';
+    var strXLabel = '<I>ENERGY [keV]';
 
     svg.append("foreignObject")
         .attr("x", (2 * range.xMin + 1.5 * emFontSize))
