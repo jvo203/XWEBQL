@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-06-23.0";
+    return "JS2023-06-26.0";
 }
 
 function uuidv4() {
@@ -2841,4 +2841,343 @@ function display_FITS_header() {
     catch (e) {
         console.log(e);
     };
+}
+
+function get_spectrum_margin() {
+    return 0.1;
+}
+
+function setup_axes() {
+    if (fitsData.depth <= 1)
+        return;
+
+    try {
+        d3.select("#axes").remove();
+        d3.select("#foreignCSV").remove();
+    }
+    catch (e) {
+    }
+
+    var svg = d3.select("#BackSVG");
+    var width = parseFloat(svg.attr("width"));
+    var height = parseFloat(svg.attr("height"));
+
+    svg = svg.append("g").attr("id", "axes");
+
+    let spectrum = fitsData.spectrum;
+    data_min = d3.min(spectrum);
+    data_max = d3.max(spectrum);
+
+    var dmin = data_min;
+    var dmax = data_max;
+
+    if (dmin == dmax) {
+        if (dmin == 0.0 && dmax == 0.0) {
+            dmin = -1.0;
+            dmax = 1.0;
+        } else {
+            if (dmin > 0.0) {
+                dmin *= 0.99;
+                dmax *= 1.01;
+            };
+
+            if (dmax < 0.0) {
+                dmax *= 0.99;
+                dmin *= 1.01;
+            }
+        }
+    }
+
+    var interval = dmax - dmin;
+
+    var range = get_axes_range(width, height);
+
+    var iR = d3.scaleLinear()
+        .range([range.xMin, range.xMax])
+        .domain([data_band_lo, data_band_hi]);
+
+    var xR = d3.scaleLinear()
+        .range([range.xMin, range.xMax])
+        .domain([data_band_lo, data_band_hi]);
+
+    var yR = d3.scaleLinear()
+        .range([range.yMax, range.yMin])
+        .domain([dmin - get_spectrum_margin() * interval, dmax + get_spectrum_margin() * interval]);
+
+    var iAxis = d3.axisTop(iR)
+        .tickSizeOuter([3])
+        .ticks(7);
+
+    var xAxis = d3.axisTop(xR)
+        .tickSizeOuter([3])
+        .ticks(7);
+    /*.tickFormat(function(d) {
+      //limit the number of decimal digits shown
+      return parseFloat(d.toPrecision(7)) ;
+    });*/
+    /*.tickFormat(function(d) {var n ;
+           if(fitsData.CDELT3 > 0)
+             n = d * (fitsData.depth-1) + 1 ;
+           else
+             n = (1-d) * (fitsData.depth-1) + 1 ;
+           
+           var freq = fitsData.CRVAL3+fitsData.CDELT3*(n-fitsData.CRPIX3) ;
+           freq /= 1e9 ;//convert from Hz to GHz
+           return freq.toPrecision(6) ;
+    });*/
+
+    var yAxis = d3.axisRight(yR)
+        .tickSizeOuter([3])
+        .tickFormat(function (d) {
+            var number;
+
+            if (Math.abs(d) <= 0.001 || Math.abs(d) >= 1000)
+                number = d.toExponential();
+            else
+                number = d;
+
+            if (Math.abs(d) == 0)
+                number = d;
+
+            return number;
+        });
+
+    if (has_frequency_info) {
+        //x-axis label
+        var strXLabel = "";
+
+        try {
+            if (!checkbox.checked)
+                strXLabel = '<I>F<SUB>' + fitsData.SPECSYS.trim() + '</SUB></I> [GHz]';
+            else
+                strXLabel = '<I>F<SUB>REST</SUB></I> [GHz]';
+        }
+        catch (e) {
+            strXLabel = '<I>F<SUB>' + 'LSRK' + '</SUB></I> [GHz]';
+        };
+
+        svg.append("foreignObject")
+            .attr("x", (2 * range.xMin + 1.5 * emFontSize))
+            .attr("y", (height - 3.5 * emFontSize))
+            .attr("width", 20 * emFontSize)
+            .attr("height", 2 * emFontSize)
+            .append("xhtml:div")
+            .attr("id", "frequency_display")
+            .style("display", "inline-block")
+            .attr("class", "axis-label")
+            .html(strXLabel);
+
+        // Add the X Axis
+        svg.append("g")
+            .attr("class", "axis")
+            .attr("id", "xaxis")
+            .style("fill", axisColour)
+            .style("stroke", axisColour)
+            //.style("stroke-width", emStrokeWidth)
+            .attr("transform", "translate(0," + (height - 1) + ")")
+            .call(xAxis);
+    }
+
+    if (!optical_view) {
+        //y-axis label
+        var yLabel = "Integrated";
+
+        if (intensity_mode == "mean")
+            yLabel = "Mean";
+
+        var bunit = '';
+        if (fitsData.BUNIT != '') {
+            bunit = fitsData.BUNIT.trim();
+
+            if (intensity_mode == "integrated" && has_velocity_info)
+                bunit += '•km/s';
+
+            bunit = "[" + bunit + "]";
+        }
+
+        svg.append("text")
+            .attr("id", "ylabel")
+            .attr("x", (-height + 2 * range.xMin + 1.5 * emFontSize)/*-0.75*height*/)
+            .attr("y", 1.25 * emFontSize + 0 * range.xMin)
+            .attr("font-family", "Inconsolata")
+            .attr("font-size", "1.25em")
+            .attr("text-anchor", "start")
+            .style("fill", "darkgray")
+            //.style("opacity", 0.7)
+            .attr("stroke", "none")
+            .attr("transform", "rotate(-90)")
+            .text(yLabel + ' ' + fitsData.BTYPE.trim() + " " + bunit);
+
+        // Add the Y Axis
+        svg.append("g")
+            .attr("class", "axis")
+            .attr("id", "yaxis")
+            .style("fill", axisColour)
+            .style("stroke", axisColour)
+            //.style("stroke-width", emStrokeWidth)
+            .attr("transform", "translate(" + (0.75 * range.xMin - 1) + ",0)")
+            .call(yAxis);
+
+        // Add a CSV export link
+        if (has_velocity_info || has_frequency_info) {
+            var front_svg = d3.select("#FrontSVG");
+            var width = parseFloat(front_svg.attr("width"));
+            var height = parseFloat(front_svg.attr("height"));
+
+            strCSV = '<span id="exportCSV" class="fas fa-file-csv" style="display:inline-block; cursor: pointer" title="click to export spectrum to a local file"></span>'
+
+            var colour_style = "csv-dark";
+            if (theme == 'bright')
+                colour_style = "csv-light";
+
+            let x1 = range.xMax + 0.75 * emFontSize;
+            let x2 = (range.xMax + width) / 2.0 - 0.5 * emFontSize;
+
+            front_svg.append("foreignObject")
+                .attr("id", "foreignCSV")
+                .attr("x", Math.min(x1, x2))
+                .attr("y", (height - 2.0 * emFontSize))
+                .attr("width", 2 * emFontSize)
+                .attr("height", 2 * emFontSize)
+                .append("xhtml:div")
+                .attr("id", "csv")
+                .attr("class", colour_style)
+                .attr("pointer-events", "auto")
+                .html(strCSV);
+
+            setup_csv_export();
+
+            d3.select("#csv").moveToFront();
+        };
+    }
+
+    {
+        svg.append("line")
+            .attr("id", "freq_bar")
+            .attr("x1", range.xMin)
+            .attr("y1", 0)
+            .attr("x2", range.xMin)
+            .attr("y2", height - 1)
+            .style("stroke", "white")
+            //.style("stroke-dasharray", ("5, 5, 1, 5"))
+            .style("stroke-width", 2 * emStrokeWidth)
+            .attr("opacity", 0.0);
+    }
+
+    //add the x-axis frequency range selection shadow rectangle
+    svg.append("rect")
+        .attr("id", "fregion")
+        .attr("x", range.xMin)
+        .attr("y", 0)
+        .attr("width", (range.xMax - range.xMin))
+        .attr("height", height - 1)
+        .attr("fill", "gray")//"gray"
+        .style("stroke-dasharray", ("1, 5, 1, 1"))
+        .style("mix-blend-mode", "difference")
+        .attr("opacity", 0.0)
+        .moveToBack();
+
+    try {
+        d3.select("#axes_selection").remove();
+    }
+    catch (e) {
+    }
+
+    var svg = d3.select("#FrontSVG");
+
+    var group = svg.append("g").attr("id", "axes_selection");
+
+    var patternScale = Math.ceil(((range.xMax - range.xMin) / 200 / 4));
+
+    var patternPath = 'M' + (-1 * patternScale) + ',' + (1 * patternScale) + ' l' + (2 * patternScale) + ',' + (-2 * patternScale) + ' M0,' + (4 * patternScale) + ' l' + (4 * patternScale) + ',' + (-4 * patternScale) + ' M' + (3 * patternScale) + ',' + (5 * patternScale) + ' l' + (2 * patternScale) + ',' + (-2 * patternScale);
+
+    svg.append("pattern")
+        .attr("id", "diagonalHatch")
+        .attr("patternUnits", "userSpaceOnUse")
+        .attr("width", patternScale * 4)
+        .attr("height", patternScale * 4)
+        .append("path")
+        //.attr("d", "M-1,1 l2,-2 M0,4 l4,-4 M3,5 l2,-2")
+        .attr("d", patternPath)
+        .style("stroke", "gray")
+        .style("stroke-width", 1);
+
+    if (has_frequency_info || has_velocity_info || optical_view)
+        group.append("rect")
+            .attr("id", "frequency")
+            .attr("x", range.xMin)
+            .attr("y", range.yMax + 1)
+            .attr("width", (range.xMax - range.xMin))
+            .attr("height", (height - 1 - range.yMax - 1))
+            .attr("fill", "url(#diagonalHatch)")
+            //.attr("stroke", "white")
+            //.style("stroke-dasharray", ("1, 5"))
+            .attr("opacity", 0.0)
+            .style('cursor', 'pointer')
+            .on("mouseleave", (event) => {
+                x_axis_mouseleave();
+            })
+            .on("mouseenter", (event) => {
+                var offset = d3.pointer(event);
+                x_axis_mouseenter(offset);
+
+            })
+            .on("mousemove", (event) => {
+                var offset = d3.pointer(event);
+
+                if (offset[0] >= 0) {
+                    x_axis_mousemove(offset);
+                };
+            })
+            .call(d3.drag()
+                .on("start", dragstart)
+                .on("drag", dragmove)
+                .on("end", dragend));
+
+    //shift/zoom Y-Axis
+    group = svg.append("g").attr("id", "y_axis_stretching");
+
+    prev_scale = 1.0;
+
+    group.append("rect")
+        .attr("id", "scaling")
+        .attr("x", 0)
+        .attr("y", range.yMin)
+        .attr("width", 2 * 0.75 * range.xMin)
+        .attr("height", (range.yMax - range.yMin))
+        .attr("fill", "url(#diagonalHatch)")
+        .attr("opacity", 0.0)
+        .call(d3.drag().on("drag", shifted))
+        .call(d3.zoom().scaleExtent([0.1, 10]).on("zoom", scaled))
+        .on("mouseleave", function (event) {
+            d3.select(this)
+                .style('cursor', '')
+                .attr("opacity", 0.0);
+
+            /*d3.select("#yaxis")
+            .style("fill", axisColour)
+            .style("stroke", axisColour);*/
+        })
+        .on("mouseenter", function (event) {
+            if (autoscale)
+                return;
+
+            if (windowLeft)
+                return;
+
+            hide_navigation_bar();
+
+            d3.select(this)
+                .style('cursor', 'ns-resize')
+                .attr("opacity", 0.5);
+
+            let fillColour = 'white';
+
+            if (theme == 'bright')
+                fillColour = 'black';
+
+            d3.select("#yaxis")
+                .style("fill", fillColour)
+                .style("stroke", fillColour);
+        });
 }
