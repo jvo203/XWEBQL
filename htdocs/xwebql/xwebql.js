@@ -927,8 +927,8 @@ async function mainRenderer() {
         document.body.style.fontSize = emFontSize + "px";
         console.log("emFontSize : ", emFontSize.toFixed(2), "emStrokeWidth : ", emStrokeWidth.toFixed(2));
 
-        var width = rect.width - 20;
-        var height = rect.height - 20;
+        var width = Math.round(rect.width - 20);
+        var height = Math.round(rect.height - 20);
 
         d3.select("#mainDiv").append("canvas")
             .attr("id", "HTMLCanvas")
@@ -2895,8 +2895,9 @@ function setup_axes() {
     }
 
     var interval = dmax - dmin;
-
     var range = get_axes_range(width, height);
+
+    console.log("Y-Range:", range.yMin, range.yMax, dmin, dmax);
 
     var iR = d3.scaleLinear()
         .range([range.xMin, range.xMax])
@@ -3261,8 +3262,14 @@ function plot_spectrum(spectrum) {
     var dx = range.xMax - range.xMin;
     var dy = range.yMax - range.yMin;
 
+    console.log("Y-Range:", range.yMin, range.yMax, dmin, dmax);
+
     var interval = dmax - dmin;
     dmax += get_spectrum_margin() * interval;
+
+    // take the natural logarithm
+    dmin = Math.log(dmin);
+    dmax = Math.log(dmax);
 
     ctx.clearRect(0, 0, width, height);
 
@@ -3277,9 +3284,9 @@ function plot_spectrum(spectrum) {
     var y = 0;
 
     if (reverse)
-        y = (data[data.length - 1] - dmin) / (dmax - dmin) * dy;
+        y = (Math.log(data[data.length - 1]) - dmin) / (dmax - dmin) * dy;
     else
-        y = (data[0] - dmin) / (dmax - dmin) * dy;
+        y = (Math.log(data[0]) - dmin) / (dmax - dmin) * dy;
 
     ctx.save();
     ctx.beginPath();
@@ -3289,11 +3296,18 @@ function plot_spectrum(spectrum) {
 
     for (var x = 1 | 0; x < data.length; x = (x + 1) | 0) {
         if (reverse)
-            y = (data[data.length - 1 - x] - dmin) / (dmax - dmin) * dy;
+            y = (Math.log(data[data.length - 1 - x]) - dmin) / (dmax - dmin) * dy;
         else
-            y = (data[x] - dmin) / (dmax - dmin) * dy;
+            y = (Math.log(data[x]) - dmin) / (dmax - dmin) * dy;
 
-        ctx.lineTo(offset, range.yMax - y);
+        console.log(x, data[x], Math.log(data[x]), y);
+
+        // test y for Infinity
+        if (isFinite(y))
+            ctx.lineTo(offset, range.yMax - y);
+        else
+            ctx.moveTo(offset, range.yMax - 1);
+
         offset += incrx;
     };
 
