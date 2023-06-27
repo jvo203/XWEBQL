@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-06-26.0";
+    return "JS2023-06-27.0";
 }
 
 function uuidv4() {
@@ -3188,4 +3188,368 @@ function scaled(event) {
 
     plot_spectrum(last_spectrum);
     replot_y_axis();
+}
+
+function plot_spectrum(spectrum) {
+    if (mousedown)
+        return;
+
+    if (fitsData.depth <= 1) {
+        return;
+    }
+
+    var elem = document.getElementById("SpectrumCanvas");
+    if (displaySpectrum) {
+        elem.style.display = "block";
+        d3.select("#yaxis").attr("opacity", 1);
+        d3.select("#ylabel").attr("opacity", 1);
+    }
+    else {
+        elem.style.display = "none";
+        d3.select("#yaxis").attr("opacity", 0);
+        d3.select("#ylabel").attr("opacity", 0);
+    }
+
+    var canvas = document.getElementById("SpectrumCanvas");
+    var ctx = canvas.getContext('2d');
+
+    var width = canvas.width;
+    var height = canvas.height;
+
+    tmp_data_min = Math.max(d3.min(spectrum), 1);  // omit zero counts
+    tmp_data_max = d3.max(spectrum);
+
+    if (autoscale) {
+        dmin = tmp_data_min;
+        dmax = tmp_data_max;
+    }
+    else {
+        if ((user_data_min != null) && (user_data_max != null)) {
+            dmin = user_data_min;
+            dmax = user_data_max;
+        }
+        else {
+            dmin = data_min;
+            dmax = data_max;
+        }
+    };
+
+    if (windowLeft) {
+        dmin = data_min;
+        dmax = data_max;
+    }
+
+    if (dmin == dmax) {
+        if (dmin == 0.0 && dmax == 0.0) {
+            dmin = -1.0;
+            dmax = 1.0;
+        } else {
+            if (dmin > 0.0) {
+                dmin *= 0.99;
+                dmax *= 1.01;
+            };
+
+            if (dmax < 0.0) {
+                dmax *= 0.99;
+                dmin *= 1.01;
+            }
+        }
+    }
+
+    var range = get_axes_range(width, height);
+
+    var dx = range.xMax - range.xMin;
+    var dy = range.yMax - range.yMin;
+
+    var interval = dmax - dmin;
+    dmax += get_spectrum_margin() * interval;
+
+    ctx.clearRect(0, 0, width, height);
+
+    let data = largestTriangleThreeBuckets(spectrum, dx / 2);
+
+    var incrx = dx / (data.length - 1);
+    var offset = range.xMin;
+
+    //get display direction
+    var reverse = get_spectrum_direction(fitsData);
+
+    var y = 0;
+
+    if (reverse)
+        y = (data[data.length - 1] - dmin) / (dmax - dmin) * dy;
+    else
+        y = (data[0] - dmin) / (dmax - dmin) * dy;
+
+    ctx.save();
+    ctx.beginPath();
+
+    ctx.moveTo(offset, range.yMax - y);
+    offset += incrx;
+
+    for (var x = 1 | 0; x < data.length; x = (x + 1) | 0) {
+        if (reverse)
+            y = (data[data.length - 1 - x] - dmin) / (dmax - dmin) * dy;
+        else
+            y = (data[x] - dmin) / (dmax - dmin) * dy;
+
+        ctx.lineTo(offset, range.yMax - y);
+        offset += incrx;
+    };
+
+    ctx.shadowColor = getShadowStyle();
+    ctx.shadowBlur = 5;//20
+    //ctx.shadowOffsetX = 10; 
+    //ctx.shadowOffsetY = 10;
+
+    ctx.strokeStyle = getStrokeStyle();
+
+    ctx.lineWidth = 1;// 0
+    ctx.strokeWidth = emStrokeWidth;
+
+    ctx.stroke();
+    ctx.closePath();
+    ctx.restore();
+}
+
+function replot_y_axis() {
+    if (!displaySpectrum || optical_view)
+        return;
+
+    var svg = d3.select("#BackSVG");
+    var width = parseFloat(svg.attr("width"));
+    var height = parseFloat(svg.attr("height"));
+
+    var dmin = 0.0;
+    var dmax = 0.0;
+
+    if (autoscale) {
+        dmin = tmp_data_min;
+        dmax = tmp_data_max;
+    }
+    else {
+        if ((user_data_min != null) && (user_data_max != null)) {
+            dmin = user_data_min;
+            dmax = user_data_max;
+        }
+        else {
+            dmin = data_min;
+            dmax = data_max;
+        }
+    };
+
+    if (windowLeft) {
+        dmin = data_min;
+        dmax = data_max;
+    }
+
+    if (dmin == dmax) {
+        if (dmin == 0.0 && dmax == 0.0) {
+            dmin = -1.0;
+            dmax = 1.0;
+        } else {
+            if (dmin > 0.0) {
+                dmin *= 0.99;
+                dmax *= 1.01;
+            };
+
+            if (dmax < 0.0) {
+                dmax *= 0.99;
+                dmin *= 1.01;
+            }
+        }
+    }
+
+    var interval = dmax - dmin;
+
+    var range = get_axes_range(width, height);
+
+    var yR = d3.scaleLinear()
+        .range([range.yMax, range.yMin])
+        .domain([dmin - get_spectrum_margin() * interval, dmax + get_spectrum_margin() * interval]);
+
+    var yAxis = d3.axisRight(yR)
+        .tickSizeOuter([3])
+        //.tickFormat(function(d) { return d.toPrecision(3) ; }) ;
+        .tickFormat(function (d) {
+            var number;
+
+            if (Math.abs(d) <= 0.001 || Math.abs(d) >= 1000)
+                number = d.toExponential();
+            else
+                number = d;
+
+            if (Math.abs(d) == 0)
+                number = d;
+
+            return number;
+        });
+
+    d3.select("#yaxis").remove();
+    svg = d3.select("#axes");
+
+    // Add the Y Axis
+    svg.append("g")
+        .attr("class", "axis")
+        .attr("id", "yaxis")
+        .style("fill", axisColour)
+        .style("stroke", axisColour)
+        //.style("stroke-width", emStrokeWidth)
+        .attr("transform", "translate(" + (0.75 * range.xMin - 1) + ",0)")
+        .call(yAxis);
+
+    //y-axis label
+    var yLabel = "Integrated";
+
+    if (intensity_mode == "mean")
+        yLabel = "Mean";
+
+    let fitsData = fitsContainer[va_count - 1];
+
+    var bunit = '';
+    if (fitsData.BUNIT != '') {
+        bunit = fitsData.BUNIT.trim();
+
+        if (intensity_mode == "integrated" && has_velocity_info)
+            bunit += '•km/s';
+
+        bunit = "[" + bunit + "]";
+    }
+
+    d3.select("#ylabel").text(yLabel + ' ' + fitsData.BTYPE.trim() + " " + bunit);
+}
+
+function largestTriangleThreeBuckets(data, threshold) {
+
+    var floor = Math.floor,
+        abs = Math.abs;
+
+    var dataLength = data.length;
+    if (threshold >= dataLength || threshold === 0) {
+        return data; // Nothing to do
+    }
+
+    //console.log("applying 'largestTriangleThreeBuckets'");
+
+    var sampled = [],
+        sampledIndex = 0;
+
+    // Bucket size. Leave room for start and end data points
+    var every = (dataLength - 2) / (threshold - 2);
+
+    var a = 0,  // Initially a is the first point in the triangle
+        maxAreaPoint,
+        maxArea,
+        area,
+        nextA;
+
+    sampled[sampledIndex++] = data[a]; // Always add the first point
+
+    for (var i = 0; i < threshold - 2; i++) {
+
+        // Calculate point average for next bucket (containing c)
+        var avgX = 0,
+            avgY = 0,
+            avgRangeStart = floor((i + 1) * every) + 1,
+            avgRangeEnd = floor((i + 2) * every) + 1;
+        avgRangeEnd = avgRangeEnd < dataLength ? avgRangeEnd : dataLength;
+
+        var avgRangeLength = avgRangeEnd - avgRangeStart;
+
+        for (; avgRangeStart < avgRangeEnd; avgRangeStart++) {
+            avgX += avgRangeStart;//data[ avgRangeStart ][ xAccessor ] * 1; // * 1 enforces Number (value may be Date)
+            avgY += data[avgRangeStart];
+        }
+        avgX /= avgRangeLength;
+        avgY /= avgRangeLength;
+
+        // Get the range for this bucket
+        var rangeOffs = floor((i + 0) * every) + 1,
+            rangeTo = floor((i + 1) * every) + 1;
+
+        // Point a
+        var pointAX = a,//data[ a ][ xAccessor ] * 1, // enforce Number (value may be Date)
+            pointAY = data[a];
+
+        maxArea = area = -1;
+
+        for (; rangeOffs < rangeTo; rangeOffs++) {
+            // Calculate triangle area over three buckets
+            area = abs((pointAX - avgX) * (data[rangeOffs] - pointAY) -
+                (pointAX - rangeOffs) * (avgY - pointAY)
+            ) * 0.5;
+            if (area > maxArea) {
+                maxArea = area;
+                maxAreaPoint = data[rangeOffs];
+                nextA = rangeOffs; // Next a is this b
+            }
+        }
+
+        sampled[sampledIndex++] = maxAreaPoint; // Pick this point from the bucket
+        a = nextA; // This a is the next a (chosen b)
+    }
+
+    sampled[sampledIndex++] = data[dataLength - 1]; // Always add last
+
+    return sampled;
+}
+
+function get_spectrum_direction(fitsData) {
+    var reverse = false;
+
+    //ALMAWebQLv2 behaviour
+    if (fitsData.CDELT3 > 0.0)
+        reverse = false;
+    else
+        reverse = true;
+
+    return reverse;
+}
+
+function getShadowStyle() {
+    if (theme == 'bright')
+        return "black";// purple
+    else
+        //return "yellow";//was red
+        return "rgba(255,204,0,1.0)"; // Amber        
+}
+
+function getStrokeStyle() {
+    var style = "rgba(0,0,0,1.0)";
+
+    //style = "rgba(255,204,0,0.9)" ;//yellowish ALMAWebQL v2
+    style = "rgba(255,255,255,1.0)";//white
+    //style = "rgba(153, 102, 153, 0.9)" ;//violet
+
+    if (theme == 'bright') {
+        //style = "rgba(0,0,0,1.0)";//black
+        style = "rgba(127,127,127,1.0)";// grey
+
+        if (colourmap == "greyscale")
+            style = "rgba(255,204,0,1.0)";//yellowish ALMAWebQL v2	    
+    }
+
+
+    if (theme == 'dark') {
+        if (colourmap == "green")
+            //style = "rgba(255,127,80,0.9)";//orange
+            //style = "rgba(238,130,238,0.9)" ;
+            //style = "rgba(204,204,204,0.9)";//grey
+            style = "rgba(255,204,0,1.0)";//yellowish ALMAWebQL v2	    
+        //style = "rgba(204,204,204,1.0)";//grey		
+
+        if (colourmap == "red")
+            style = "rgba(0,191,255,1.0)";//deepskyblue
+
+        if (colourmap == "blue")
+            style = "rgba(255,215,0,1.0)";//gold
+
+        if (colourmap == "hot")
+            style = "rgba(0,191,255,1.0)";//deepskyblue
+
+        //if(document.getElementById('colourmap').value == "rainbow")// || document.getElementById('colourmap').value == "parula" || document.getElementById('colourmap').value == "viridis")
+        //	style = "rgba(204,204,204,0.9)" ;
+    }
+
+    return style;
 }
