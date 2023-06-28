@@ -4134,7 +4134,7 @@ function webgl_image_renderer(gl, width, height) {
         // draw the quad (2 triangles, 6 vertices)
         gl.drawArrays(gl.TRIANGLES, 0, 6);
 
-        image.loopId = requestAnimationFrame(image_rendering_loop);
+        // image.loopId = requestAnimationFrame(image_rendering_loop); // there is no need for the animation loop as parameters are not changing
     };
 
     image.loopId = requestAnimationFrame(image_rendering_loop);
