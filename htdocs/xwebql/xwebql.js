@@ -1018,12 +1018,14 @@ async function mainRenderer() {
 
         setup_FITS_header_page();
 
-        if (welcome)
-            show_welcome();
+        /*if (welcome)
+            show_welcome();*/
 
         display_hourglass();
         show_heartbeat();
         poll_heartbeat();
+
+        imageContainer = null;
 
         dataset_timeout = -1;
         fetch_image_spectrum(datasetId, true, false);
@@ -1351,7 +1353,7 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
 
                             console.log("image width: ", img_width, "height: ", img_height, "elapsed: ", elapsed, "[ms]");
 
-                            process_hdr_image(img_width, img_height, pixels, alpha, tone_mapping, index);
+                            process_hdr_image(img_width, img_height, pixels, alpha, min_count, max_count);
 
                             if (has_json) {
                                 // display_histogram(index);
@@ -3635,4 +3637,198 @@ function getStrokeStyle() {
     }
 
     return style;
+}
+
+function true_image_dimensions(alpha, width, height) {
+    var width = width | 0;
+    var height = height | 0;
+    var linesize = width | 0;
+    var length = (width * height) | 0;
+
+    var x, y, offset;
+    var found_data;
+
+    var y1 = 0 | 0;
+    var y2 = 0 | 0;
+    var x1 = 0 | 0;
+    var x2 = 0 | 0;
+
+    //find y1
+    for (var i = 0 | 0; i < length; i = (i + 1) | 0) {
+        if (alpha[i] > 0) {
+            y1 = (i / linesize) | 0;
+            break;
+        }
+    }
+
+    //find y2
+    for (var i = length - 1; i >= 0; i = (i - 1) | 0) {
+        if (alpha[i] > 0) {
+            y2 = (i / linesize) | 0;
+            break;
+        }
+    }
+
+    //find x1
+    found_data = false;
+    for (var x = 0 | 0; x < width; x = (x + 1) | 0) {
+        for (var y = y1; y <= y2; y = (y + 1) | 0) {
+            if (alpha[y * linesize + x] > 0) {
+                x1 = x | 0;
+                found_data = true;
+                break;
+            }
+        }
+
+        if (found_data)
+            break;
+    }
+
+    //find x2
+    found_data = false;
+    for (var x = (width - 1) | 0; x >= 0; x = (x - 1) | 0) {
+        for (var y = y1; y <= y2; y = (y + 1) | 0) {
+            if (alpha[y * linesize + x] > 0) {
+                x2 = x | 0;
+                found_data = true;
+                break;
+            }
+        }
+
+        if (found_data)
+            break;
+    }
+
+    //console.log("image bounding box: y1 =", y1, "y2 =", y2, "x1 =", x1, "x2 =", x2);
+
+    return {
+        x1: x1,
+        y1: y1,
+        x2: x2,
+        y2: ((height - 1) - y2), // was 'y1', with WebGL swap y1 with y2 due to a vertical mirror flip
+        width: Math.abs(x2 - x1) + 1,
+        height: Math.abs(y2 - y1) + 1
+    }
+}
+
+function process_hdr_image(img_width, img_height, pixels, alpha, min_count, max_count) {
+    console.log("process_hdr_image: ", img_width, img_height, min_count, max_count);
+    var image_bounding_dims = true_image_dimensions(alpha, img_width, img_height);
+    var pixel_range = { min_pixel: min_count, max_pixel: max_count }
+    console.log(image_bounding_dims, pixel_range);
+
+    // combine pixels with a mask
+    let len = pixels.length | 0;
+    var texture = new Float32Array(2 * len);
+    let offset = 0 | 0;
+
+    for (let i = 0 | 0; i < len; i = (i + 1) | 0) {
+        texture[offset] = pixels[i];
+        offset = (offset + 1) | 0;
+
+        texture[offset] = (alpha[i] > 0) ? 1.0 : 0.0;
+        offset = (offset + 1) | 0;
+    }
+
+    if (imageContainer != null) {
+        clear_webgl_internal_buffers(imageContainer);
+    }
+
+    imageContainer = { width: img_width, height: img_height, pixels: pixels, alpha: alpha, texture: texture, image_bounding_dims: image_bounding_dims, pixel_range: pixel_range };
+
+    //next display the image    
+    init_webgl_image_buffers();
+
+    setup_image_selection();
+
+    try {
+        display_scale_info();
+    }
+    catch (err) {
+    };
+
+    has_image = true;
+
+    setup_viewports();
+
+    hide_hourglass();
+}
+
+function init_webgl_image_buffers() {
+    //place the image onto the main canvas
+    var canvas = document.getElementById('HTMLCanvas');
+    canvas.style.display = "block";// a hack needed by Apple Safari
+    var width = canvas.width;
+    var height = canvas.height;
+
+    if (webgl1 || webgl2) {
+        canvas.addEventListener("webglcontextlost", function (event) {
+            event.preventDefault();
+
+            var image = imageContainer;
+            cancelAnimationFrame(image.loopId);
+            console.error("HTMLCanvas: webglcontextlost");
+        }, false);
+
+        canvas.addEventListener(
+            "webglcontextrestored", function () {
+                console.log("HTMLCanvas: webglcontextrestored");
+                init_webgl_image_buffers();
+            }, false);
+    }
+
+    if (webgl2) {
+        var ctx = canvas.getContext("webgl2", { preserveDrawingBuffer: true });
+        imageContainer.gl = ctx;
+        // console.log("init_webgl is using the WebGL2 context.");
+
+        // enable floating-point textures filtering			
+        ctx.getExtension('OES_texture_float_linear');
+
+        // needed by gl.checkFramebufferStatus
+        ctx.getExtension('EXT_color_buffer_float');
+
+        // call the common WebGL renderer
+        webgl_image_renderer(ctx, width, height);
+    } else if (webgl1) {
+        var ctx = canvas.getContext("webgl", { preserveDrawingBuffer: true });
+        imageContainer.gl = ctx;
+        // console.log("init_webgl is using the WebGL1 context.");
+
+        // enable floating-point textures
+        ctx.getExtension('OES_texture_float');
+        ctx.getExtension('OES_texture_float_linear');
+
+        // call the common WebGL renderer
+        webgl_image_renderer(ctx, width, height);
+    } else {
+        console.log("WebGL not supported by your browser, falling back onto HTML 2D Canvas (not implemented yet).");
+        return;
+    }
+}
+
+function clear_webgl_internal_buffers(image) {
+    if (image.first)
+        return;
+
+    // cancel the animation loop
+    cancelAnimationFrame(image.loopId);
+
+    var gl = image.gl;
+
+    if (gl === undefined || gl == null)
+        return;
+
+    // position buffer
+    gl.deleteBuffer(image.positionBuffer);
+
+    // texture
+    gl.deleteTexture(image.tex);
+
+    // program
+    gl.deleteShader(image.program.vShader);
+    gl.deleteShader(image.program.fShader);
+    gl.deleteProgram(image.program);
+
+    image.gl = null;
 }
