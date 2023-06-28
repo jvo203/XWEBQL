@@ -3995,7 +3995,7 @@ function webgl_image_renderer(gl, width, height) {
         var fragmentShaderCode = document.getElementById("common-shader").text + document.getElementById(image.tone_mapping.flux + "-shader").text;
     } catch (_) {
         // this will be triggered only for datasets where the tone mapping has not been set (i.e. the mask is null etc...)
-        var fragmentShaderCode = document.getElementById("common-shader").text + document.getElementById("legacy-shader").text;
+        var fragmentShaderCode = document.getElementById("common-shader").text + document.getElementById("log-shader").text;
     }
 
     if (webgl2)

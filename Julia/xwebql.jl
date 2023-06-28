@@ -584,9 +584,9 @@ function streamXEvents(http::HTTP.Streams.Stream)
     write(http, read(HT_DOCS * "/xwebql/legend-common-shader.frag"))
     write(http, "</script>\n")
 
-    # tone mappings    
-    write(http, "<script id=\"legacy-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/legacy-shader.frag"))
+    # tone mapping (only one for the time being)
+    write(http, "<script id=\"log-shader\" type=\"x-shader/x-vertex\">\n")
+    write(http, read(HT_DOCS * "/xwebql/log-shader.frag"))
     write(http, "</script>\n")
 
     # colourmaps
