@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-06-27.0";
+    return "JS2023-06-28.0";
 }
 
 function uuidv4() {
@@ -3288,8 +3288,23 @@ function plot_spectrum(spectrum) {
     else
         y = (Math.log(data[0]) - dmin) / (dmax - dmin) * dy;
 
+    var previousState = isFinite(y);
+    var currentState = isFinite(y);
+    var previousY = y;
+
     ctx.save();
     ctx.beginPath();
+
+    ctx.shadowColor = getShadowStyle();
+    ctx.shadowBlur = 5;//20
+    //ctx.shadowOffsetX = 10; 
+    //ctx.shadowOffsetY = 10;
+
+    var style = getStrokeStyle();
+    ctx.strokeStyle = style;
+
+    ctx.lineWidth = 1;// 0
+    ctx.strokeWidth = emStrokeWidth;
 
     ctx.moveTo(offset, range.yMax - y);
     offset += incrx;
@@ -3300,26 +3315,56 @@ function plot_spectrum(spectrum) {
         else
             y = (Math.log(data[x]) - dmin) / (dmax - dmin) * dy;
 
-        console.log(x, data[x], Math.log(data[x]), y);
+        currentState = isFinite(y);
+
+        /*if (previousState != currentState) {
+            previousState = currentState;
+            ctx.stroke();
+            ctx.closePath();
+            ctx.beginPath();
+            ctx.moveTo(offset, range.yMax - previousY);
+        }*/
 
         // test y for Infinity
-        if (isFinite(y))
+        if (isFinite(y)) {
+            //ctx.setLineDash([]);
+            //ctx.strokeStyle = style;
             ctx.lineTo(offset, range.yMax - y);
-        else
-            ctx.moveTo(offset, range.yMax - 1);
+        }
+        else {
+            //ctx.moveTo(offset, range.yMax + 1);
+            //ctx.setLineDash([10, 10]);
+            //ctx.strokeStyle = "red";
+            ctx.lineTo(offset, range.yMax + 10);
+        }
 
         offset += incrx;
+        previousY = y;
     };
 
+    ctx.stroke();
+    ctx.closePath();
+    ctx.restore();
+
+    //plot a zero line        
+    ctx.save();
+    ctx.beginPath();
+
     ctx.shadowColor = getShadowStyle();
-    ctx.shadowBlur = 5;//20
+    ctx.shadowBlur = 20;
     //ctx.shadowOffsetX = 10; 
     //ctx.shadowOffsetY = 10;
+    //ctx.strokeStyle = getStrokeStyle();
+    ctx.strokeStyle = "rgba(255,0,0,0.25)";
 
-    ctx.strokeStyle = getStrokeStyle();
-
-    ctx.lineWidth = 1;// 0
+    //ctx.setLineDash([5, 3]);
+    ctx.setLineDash([10, 10]);
+    ctx.lineWidth = 1;
     ctx.strokeWidth = emStrokeWidth;
+
+    y = (0 - dmin) / (dmax - dmin) * dy;
+    ctx.moveTo(range.xMin, range.yMax - y + emStrokeWidth / 2); // "- y" or "+ 1"
+    ctx.lineTo(range.xMax, range.yMax - y + emStrokeWidth / 2); // "- y" or "+ 1"
 
     ctx.stroke();
     ctx.closePath();
