@@ -1334,6 +1334,34 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
                             }
                         }
 
+                        // image
+                        {
+                            //console.log("processing an HDR image");
+                            let start = performance.now();
+
+                            // decompressZFP returns std::vector<float>
+                            // decompressZFPimage returns Float32Array but emscripten::typed_memory_view is buggy
+                            var res = Module.decompressZFPimage(img_width, img_height, frame_pixels);
+                            const pixels = Module.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
+
+                            var res = Module.decompressLZ4mask(img_width, img_height, frame_mask);
+                            const alpha = Module.HEAPU8.slice(res[0], res[0] + res[1]);
+
+                            let elapsed = Math.round(performance.now() - start);
+
+                            console.log("image width: ", img_width, "height: ", img_height, "elapsed: ", elapsed, "[ms]");
+
+                            process_hdr_image(img_width, img_height, pixels, alpha, tone_mapping, index);
+
+                            if (has_json) {
+                                // display_histogram(index);
+
+                                display_gridlines();
+                            }
+
+                            display_legend();
+                        }
+
                     }
 
                 })
@@ -2897,8 +2925,6 @@ function setup_axes() {
     var interval = dmax - dmin;
     var range = get_axes_range(width, height);
 
-    console.log("Y-Range:", range.yMin, range.yMax, dmin, dmax);
-
     var iR = d3.scaleLinear()
         .range([range.xMin, range.xMax])
         .domain([data_band_lo, data_band_hi]);
@@ -3261,8 +3287,6 @@ function plot_spectrum(spectrum) {
 
     var dx = range.xMax - range.xMin;
     var dy = range.yMax - range.yMin;
-
-    console.log("Y-Range:", range.yMin, range.yMax, dmin, dmax);
 
     var interval = dmax - dmin;
     dmax += get_spectrum_margin() * interval;
