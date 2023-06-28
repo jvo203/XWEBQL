@@ -3832,3 +3832,322 @@ function clear_webgl_internal_buffers(image) {
 
     image.gl = null;
 }
+
+function get_screen_scale(x) {
+    //return Math.floor(0.925*x) ;
+    return Math.floor(0.9 * x);
+}
+
+function get_image_scale_square(width, height, img_width, img_height) {
+    var screen_dimension = get_screen_scale(Math.min(width, height));
+    var image_dimension = Math.max(img_width, img_height);
+
+    return screen_dimension / image_dimension;
+}
+
+function get_image_scale(width, height, img_width, img_height) {
+    if (img_width == img_height)
+        return get_image_scale_square(width, height, img_width, img_height);
+
+    if (img_height < img_width) {
+        var screen_dimension = 0.9 * height;
+        var image_dimension = img_height;
+
+        var scale = screen_dimension / image_dimension;
+
+        var new_image_width = scale * img_width;
+
+        if (new_image_width > 0.8 * width) {
+            screen_dimension = 0.8 * width;
+            image_dimension = img_width;
+            scale = screen_dimension / image_dimension;
+        }
+
+        return scale;
+    }
+
+    if (img_width < img_height) {
+        var screen_dimension = 0.8 * width;
+        var image_dimension = img_width;
+
+        var scale = screen_dimension / image_dimension;
+
+        var new_image_height = scale * img_height;
+
+        if (new_image_height > 0.9 * height) {
+            screen_dimension = 0.9 * height;
+            image_dimension = img_height;
+            scale = screen_dimension / image_dimension;
+        }
+
+        return scale;
+    }
+}
+
+/** ---------------------------------------------------------------------
+ * Create and compile an individual shader.
+ * @param gl WebGLRenderingContext The WebGL context.
+ * @param type Number The type of shader, either gl.VERTEX_SHADER or gl.FRAGMENT_SHADER
+ * @param source String The code/text of the shader
+ * @returns WebGLShader A WebGL shader program object.
+ */
+function createAndCompileShader(gl, type, source) {
+    var typeName;
+    switch (type) {
+        case gl.VERTEX_SHADER:
+            typeName = "Vertex Shader";
+            break;
+        case gl.FRAGMENT_SHADER:
+            typeName = "Fragment Shader";
+            break;
+        default:
+            console.error("Invalid type of shader in createAndCompileShader()");
+            return null;
+    }
+
+    // Create shader object
+    var shader = gl.createShader(type);
+    if (!shader) {
+        console.error("Fatal error: gl could not create a shader object.");
+        return null;
+    }
+
+    // Put the source code into the gl shader object
+    gl.shaderSource(shader, source);
+
+    // Compile the shader code
+    gl.compileShader(shader);
+
+    // Check for any compiler errors
+    var compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+    if (!compiled && !gl.isContextLost()) {
+        // There are errors, so display them
+        var errors = gl.getShaderInfoLog(shader);
+        console.error('Failed to compile ' + typeName + ' with these errors:' + errors);
+
+        gl.deleteShader(shader);
+        return null;
+    }
+
+    return shader;
+};
+
+/** ---------------------------------------------------------------------
+ * Given two shader programs, create a complete rendering program.
+ * @param gl WebGLRenderingContext The WebGL context.
+ * @param vertexShaderCode String Code for a vertex shader.
+ * @param fragmentShaderCode String Code for a fragment shader.
+ * @returns WebGLProgram A WebGL shader program object.
+ */
+//
+function createProgram(gl, vertexShaderCode, fragmentShaderCode) {
+    // Create the 2 required shaders
+    var vertexShader = createAndCompileShader(gl, gl.VERTEX_SHADER, vertexShaderCode);
+    var fragmentShader = createAndCompileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderCode);
+    if (!vertexShader || !fragmentShader) {
+        return null;
+    }
+
+    // Create a WebGLProgram object
+    var program = gl.createProgram();
+    if (!program) {
+        console.error('Fatal error: Failed to create a program object');
+        return null;
+    }
+
+    // Attach the shader objects
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+
+    // Link the WebGLProgram object
+    gl.linkProgram(program);
+
+    // Check for success
+    var linked = gl.getProgramParameter(program, gl.LINK_STATUS);
+    if (!linked && !gl.isContextLost()) {
+        // There were errors, so get the errors and display them.
+        var error = gl.getProgramInfoLog(program);
+        console.error('Fatal error: Failed to link program: ' + error);
+        gl.deleteProgram(program);
+        gl.deleteShader(fragmentShader);
+        gl.deleteShader(vertexShader);
+        return null;
+    }
+
+    // Remember the shaders. This allows for them to be cleanly deleted.
+    program.vShader = vertexShader;
+    program.fShader = fragmentShader;
+
+    return program;
+};
+
+function webgl_image_renderer(gl, width, height) {
+    var image = imageContainer;
+
+    var scale = get_image_scale(width, height, image.image_bounding_dims.width, image.image_bounding_dims.height);
+    var img_width = scale * image.image_bounding_dims.width;
+    var img_height = scale * image.image_bounding_dims.height;
+    console.log("scaling by", scale, "new width:", img_width, "new height:", img_height, "orig. width:", image.image_bounding_dims.width, "orig. height:", image.image_bounding_dims.height);
+
+    // setup GLSL program
+    var vertexShaderCode = document.getElementById("vertex-shader").text;
+    try {
+        var fragmentShaderCode = document.getElementById("common-shader").text + document.getElementById(image.tone_mapping.flux + "-shader").text;
+    } catch (_) {
+        // this will be triggered only for datasets where the tone mapping has not been set (i.e. the mask is null etc...)
+        var fragmentShaderCode = document.getElementById("common-shader").text + document.getElementById("legacy-shader").text;
+    }
+
+    if (webgl2)
+        fragmentShaderCode = fragmentShaderCode + "\ncolour.a = colour.g;\n";
+
+    fragmentShaderCode += document.getElementById(colourmap + "-shader").text;
+
+    // WebGL2 accepts WebGL1 shaders so there is no need to update the code	
+    if (webgl2) {
+        var prefix = "#version 300 es\n";
+        vertexShaderCode = prefix + vertexShaderCode;
+        fragmentShaderCode = prefix + fragmentShaderCode;
+
+        // attribute -> in
+        vertexShaderCode = vertexShaderCode.replace(/attribute/g, "in");
+        fragmentShaderCode = fragmentShaderCode.replace(/attribute/g, "in");
+
+        // varying -> out
+        vertexShaderCode = vertexShaderCode.replace(/varying/g, "out");
+
+        // varying -> in
+        fragmentShaderCode = fragmentShaderCode.replace(/varying/g, "in");
+
+        // texture2D -> texture
+        fragmentShaderCode = fragmentShaderCode.replace(/texture2D/g, "texture");
+
+        // replace gl_FragColor with a custom variable, i.e. texColour
+        fragmentShaderCode = fragmentShaderCode.replace(/gl_FragColor/g, "texColour");
+
+        // add the definition of texColour
+        var pos = fragmentShaderCode.indexOf("void main()");
+        fragmentShaderCode = fragmentShaderCode.insert_at(pos, "out vec4 texColour;\n\n");
+    }
+
+    var program = createProgram(gl, vertexShaderCode, fragmentShaderCode);
+    image.program = program;
+
+    // look up where the vertex data needs to go.
+    var positionLocation = gl.getAttribLocation(program, "a_position");
+
+    // Create a position buffer
+    var positionBuffer = gl.createBuffer();
+    image.positionBuffer = positionBuffer;
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    // Put a unit quad in the buffer
+    var positions = [
+        -1, -1,
+        -1, 1,
+        1, -1,
+        1, -1,
+        -1, 1,
+        1, 1,
+    ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+    // load a texture
+    var tex = gl.createTexture();
+    image.tex = tex;
+
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    /*gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);*/
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    if (webgl2)
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG32F, image.width, image.height, 0, gl.RG, gl.FLOAT, image.texture);
+    else
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE_ALPHA, image.width, image.height, 0, gl.LUMINANCE_ALPHA, gl.FLOAT, image.texture);
+
+    var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if (status != gl.FRAMEBUFFER_COMPLETE) {
+        console.error(status);
+    }
+
+    image.refresh = true;
+    image.first = true;
+
+    // shoud be done in an animation loop
+    function image_rendering_loop() {
+        // set a flag
+        image.first = false;
+
+        if (image.gl === undefined || image.gl == null) {
+            return;
+        }
+
+        if (!image.refresh) {
+            image.loopId = requestAnimationFrame(image_rendering_loop);
+            return;
+        } else
+            image.refresh = false;
+
+        //WebGL how to convert from clip space to pixels	
+        gl.viewport((width - img_width) / 2, (height - img_height) / 2, img_width, img_height);
+        // console.log("gl.viewport:", (width - img_width) / 2, (height - img_height) / 2, img_width, img_height);
+        // console.log("gl.viewport:", gl.getParameter(gl.VIEWPORT));
+        // set the global variable
+        image_gl_viewport = gl.getParameter(gl.VIEWPORT);
+
+        // Clear the canvas
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        // the image bounding box
+        var locationOfBox = gl.getUniformLocation(program, "box");
+
+        // image tone mapping
+        var locationOfParams = gl.getUniformLocation(program, "params");
+
+        // drawRegion (execute the GLSL program)
+        // Tell WebGL to use our shader program pair
+        gl.useProgram(program);
+
+        let xmin = image.image_bounding_dims.x1 / (image.width - 0);// was - 1
+        let ymin = image.image_bounding_dims.y1 / (image.height - 0);// was - 1
+        let _width = image.image_bounding_dims.width / image.width;
+        let _height = image.image_bounding_dims.height / image.height;
+
+        // console.log("xmin:", xmin, "ymin:", ymin, "_width:", _width, "_height:", _height);
+        gl.uniform4fv(locationOfBox, [xmin, ymin, _width, _height]);
+
+        // get the multiplier
+        var noise_sensitivity = document.getElementById('sensitivity' + index).value;
+        var multiplier = get_noise_sensitivity(noise_sensitivity);
+
+        if (image.tone_mapping.flux == "legacy") {
+            var params = [image.tone_mapping.black, image.tone_mapping.white, image.tone_mapping.lmin, image.tone_mapping.lmax];
+            gl.uniform4fv(locationOfParams, params);
+        } else {
+            if (image.tone_mapping.flux == "ratio")
+                var params = [image.tone_mapping.median, multiplier * image.tone_mapping.ratio_sensitivity, image.tone_mapping.black, image.tone_mapping.white];
+            else
+                var params = [image.tone_mapping.median, multiplier * image.tone_mapping.sensitivity, image.tone_mapping.black, image.tone_mapping.white];
+
+            gl.uniform4fv(locationOfParams, params);
+        }
+
+        // Setup the attributes to pull data from our buffers
+        gl.enableVertexAttribArray(positionLocation);
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+        // execute the GLSL program
+        // draw the quad (2 triangles, 6 vertices)
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+        image.loopId = requestAnimationFrame(image_rendering_loop);
+    };
+
+    image.loopId = requestAnimationFrame(image_rendering_loop);
+}
