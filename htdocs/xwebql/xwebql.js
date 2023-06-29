@@ -1722,11 +1722,11 @@ function display_dataset_info() {
 
     xradec = new Array(null, null);
 
-    /*console.log("RA:", fitsData.OBSRA, fitsData.CTYPE1, "DEC:", fitsData.OBSDEC, fitsData.CTYPE2);
+    /*console.log("RA:", fitsData.RA_OBJ, fitsData.CTYPE1, "DEC:", fitsData.DEC_OBJ, fitsData.CTYPE2);
   	
-    if (fitsData.OBSRA != '' && fitsData.OBSDEC != '') {
-      var ra = ParseRA('+' + fitsData.OBSRA.toString());
-      var dec = ParseDec(fitsData.OBSDEC.toString());
+    if (fitsData.RA_OBJ != '' && fitsData.DEC_OBJ != '') {
+      var ra = ParseRA('+' + fitsData.RA_OBJ.toString());
+      var dec = ParseDec(fitsData.DEC_OBJ.toString());
       xradec = new Array((ra / 3600.0) / toDegrees, (dec / 3600.0) / toDegrees);
     }
     else

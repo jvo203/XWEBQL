@@ -306,7 +306,7 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     local CRVAL2, CDELT2, CRPIX2, CUNIT2, CTYPE2
     local CRVAL3, CDELT3, CRPIX3, CUNIT3, CTYPE3
     local BUNIT, BTYPE
-    local OBJECT, OBSRA, OBSDEC, DATEOBS, TIMESYS
+    local OBJECT, RA_OBJ, DEC_OBJ, DATEOBS, TIMESYS
     local TELESCOP, INSTRUME, OBSERVER, EQUINOX, RADECSYS
 
     # println(xobject.header)
@@ -408,18 +408,18 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     println("CRVAL2 = $CRVAL2, CDELT2 = $CDELT2, CRPIX2 = $CRPIX2, CUNIT2 = $CUNIT2, CTYPE2 = $CTYPE2")
     println("CRVAL3 = $CRVAL3, CDELT3 = $CDELT3, CRPIX3 = $CRPIX3, CUNIT3 = $CUNIT3, CTYPE3 = $CTYPE3")
 
-    # OBSRA
+    # RA_OBJ
     try
-        OBSRA = xobject.header["RA_OBJ"]
+        RA_OBJ = xobject.header["RA_OBJ"]
     catch _
-        OBSRA = CRVAL1
+        RA_OBJ = CRVAL1
     end
 
-    # OBSDEC
+    # DEC_OBJ
     try
-        OBSDEC = xobject.header["DEC_OBJ"]
+        DEC_OBJ = xobject.header["DEC_OBJ"]
     catch _
-        OBSDEC = CRVAL2
+        DEC_OBJ = CRVAL2
     end
 
     # OBJECT
@@ -443,7 +443,7 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
         TIMESYS = "UNKNOWN"
     end
 
-    println("OBJECT = $OBJECT, OBSRA = $OBSRA, OBSDEC = $OBSDEC, DATEOBS = $DATEOBS, TIMESYS = $TIMESYS")
+    println("OBJECT = $OBJECT, RA_OBJ = $RA_OBJ, DEC_OBJ = $DEC_OBJ, DATEOBS = $DATEOBS, TIMESYS = $TIMESYS")
 
     # TELESCOP
     try
@@ -507,8 +507,8 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     new_header["OBSERVER"] = OBSERVER
     new_header["EQUINOX"] = EQUINOX
     new_header["RADECSYS"] = RADECSYS
-    new_header["OBSRA"] = OBSRA
-    new_header["OBSDEC"] = OBSDEC
+    new_header["RA_OBJ"] = RA_OBJ
+    new_header["DEC_OBJ"] = DEC_OBJ
     new_header["DATE-OBS"] = DATEOBS
     new_header["TIMESYS"] = TIMESYS
 
@@ -583,8 +583,8 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
         "CTYPE3" => CTYPE3,
         "BUNIT" => BUNIT,
         "BTYPE" => BTYPE,
-        "OBSRA" => OBSRA,
-        "OBSDEC" => OBSDEC,
+        "RA_OBJ" => RA_OBJ,
+        "DEC_OBJ" => DEC_OBJ,
         "OBJECT" => OBJECT,
         "DATEOBS" => DATEOBS,
         "TIMESYS" => TIMESYS,
