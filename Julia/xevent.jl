@@ -402,7 +402,7 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     CDELT3 = (E2 - E1) / (NAXIS3 - 1)
     CRVAL3 = E1
     CUNIT3 = "eV"
-    CTYPE3 = "ENERGY"
+    CTYPE3 = "LOG-ENERGY"
 
     println("CRVAL1 = $CRVAL1, CDELT1 = $CDELT1, CRPIX1 = $CRPIX1, CUNIT1 = $CUNIT1, CTYPE1 = $CTYPE1")
     println("CRVAL2 = $CRVAL2, CDELT2 = $CDELT2, CRPIX2 = $CRPIX2, CUNIT2 = $CUNIT2, CTYPE2 = $CTYPE2")
@@ -530,6 +530,11 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     new_header["CRPIX3"] = CRPIX3
     new_header["CUNIT3"] = CUNIT3
     new_header["CTYPE3"] = CTYPE3
+
+    set_comment!(new_header, "CRVAL3", "natural logarithm of eV")
+    set_comment!(new_header, "CDELT3", "natural logarithm of eV")
+    set_comment!(new_header, "CUNIT3", "natural logarithm of eV")
+    set_comment!(new_header, "CTYPE3", "natural logarithm of energy")
 
     # other    
     new_header["BUNIT"] = BUNIT
