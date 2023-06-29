@@ -487,6 +487,7 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
 
     # make a new header from pixels
     new_header = default_header(pixels)
+    #FITSIO.fitswrite("test.fits", pixels)
 
     # remove the "EXTEND" keyword
     delete!(new_header, "EXTEND")
