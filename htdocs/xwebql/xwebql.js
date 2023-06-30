@@ -4164,6 +4164,27 @@ function webgl_image_renderer(gl, width, height) {
     image.loopId = requestAnimationFrame(image_rendering_loop);
 }
 
+function x2hms(x) {
+    if (fitsData.CDELT1 != null)
+        return RadiansPrintHMS((fitsData.CRVAL1 + (x - fitsData.CRPIX1) * fitsData.CDELT1) / toDegrees);
+    else
+        throw "CDELT1 is not available";
+};
+
+function x2dms(x) {
+    if (fitsData.CDELT1 != null)
+        return RadiansPrintDMS((fitsData.CRVAL1 + (x - fitsData.CRPIX1) * fitsData.CDELT1) / toDegrees);
+    else
+        throw "CDELT1 is not available";
+};
+
+function y2dms(y) {
+    if (fitsData.CDELT2 != null)
+        return RadiansPrintDMS((fitsData.CRVAL2 + (fitsData.height - y - fitsData.CRPIX2) * fitsData.CDELT2) / toDegrees);
+    else
+        throw "CDELT2 is not available";
+};
+
 function display_gridlines() {
     if (fitsData == null)
         return;
@@ -4237,7 +4258,7 @@ function display_gridlines() {
                 if (d == 0.0 || d == 1.0)
                     return "";
 
-                var image = imageContainer[va_count - 1];
+                var image = imageContainer;
                 var image_bounding_dims = image.image_bounding_dims;
 
                 var tmp = image_bounding_dims.x1 + d * (image_bounding_dims.width - 1);
@@ -4286,7 +4307,7 @@ function display_gridlines() {
                 if (d == 0.0 || d == 1.0)
                     return "";
 
-                var image = imageContainer[va_count - 1];
+                var image = imageContainer;
                 var image_bounding_dims = image.image_bounding_dims;
 
                 var tmp = image_bounding_dims.x1 + d * (image_bounding_dims.width - 1);
@@ -4337,7 +4358,7 @@ function display_gridlines() {
                 if (d == 0.0 || d == 1.0)
                     return "";
 
-                var image = imageContainer[va_count - 1];
+                var image = imageContainer;
                 var image_bounding_dims = image.image_bounding_dims;
 
                 var tmp = image_bounding_dims.y1 + d * (image_bounding_dims.height - 1);
@@ -4372,14 +4393,1067 @@ function display_gridlines() {
             .style("text-anchor", "start");//was end, dx -.35, dy 0
     }
 
-    if (va_count == 1 || composite_view) {
-        var htmlStr = displayGridlines ? '<span class="fas fa-check-square"></span> lon/lat grid lines' : '<span class="far fa-square"></span> lon/lat grid lines';
-        d3.select("#displayGridlines").html(htmlStr);
+    var htmlStr = displayGridlines ? '<span class="fas fa-check-square"></span> lon/lat grid lines' : '<span class="far fa-square"></span> lon/lat grid lines';
+    d3.select("#displayGridlines").html(htmlStr);
 
-        var elem = d3.select("#gridlines");
-        if (displayGridlines)
+    var elem = d3.select("#gridlines");
+    if (displayGridlines)
+        elem.attr("opacity", 1);
+    else
+        elem.attr("opacity", 0);
+}
+
+function display_legend() {
+    var rect = d3.select("#image_rectangle");
+
+    var img_width;
+
+    try {
+        img_width = parseFloat(rect.attr("width"));
+    }
+    catch (e) {
+        console.log('image_rectangle not available yet');
+        return;
+    }
+
+    try {
+        clear_webgl_legend_buffers(va_count);
+    }
+    catch (e) {
+    }
+
+    try {
+        d3.select("#legend").remove();
+    }
+    catch (e) {
+    }
+
+    var svg = d3.select("#BackgroundSVG");
+    var width = parseFloat(svg.attr("width"));
+    var height = parseFloat(svg.attr("height"));
+
+    var legendHeight = 0.8 * height;
+    var rectWidth = 5 * legendHeight / 64;
+    var x = Math.max(0.05 * width, (width - img_width) / 2 - 1.5 * rectWidth);
+
+    var group = svg.append("g")
+        .attr("id", "legend")
+        .attr("opacity", 1.0);
+
+    // append a WebGL legend div
+    group.append("foreignObject")
+        .attr("id", "legendObject")
+        .attr("x", x)
+        .attr("y", 0.1 * height)
+        .attr("width", rectWidth)
+        .attr("height", legendHeight)
+        .append("xhtml:div")
+        .attr("id", "legendDiv")
+        .append("canvas")
+        .attr("id", "legendCanvas")
+        .attr("width", rectWidth)
+        .attr("height", legendHeight);
+
+    init_webgl_legend_buffers(va_count);
+    clear_webgl_legend_buffers(va_count);
+
+    var upper_range;
+
+    if (flux == "ratio")
+        upper_range = 0.999;
+    else
+        upper_range = 1.0;
+
+    var colourScale = d3.scaleLinear()
+        .range([0.8 * height, 0])
+        .domain([0, upper_range]);
+
+    var colourAxis = d3.axisRight(colourScale)
+        .tickSizeOuter([0])
+        .tickSizeInner([0])
+        .tickFormat(function (d) {
+            var prefix = "";
+
+            if (d == 0)
+                prefix = "≤";
+
+            if (d == 1)
+                prefix = "≥";
+
+            var pixelVal = get_pixel_flux(d, va_count);
+
+            var number;
+
+            if (Math.abs(pixelVal) <= 0.001 || Math.abs(pixelVal) >= 1000)
+                number = pixelVal.toExponential(3);
+            else
+                number = pixelVal.toPrecision(3);
+
+            return prefix + number;
+        });
+
+    group.append("g")
+        .attr("class", "colouraxis")
+        .attr("id", "legendaxis")
+        .style("stroke-width", emStrokeWidth / 2)
+        .attr("transform", "translate(" + ((width - img_width) / 2 - 2.0 * rectWidth) + "," + 0.1 * height + ")")
+        .call(colourAxis);
+
+    let fitsData = fitsContainer[va_count - 1];
+
+    var bunit = '';
+    if (fitsData.BUNIT != '') {
+        bunit = fitsData.BUNIT.trim();
+
+        if (fitsData.depth > 1 && has_velocity_info)
+            bunit += '•km/s';
+
+        bunit = "[" + bunit + "]";
+    }
+
+    group.append("text")
+        .attr("id", "colourlabel")
+        .attr("x", ((width - img_width) / 2 - 1.0 * rectWidth))
+        .attr("y", 0.9 * height + 1.5 * emFontSize)
+        .attr("font-family", "Inconsolata")
+        .attr("font-size", 1.25 * emFontSize)
+        .attr("text-anchor", "middle")
+        .attr("stroke", "none")
+        .attr("opacity", 0.8)
+        .text(bunit);
+
+    if (va_count == 1) {
+        var elem = d3.select("#legend");
+
+        if (displayLegend)
             elem.attr("opacity", 1);
         else
             elem.attr("opacity", 0);
     }
+    else {
+        for (let index = 1; index <= va_count; index++) {
+            var elem = d3.select("#legend" + index);
+
+            if (displayLegend)
+                elem.attr("opacity", 1);
+            else
+                elem.attr("opacity", 0);
+        }
+    }
+}
+
+function zoomed(event) {
+    console.log("scale: " + event.transform.k);
+    zoom_scale = event.transform.k;
+
+    console.log("windowLeft:", windowLeft);
+
+    if (!windowLeft) {
+        try {
+            zoom_beam();
+        }
+        catch (e) {
+            console.log('NON-CRITICAL:', e);
+        }
+
+        var evt = new MouseEvent("mousemove");
+        d3.select('#image_rectangle').node().dispatchEvent(evt);
+
+        viewport.refresh = true;
+    }
+}
+
+function setup_image_selection() {
+    //delete previous instances
+    try {
+        d3.select("#region").remove();
+        d3.select("#zoom").remove();
+        d3.select("#zoomCross").remove();
+        d3.select("#image_rectangle").remove();
+    }
+    catch (e) { };
+
+    var svg = d3.select("#FrontSVG");
+    var width = parseFloat(svg.attr("width"));
+    var height = parseFloat(svg.attr("height"));
+
+    var image_bounding_dims = imageContainer.image_bounding_dims;
+    var scale = get_image_scale(width, height, image_bounding_dims.width, image_bounding_dims.height);
+    var img_width = scale * image_bounding_dims.width;
+    var img_height = scale * image_bounding_dims.height;
+
+    let fillColour = 'white';
+
+    if (theme == 'bright')
+        fillColour = 'black';
+
+    //sub-region selection rectangle
+    svg.append("rect")
+        .attr("id", "region")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", 0)
+        .attr("height", 0)
+        .attr("fill", "none")
+        .style("stroke", fillColour)
+        .style("stroke-dasharray", ("1, 5, 1"))
+        .style("stroke-width", emStrokeWidth)
+        .attr("opacity", 0.0);
+
+    //pv line selection
+    svg.append("line")
+        .attr("id", "pvline")
+        .attr("x1", 0)
+        .attr("y1", 0)
+        .attr("x2", 0)
+        .attr("y2", 0)
+        .attr("marker-start", "url(#head)")
+        .attr("marker-end", "url(#head)")
+        .style("stroke", fillColour)
+        .style("stroke-dasharray", ("1, 5, 1"))
+        .style("stroke-width", emStrokeWidth)
+        .attr("opacity", 0.0);
+
+    svg.append("line")
+        .attr("id", "pvmid")
+        .attr("x1", 0)
+        .attr("y1", 0)
+        .attr("x2", 0)
+        .attr("y2", 0)
+        .style("stroke", fillColour)
+        .style("stroke-width", emStrokeWidth)
+        .attr("opacity", 0.0);
+
+    if (colourmap == "greyscale" || colourmap == "negative")
+        fillColour = "#C4A000";
+
+    if (zoom_shape == "square") {
+        //zoom selection rectangle
+        svg.append("rect")
+            .attr("id", "zoom")
+            .attr("x", 0)
+            .attr("y", 0)
+            .attr("width", 0)
+            .attr("height", 0)
+            .attr("fill", "none")
+            .attr("pointer-events", "none")
+            .style("stroke", fillColour)
+            //.style("stroke-dasharray", ("1, 5, 1"))
+            .style("stroke-width", 3 * emStrokeWidth)
+            .attr("opacity", 0.0);
+    };
+
+    if (zoom_shape == "circle") {
+        //zoom selection circle
+        svg.append("circle")
+            .attr("id", "zoom")
+            .attr("cx", 0)
+            .attr("cy", 0)
+            .attr("r", 0)
+            .attr("fill", "none")
+            .attr("pointer-events", "none")
+            .style("stroke", fillColour)
+            //.style("stroke-dasharray", ("1, 5, 1"))
+            .style("stroke-width", 3 * emStrokeWidth)
+            .attr("opacity", 0.0);
+    };
+
+    var crossSize = 1.0 * emFontSize;
+
+    //zoom cross-hair
+    svg.append("svg:image")
+        .attr("id", "zoomCross")
+        .attr("x", 0)
+        .attr("y", 0)
+        //.attr("xlink:href", ROOT_PATH + "plainicon.com-crosshair_white.svg")
+        .attr("xlink:href", "https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/plainicon.com-crosshair_white.svg")
+        .attr("width", crossSize)
+        .attr("height", crossSize)
+        .attr("opacity", 0.0);
+
+    var zoom_element = d3.select("#zoom");
+    var zoom_cross = d3.select("#zoomCross");
+
+    var zoom = d3.zoom()
+        .scaleExtent([10, 200])//was 200
+        .on("zoom", zoomed);
+
+    now = performance.now();
+    then = now;
+
+    spec_now = performance.now();
+    spec_then = spec_now;
+
+    //set up the spectrum rendering loop
+    function update_spectrum() {
+        spec_now = performance.now();
+        spec_elapsed = spec_now - spec_then;
+
+        //if (spec_elapsed > fpsInterval)
+        {
+            spec_then = spec_now - (spec_elapsed % fpsInterval);
+            //console.log("spectrum interval: " + spec_elapsed.toFixed(3) + " [ms]", "fps = ", Math.round(1000 / spec_elapsed)) ;
+
+            //spectrum
+            try {
+                let go_ahead = true;
+                let new_seq_id = 0;
+
+                for (let index = 0; index < va_count; index++) {
+                    let len = spectrum_stack[index].length;
+
+                    if (len > 0) {
+                        let id = spectrum_stack[index][len - 1].id;
+
+                        if (id <= last_seq_id)
+                            go_ahead = false;
+                        else
+                            new_seq_id = Math.max(new_seq_id, id);
+                    }
+                    else
+                        go_ahead = false;
+                }
+
+                if (go_ahead) {
+                    last_seq_id = new_seq_id;
+                    //console.log("last_seq_id:", last_seq_id);
+
+                    //pop all <va_count> spectrum stacks
+                    var data = [];
+
+                    for (let index = 0; index < va_count; index++) {
+                        data.push(spectrum_stack[index].pop().spectrum);
+                        spectrum_stack[index] = [];
+                    }
+
+                    plot_spectrum(data);
+                    replot_y_axis();
+
+                    last_spectrum = data;
+                }
+
+            }
+            catch (e) {
+                console.log(e);
+            }
+
+        }
+
+        if (!windowLeft)
+            requestAnimationFrame(update_spectrum);
+    }
+
+    // a fix for Safari
+    d3.select(document.body)
+        .on('wheel.body', e => { });
+
+    //svg image rectangle for zooming-in
+    var rect = svg.append("rect")
+        .attr("id", "image_rectangle")
+        /*.attr("x", Math.floor((width - img_width) / 2))
+        .attr("y", Math.floor((height - img_height) / 2))
+        .attr("width", Math.floor(img_width))
+        .attr("height", Math.floor(img_height))*/
+        .attr("x", (width - img_width) / 2)
+        .attr("y", (height - img_height) / 2)
+        .attr("width", img_width)
+        .attr("height", img_height)
+        .style('cursor', 'none')//'crosshair')//'none' to mask Chrome latency
+        /*.style('cursor', 'crosshair')//'crosshair')*/
+        /*.style("fill", "transparent")
+          .style("stroke", "yellow")
+          .style("stroke-width", emStrokeWidth)
+          .style("stroke-dasharray", ("1, 5, 1"))*/
+        .attr("opacity", 0.0)
+        /*.call(d3.drag()
+            .on("start", fits_subregion_start)
+            .on("drag", fits_subregion_drag)
+            .on("end", fits_subregion_end)
+        )*/
+        .call(zoom)
+        .on("mouseenter", (event) => {
+            hide_navigation_bar();
+
+            // cancel the image animation loop
+            if (va_count == 1) {
+                clear_webgl_image_buffers(va_count);
+            } else {
+                if (composite_view) {
+                    clear_webgl_composite_image_buffers();
+                }
+            }
+
+            try {
+                zoom_beam();
+            }
+            catch (e) {
+                console.log('NON-CRITICAL:', e);
+            }
+
+            if (d3.select("#pvline").attr("opacity") < 1.0) {
+                zoom_element.attr("opacity", 1.0);
+                zoom_cross.attr("opacity", 0.75);
+            }
+
+            d3.select("#pixel").text("").attr("opacity", 0.0);
+
+            document.addEventListener('copy', copy_coordinates);
+            shortcut.add("s", function () {
+                set_autoscale_range(false);
+            });
+            shortcut.add("Meta+C", copy_coordinates);
+
+            windowLeft = false;
+
+            spectrum_stack = new Array(va_count);
+            for (let i = 0; i < va_count; i++)
+                spectrum_stack[i] = [];
+
+            image_stack = [];
+            viewport_zoom_settings = null;
+            prev_mouse_position = { x: -1, y: -1 };
+
+            requestAnimationFrame(update_spectrum);
+
+            var offset;
+
+            try {
+                offset = d3.pointer(event);
+            }
+            catch (e) {
+                console.log(e);
+                return;
+            }
+
+            mouse_position = { x: offset[0], y: offset[1] };
+
+            if (!initKalmanFilter)
+                initKalman();
+
+            resetKalman();
+
+            if (va_count == 1) {
+                init_webgl_zoom_buffers();
+            } else {
+                if (composite_view) {
+                    init_webgl_composite_zoom_buffers();
+                }
+            }
+
+            // send a "Kalman Filter reset" WebSocket message in order to reset the server-side Kalman Filter
+            var msg = {
+                type: "kalman_reset",
+                seq_id: ++sent_seq_id
+            };
+
+            for (let index = 0; index < va_count; index++) {
+                if (wsConn[index].readyState == 1)
+                    wsConn[index].send(JSON.stringify(msg));
+            }
+
+            setup_window_timeout();
+        })
+        .on("mouseleave", (event) => {
+            clearTimeout(idleMouse);
+
+            // send a "Kalman Filter reset" WebSocket message in order to reset the server-side Kalman Filter
+            var msg = {
+                type: "kalman_reset",
+                seq_id: ++sent_seq_id
+            };
+
+            for (let index = 0; index < va_count; index++) {
+                if (wsConn[index].readyState == 1)
+                    wsConn[index].send(JSON.stringify(msg));
+            }
+
+            setup_window_timeout();
+
+            // cancel the P-V line & re-set the mouse click flag
+            d3.select("#pvline")
+                .attr("x1", 0)
+                .attr("y1", 0)
+                .attr("x2", 0)
+                .attr("y2", 0)
+                .style("stroke-dasharray", ("1, 5, 1"))
+                .attr("opacity", 0.0);
+
+            d3.select("#pvmid")
+                .attr("x1", 0)
+                .attr("y1", 0)
+                .attr("x2", 0)
+                .attr("y2", 0)
+                .attr("opacity", 0.0);
+
+            mouse_click_end = true;
+
+            // clear the ViewportCanvas in WebGL
+            if (viewport != null) {
+                // Clear the Viewport Canvas
+                //console.log("clearing the Viewport Canvas");
+                var gl = viewport.gl;
+
+                if (gl !== undefined && gl != null) {
+                    gl.clearColor(0, 0, 0, 0);
+                    gl.clear(gl.COLOR_BUFFER_BIT);
+                };
+
+                clear_webgl_zoom_buffers();
+            }
+
+            // Clear the ZOOMCanvas
+            clear_webgl_viewport();
+
+            if (!event.shiftKey)
+                windowLeft = true;
+
+            spectrum_stack = new Array(va_count);
+            for (let i = 0; i < va_count; i++)
+                spectrum_stack[i] = [];
+
+            image_stack = [];
+
+            if (!event.shiftKey) {
+                viewport_zoom_settings = null;
+                zoom_element.attr("opacity", 0.0);
+                zoom_cross.attr("opacity", 0.0);
+            };
+
+            d3.select("#" + zoom_location).style("stroke", "transparent");
+            d3.select("#" + zoom_location + "Cross").attr("opacity", 0.0);
+            d3.select("#" + zoom_location + "Beam").attr("opacity", 0.0);
+
+            d3.select("#pixel").text("").attr("opacity", 0.0);
+
+            document.removeEventListener('copy', copy_coordinates);
+            shortcut.remove("Meta+C");
+            shortcut.remove("s");
+
+            if (event.shiftKey)
+                return;
+
+            setup_csv_export();
+
+            if (xradec != null && d3.select("#pvline").attr("opacity") < 1.0) {
+                let fitsData = fitsContainer[va_count - 1];
+
+                let raText = 'RA N/A';
+                let decText = 'DEC N/A';
+
+                if (fitsData.CTYPE1.indexOf("RA") > -1) {
+                    if (coordsFmt == 'DMS')
+                        raText = 'α: ' + RadiansPrintDMS(xradec[0]);
+                    else
+                        raText = 'α: ' + RadiansPrintHMS(xradec[0]);
+                }
+
+                if (fitsData.CTYPE1.indexOf("GLON") > -1)
+                    raText = 'l: ' + RadiansPrintDMS(xradec[0]);
+
+                if (fitsData.CTYPE1.indexOf("ELON") > -1)
+                    raText = 'λ: ' + RadiansPrintDMS(xradec[0]);
+
+                if (fitsData.CTYPE2.indexOf("DEC") > -1)
+                    decText = 'δ: ' + RadiansPrintDMS(xradec[1]);
+
+                if (fitsData.CTYPE2.indexOf("GLAT") > -1)
+                    decText = 'b: ' + RadiansPrintDMS(xradec[1]);
+
+                if (fitsData.CTYPE2.indexOf("ELAT") > -1)
+                    decText = 'β: ' + RadiansPrintDMS(xradec[1]);
+
+                d3.select("#ra").text(raText);
+                d3.select("#dec").text(decText);
+            }
+
+            if (mousedown)
+                return;
+
+            let fitsData = fitsContainer[va_count - 1];
+
+            if (fitsData != null) {
+                if (fitsData.depth > 1) {
+                    if (va_count == 1) {
+                        if (intensity_mode == "mean") {
+                            plot_spectrum([fitsData.mean_spectrum]);
+                            replot_y_axis();
+                        }
+
+                        if (intensity_mode == "integrated") {
+                            plot_spectrum([fitsData.integrated_spectrum]);
+                            replot_y_axis();
+                        }
+                    }
+                    else {
+                        if (intensity_mode == "mean") {
+                            plot_spectrum(mean_spectrumContainer);
+                            replot_y_axis();
+                        }
+
+                        if (intensity_mode == "integrated") {
+                            plot_spectrum(integrated_spectrumContainer);
+                            replot_y_axis();
+                        }
+                    }
+                }
+            }
+
+            if (va_count == 1) {
+                clear_webgl_image_buffers(va_count);
+                init_webgl_image_buffers(va_count);
+            } else {
+                if (composite_view) {
+                    clear_webgl_composite_image_buffers();
+                    init_webgl_composite_image_buffers();
+                }
+            }
+        })
+        .on("mousemove", (event) => {
+            // cancel the image animation loop
+            if (va_count == 1) {
+                clear_webgl_image_buffers(va_count);
+            } else {
+                if (composite_view) {
+                    clear_webgl_composite_image_buffers();
+                }
+            }
+
+            if (!autoscale && event.shiftKey) {
+                d3.select("#scaling")
+                    .style('cursor', 'ns-resize')
+                    .attr("opacity", 0.5);
+
+                let fillColour = 'white';
+
+                if (theme == 'bright')
+                    fillColour = 'black';
+
+                d3.select("#yaxis")
+                    .style("fill", fillColour)
+                    .style("stroke", fillColour);
+            }
+            else {
+                d3.select("#scaling")
+                    .style('cursor', '')
+                    .attr("opacity", 0.0);
+
+                d3.select("#yaxis")
+                    .style("fill", axisColour)
+                    .style("stroke", axisColour);
+            }
+
+            if (freqdrag || event.shiftKey) {
+                var node = event.currentTarget;
+                node.style.cursor = 'pointer';
+                return;
+            }
+
+            try {
+                // check the opacity attribute of the P-V line
+                if (d3.select("#pvline").attr("opacity") > 0.0 && !mouse_click_end) {
+                    // update the P-V line
+
+                    let x1 = line_x;
+                    let y1 = line_y;
+
+                    let mpos = d3.pointer(event);
+                    let x2 = mpos[0]; let y2 = mpos[1];
+
+                    d3.select("#pvline")
+                        .style("stroke-dasharray", ("1, 5, 1"))
+                        .attr("x1", x1)
+                        .attr("y1", y1)
+                        .attr("x2", x2)
+                        .attr("y2", y2);
+
+                    let dx = x2 - x1;
+                    let dy = y2 - y1;
+
+                    if (Math.abs(dy) > 0) {
+                        let _m = - dx / dy; // a perpendicular line to the P-V line				
+                        let _s = emFontSize / Math.sqrt(1 + _m * _m) / golden_ratio;
+
+                        let _mx = _s;
+                        let _my = _m * _s;
+
+                        let _x = (x1 + x2) / 2; // midpoint of the P-V line
+                        let _y = (y1 + y2) / 2; // midpoint of the P-V line
+
+                        let _x1 = _x - _mx;
+                        let _y1 = _y - _my;
+                        let _x2 = _x + _mx;
+                        let _y2 = _y + _my;
+
+                        d3.select("#pvmid").attr("x1", _x1).attr("y1", _y1).attr("x2", _x2).attr("y2", _y2);
+                    }
+
+                    // return; // disabled to test zoom-in for the P-V line end point           
+                }
+
+                if (d3.select("#pvline").attr("opacity") > 0.0 && mouse_click_end) {
+                    // reset and hide the P-V line
+                    d3.select("#pvline")
+                        .attr("x1", 0)
+                        .attr("y1", 0)
+                        .attr("x2", 0)
+                        .attr("y2", 0)
+                        .attr("opacity", 0.0);
+
+                    d3.select("#pvmid").attr("opacity", 0.0);
+                }
+            } catch (_) { }
+
+            // commented out so that the caching 'wait' cursor remains visible
+            //d3.select(this).style('cursor', 'none');			
+
+            event.preventDefault = true;
+            if (!has_image) return;
+
+            let fitsData = fitsContainer[va_count - 1];
+
+            if (fitsData == null)
+                return;
+
+            var elem = document.getElementById("SpectrumCanvas");
+            elem.getContext('2d').globalAlpha = 1.0;
+            var width = elem.width;
+            var height = elem.height;
+
+            moving = true;
+            clearTimeout(idleMouse);
+            windowLeft = false;
+
+            d3.select("#" + zoom_location).style("stroke", "Gray");
+            d3.select("#" + zoom_location + "Cross").attr("opacity", 0.75);
+            d3.select("#" + zoom_location + "Beam").attr("opacity", 0.75);
+
+            try {
+                var offset = d3.pointer(event);
+
+                // there seems to be a bug in d3.js !? offset coordinates go negative !?
+                if ((offset[0] < 0) || (offset[1] < 0)) {
+                    offset[0] = mouse_position.x;
+                    offset[1] = mouse_position.y;
+                }
+            }
+            catch (e) {
+                // return if for example <mouse_position> is undefined
+                // hide the beam (just in case it gets displayed)
+                d3.select("#" + zoom_location + "Beam").attr("opacity", 0.0);
+                return;
+            }
+
+            if (isNaN(offset[0]) || isNaN(offset[1]))
+                return;
+
+            if ((offset[0] >= 0) && (offset[1] >= 0)) {
+                mouse_position = { x: offset[0], y: offset[1] };
+            };
+
+            //console.log("mouse position:", mouse_position);
+
+            var image_bounding_dims = imageContainer[va_count - 1].image_bounding_dims;
+            var scale = get_image_scale(width, height, image_bounding_dims.width, image_bounding_dims.height);
+
+            var clipSize = Math.min(image_bounding_dims.width, image_bounding_dims.height) / zoom_scale;
+            var sel_width = clipSize * scale;
+            var sel_height = clipSize * scale;
+
+            if (!mousedown) {
+                let mx = mouse_position.x;
+                let my = mouse_position.y;
+
+                if (zoom_shape == "square")
+                    zoom_element.attr("x", mx - sel_width).attr("y", my - sel_height).attr("width", 2 * sel_width).attr("height", 2 * sel_height).attr("opacity", 1.0);
+
+                if (zoom_shape == "circle")
+                    zoom_element.attr("cx", mx).attr("cy", my).attr("r", Math.round(sel_width)).attr("opacity", 1.0);
+
+                var crossSize = 1.0 * emFontSize;
+                zoom_cross.attr("x", mx - crossSize / 2).attr("y", my - crossSize / 2).attr("width", crossSize).attr("height", crossSize).attr("opacity", 0.75);
+            }
+
+            let rect = event.currentTarget;
+
+            var ax = (image_bounding_dims.width - 0) / (rect.getAttribute("width") - 0);
+            var x = image_bounding_dims.x1 + ax * (mouse_position.x - rect.getAttribute("x"));
+
+            var ay = (image_bounding_dims.height - 0) / (rect.getAttribute("height") - 0);
+            var y = (image_bounding_dims.y1 + image_bounding_dims.height - 0) - ay * (mouse_position.y - rect.getAttribute("y"));
+
+            var orig_x = x * (fitsData.width - 0) / (imageContainer[va_count - 1].width - 0);
+            var orig_y = y * (fitsData.height - 0) / (imageContainer[va_count - 1].height - 0);
+
+            try {
+                let raText = 'RA N/A';
+                let decText = 'DEC N/A';
+
+                if (fitsData.CTYPE1.indexOf("RA") > -1) {
+                    if (coordsFmt == 'DMS')
+                        raText = 'α: ' + x2dms(orig_x);
+                    else
+                        raText = 'α: ' + x2hms(orig_x);
+                }
+
+                if (fitsData.CTYPE1.indexOf("GLON") > -1)
+                    raText = 'l: ' + x2dms(orig_x);
+
+                if (fitsData.CTYPE1.indexOf("ELON") > -1)
+                    raText = 'λ: ' + x2dms(orig_x);
+
+                if (fitsData.CTYPE2.indexOf("DEC") > -1)
+                    decText = 'δ: ' + y2dms(orig_y);
+
+                if (fitsData.CTYPE2.indexOf("GLAT") > -1)
+                    decText = 'b: ' + y2dms(orig_y);
+
+                if (fitsData.CTYPE2.indexOf("ELAT") > -1)
+                    decText = 'β: ' + y2dms(orig_y);
+
+                d3.select("#ra").text(raText);
+                d3.select("#dec").text(decText);
+            }
+            catch (err) {
+                //use the CD scale matrix
+                let radec = CD_matrix(orig_x, fitsData.height - orig_y);
+
+                let raText = 'RA N/A';
+                let decText = 'DEC N/A';
+
+                if (fitsData.CTYPE1.indexOf("RA") > -1) {
+                    if (coordsFmt == 'DMS')
+                        raText = 'α: ' + RadiansPrintDMS(radec[0]);
+                    else
+                        raText = 'α: ' + RadiansPrintHMS(radec[0]);
+                }
+
+                if (fitsData.CTYPE1.indexOf("GLON") > -1)
+                    raText = 'l: ' + RadiansPrintDMS(radec[0]);
+
+                if (fitsData.CTYPE1.indexOf("ELON") > -1)
+                    raText = 'λ: ' + RadiansPrintDMS(radec[0]);
+
+                if (fitsData.CTYPE2.indexOf("DEC") > -1)
+                    decText = 'δ: ' + RadiansPrintDMS(radec[1]);
+
+                if (fitsData.CTYPE2.indexOf("GLAT") > -1)
+                    decText = 'b: ' + RadiansPrintDMS(radec[1]);
+
+                if (fitsData.CTYPE2.indexOf("ELAT") > -1)
+                    decText = 'β: ' + RadiansPrintDMS(radec[1]);
+
+                d3.select("#ra").text(raText);
+                d3.select("#dec").text(decText);
+            }
+
+            //for each image
+            var pixelText = '';
+            var displayPixel = true;
+            var PR = ["R:", "G:", "B:"];
+            for (let index = 1; index <= va_count; index++) {
+                var imageFrame = imageContainer[index - 1];
+
+                var pixel_coord = Math.round(y) * imageFrame.width + Math.round(x);
+
+                var pixel = imageFrame.pixels[pixel_coord];
+                var alpha = imageFrame.alpha[pixel_coord];
+
+                let bunit = fitsData.BUNIT.trim();
+                if (fitsData.depth > 1 && has_velocity_info)
+                    bunit += '•km/s';
+
+                if (alpha > 0 && !isNaN(pixel)) {
+                    //d3.select("#pixel").text(prefix + pixelVal.toPrecision(3) + " " + bunit).attr("opacity", 1.0) ;
+                    if (va_count > 1)
+                        pixelText += PR[index - 1 % PR.length];
+                    pixelText += pixel.toPrecision(3) + " ";
+                    displayPixel = displayPixel && true;
+                }
+                else {
+                    //d3.select("#pixel").text("").attr("opacity", 0.0) ;
+                    displayPixel = displayPixel && false;
+                }
+
+                if (index == va_count && displayPixel) {
+                    pixelText += bunit;
+                    d3.select("#pixel").text(pixelText).attr("opacity", 1.0);
+                }
+                else
+                    d3.select("#pixel").text("").attr("opacity", 0.0);
+            }
+
+            //viewport collision detection
+            {
+                var collision_detected = false;
+
+                if (zoom_shape == "square") {
+                    let w1 = parseFloat(zoom_element.attr("width"));
+                    let h1 = parseFloat(zoom_element.attr("height"));
+
+                    let tmp = d3.select("#" + zoom_location);
+                    let x2 = parseFloat(tmp.attr("x"));
+                    let y2 = parseFloat(tmp.attr("y"));
+                    let w2 = parseFloat(tmp.attr("width"));
+                    let h2 = parseFloat(tmp.attr("height"));
+
+                    if (zoom_location == "upper")
+                        if (((offset[0] - w1 / 2) < (x2 + w2)) && (offset[1] - h1 / 2) < (y2 + h2)) {
+                            collision_detected = true;
+                        }
+
+                    if (zoom_location == "lower")
+                        if (((offset[0] + w1 / 2) > x2) && (offset[1] + h1 / 2) > y2)
+                            collision_detected = true;
+                }
+
+                if (zoom_shape == "circle") {
+                    let r1 = parseFloat(zoom_element.attr("r"));
+
+                    let tmp = d3.select("#" + zoom_location);
+
+                    let _x = parseFloat(tmp.attr("cx"));
+                    let _y = parseFloat(tmp.attr("cy"));
+                    let r2 = parseFloat(tmp.attr("r"));
+
+                    let dx = offset[0] - _x;
+                    let dy = offset[1] - _y;
+                    let rSq = dx * dx + dy * dy;
+
+                    if (rSq < (r1 + r2) * (r1 + r2))
+                        collision_detected = true;
+                }
+
+                if (collision_detected/* && zoom_scale > 10*/) {
+                    //ctx.clearRect(0, 0, c.width, c.height);
+                    swap_viewports();
+                }
+            }
+
+            // update image updates      
+            if (!mousedown || d3.select("#pvline").attr("opacity") == 1.0) {
+                var px, py;
+
+                var zoomed_size = Math.round(get_zoomed_size(width, height, img_width, img_height));
+
+                if (zoom_location == "upper") {
+                    px = emStrokeWidth;
+                    py = emStrokeWidth;
+                }
+                else {
+                    px = width - 1 - emStrokeWidth - zoomed_size;
+                    py = height - 1 - emStrokeWidth - zoomed_size;
+                }
+
+                zoomed_size = Math.round(zoomed_size);
+                px = Math.round(px);
+                py = Math.round(py);
+
+                //image_stack.push({ x: x, y: y, clipSize: clipSize, px: px, py: py, zoomed_size: zoomed_size });
+                viewport_zoom_settings = { x: x, y: y, clipSize: clipSize, px: px, py: py, zoomed_size: zoomed_size };
+
+                if ((mouse_position.x != prev_mouse_position.x) || (mouse_position.y != prev_mouse_position.y)) {
+                    prev_mouse_position = mouse_position;
+                    viewport.refresh = true;
+                }
+            }
+
+            now = performance.now();
+            elapsed = performance.now() - then;
+
+            // predict future mouse positions, send spectrum update requests
+            if (elapsed > fpsInterval + computed + processed && (!mousedown || d3.select("#pvline").attr("opacity") == 1.0))//+ latency, computed, processed
+            {
+                then = now - (elapsed % fpsInterval);
+                //ALMAWS.send('[mouse] t=' + now + ' x=' + offset[0] + ' y=' + offset[1]);
+
+                //console.log("refresh interval: " + elapsed.toFixed(3) + " [ms]", "fps = ", Math.round(1000 / elapsed));
+
+                if (!initKalmanFilter)
+                    initKalman();
+
+                updateKalman();
+
+                var pred_mouse_x = Math.round(mouse_position.x + last_x.elements[2] * latency);
+                var pred_mouse_y = Math.round(mouse_position.y + last_x.elements[3] * latency);
+                //var pred_mouse_x = Math.round(mouse_position.x + last_x.elements[0] * latency + 0.5 * last_x.elements[2] * latency * latency) ;
+                //var pred_mouse_y = Math.round(mouse_position.y + last_x.elements[1] * latency + 0.5 * last_x.elements[3] * latency * latency) ;				
+
+                //console.log("latency = ", latency.toFixed(1), "[ms]", "mx = ", mouse_position.x, "px = ", pred_mouse_x, "my = ", mouse_position.y, "py = ", pred_mouse_y);
+                /*var pred_x = image_bounding_dims.x1 + (pred_mouse_x - d3.select(this).attr("x")) / (d3.select(this).attr("width") - 1) * (image_bounding_dims.width - 1);
+                var pred_y = image_bounding_dims.y2 + (pred_mouse_y - d3.select(this).attr("y")) / (d3.select(this).attr("height") - 1) * (image_bounding_dims.height - 1);*/
+
+                let rect = event.currentTarget;
+
+                var ax = (image_bounding_dims.width - 0) / (rect.getAttribute("width") - 0);
+                var pred_x = image_bounding_dims.x1 + ax * (pred_mouse_x - rect.getAttribute("x"));
+
+                var ay = (image_bounding_dims.height - 0) / (rect.getAttribute("height") - 0);
+                var pred_y = (image_bounding_dims.y1 + image_bounding_dims.height - 0) - ay * (pred_mouse_y - rect.getAttribute("y"));
+
+                var fitsX = pred_x * (fitsData.width - 0) / (imageContainer[va_count - 1].width - 0);//x or pred_x
+                var fitsY = pred_y * (fitsData.height - 0) / (imageContainer[va_count - 1].height - 0);//y or pred_y
+                var fitsSize = clipSize * (fitsData.width - 0) / (imageContainer[va_count - 1].width - 0);
+
+                //console.log('active', 'x = ', x, 'y = ', y, 'clipSize = ', clipSize, 'fitsX = ', fitsX, 'fitsY = ', fitsY, 'fitsSize = ', fitsSize) ;
+                //let strLog = 'active x = ' + x + ' y = '+ y + ' clipSize = ' + clipSize + ' fitsX = ' + fitsX + ' fitsY = ' + fitsY + ' fitsSize = ' + fitsSize + ' pred_x = ' + pred_x + ' pred_y = ' + pred_y + ' pred_mouse_x = ' + pred_mouse_x + ' pred_mouse_y = ' + pred_mouse_y ;
+
+                //send a spectrum request to the server				
+                var x1 = Math.round(fitsX - fitsSize);
+                var y1 = Math.round(fitsY - fitsSize);
+                var x2 = Math.round(fitsX + fitsSize);
+                var y2 = Math.round(fitsY + fitsSize);
+
+                if (realtime_spectrum && fitsData.depth > 1 && !optical_view) {
+                    sent_seq_id++;
+
+                    for (let index = 0; index < va_count; index++) {
+                        // a real-time websocket request
+                        var range = get_axes_range(width, height);
+                        var dx = range.xMax - range.xMin;
+
+                        if (viewport_zoom_settings != null) {
+                            let _width = viewport_zoom_settings.zoomed_size;
+                            let _height = viewport_zoom_settings.zoomed_size;
+
+                            var request = {
+                                type: "realtime_image_spectrum",
+                                dx: dx,
+                                image: false,
+                                quality: image_quality,
+                                x1: x1 + 1,
+                                y1: y1 + 1,
+                                x2: x2 + 1,
+                                y2: y2 + 1,
+                                width: _width,
+                                height: _height,
+                                beam: zoom_shape,
+                                intensity: intensity_mode,
+                                frame_start: data_band_lo,
+                                frame_end: data_band_hi,
+                                ref_freq: RESTFRQ,
+                                seq_id: sent_seq_id,
+                                timestamp: performance.now()
+                            };
+
+                            if (wsConn[index].readyState == 1)
+                                wsConn[index].send(JSON.stringify(request));
+                        }
+                    }
+                }
+
+                setup_window_timeout();
+            }
+
+            idleMouse = setTimeout(imageTimeout, 250);//was 250ms + latency
+        });
+
+    let fitsData = fitsContainer[va_count - 1];
+
+    if (fitsData != null) {
+        if (fitsData.depth > 1) {
+            rect.on("click", pv_event);
+        }
+    }
+
+    zoom.scaleTo(rect, zoom_scale);
 }
