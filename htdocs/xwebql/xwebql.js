@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-06-29.0";
+    return "JS2023-06-30.0";
 }
 
 function uuidv4() {
@@ -1358,10 +1358,19 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
                             if (has_json) {
                                 // display_histogram(index);
 
-                                display_gridlines();
+                                try {
+                                    display_gridlines();
+                                }
+                                catch (err) {
+                                    console.log("display_gridlines:", err);
+                                }
                             }
 
-                            display_legend();
+                            try {
+                                display_legend();
+                            } catch (err) {
+                                console.log("display_legend:", err);
+                            }
                         }
 
                     }
@@ -3731,7 +3740,7 @@ function process_hdr_image(img_width, img_height, pixels, alpha, min_count, max_
     }
 
     if (imageContainer != null) {
-        clear_webgl_internal_buffers(imageContainer);
+        clear_webgl_image_buffers();
     }
 
     imageContainer = { width: img_width, height: img_height, pixels: pixels, alpha: alpha, texture: texture, image_bounding_dims: image_bounding_dims, pixel_range: pixel_range };
@@ -3739,17 +3748,28 @@ function process_hdr_image(img_width, img_height, pixels, alpha, min_count, max_
     //next display the image    
     init_webgl_image_buffers();
 
-    setup_image_selection();
+    try {
+        setup_image_selection();
+    }
+    catch (err) {
+        console.log("setup_image_selection: ", err);
+    };
 
     try {
         display_scale_info();
     }
     catch (err) {
+        console.log("display_scale_info: ", err);
     };
 
     has_image = true;
 
-    setup_viewports();
+    try {
+        setup_viewports();
+    }
+    catch (err) {
+        console.log("setup_viewports: ", err);
+    };
 
     hide_hourglass();
 }
@@ -3805,6 +3825,10 @@ function init_webgl_image_buffers() {
         console.log("WebGL not supported by your browser, falling back onto HTML 2D Canvas (not implemented yet).");
         return;
     }
+}
+
+function clear_webgl_image_buffers() {
+    clear_webgl_internal_buffers(imageContainer);
 }
 
 function clear_webgl_internal_buffers(image) {
@@ -4138,4 +4162,224 @@ function webgl_image_renderer(gl, width, height) {
     };
 
     image.loopId = requestAnimationFrame(image_rendering_loop);
+}
+
+function display_gridlines() {
+    if (fitsData == null)
+        return;
+
+    if (fitsData.CTYPE1.indexOf("RA") < 0 && fitsData.CTYPE1.indexOf("GLON") < 0 && fitsData.CTYPE1.indexOf("ELON") < 0) {
+        d3.select("#displayGridlines")
+            .style("font-style", "italic")
+            .style('cursor', 'not-allowed')
+            .style("display", "none")
+            .attr("disabled", "disabled");
+        return;
+    }
+
+    if (fitsData.CTYPE2.indexOf("DEC") < 0 && fitsData.CTYPE2.indexOf("GLAT") < 0 && fitsData.CTYPE2.indexOf("ELAT") < 0) {
+        d3.select("#displayGridlines")
+            .style("font-style", "italic")
+            .style('cursor', 'not-allowed')
+            .style("display", "none")
+            .attr("disabled", "disabled");
+        return;
+    }
+
+    if (!has_image)
+        return;
+
+    try {
+        d3.select("#gridlines").remove();
+    }
+    catch (e) {
+    }
+
+    var elem = d3.select("#image_rectangle");
+    var width = parseFloat(elem.attr("width"));
+    var height = parseFloat(elem.attr("height"));
+
+    var x_offset = parseFloat(elem.attr("x"));
+    var y_offset = parseFloat(elem.attr("y"));
+
+    var x = d3.scaleLinear()
+        .range([x_offset, x_offset + width - 1])
+        .domain([0, 1]);
+
+    var y = d3.scaleLinear()
+        .range([y_offset + height - 1, y_offset])
+        .domain([1, 0]);
+
+    var svg = d3.select("#BackgroundSVG");
+
+    svg = svg.append("g")
+        .attr("id", "gridlines")
+        .attr("opacity", 1.0);
+
+    let fillColour = 'white';
+    let strokeColour = 'white';
+
+    if (theme == 'bright') {
+        fillColour = 'gray';
+        strokeColour = 'gray';
+    }
+
+    if (colourmap == "greyscale" || colourmap == "negative") {
+        fillColour = "#C4A000";
+        strokeColour = fillColour;
+    }
+
+    // Add the X Axis
+    if (fitsData.depth > 1) {
+        var xAxis = d3.axisBottom(x)
+            .tickSize(height)
+            .tickFormat(function (d) {
+                if (d == 0.0 || d == 1.0)
+                    return "";
+
+                var image = imageContainer[va_count - 1];
+                var image_bounding_dims = image.image_bounding_dims;
+
+                var tmp = image_bounding_dims.x1 + d * (image_bounding_dims.width - 1);
+                var orig_x = tmp * fitsData.width / image.width;
+
+                try {
+                    if (fitsData.CTYPE1.indexOf("RA") > -1) {
+                        if (coordsFmt == 'DMS')
+                            return x2dms(orig_x);
+                        else
+                            return x2hms(orig_x);
+                    }
+
+                    if (fitsData.CTYPE1.indexOf("GLON") > -1 || fitsData.CTYPE1.indexOf("ELON") > -1)
+                        return x2dms(orig_x);
+                }
+                catch (err) {
+                    console.log(err);
+                }
+
+                return "";
+            });
+
+        svg.append("g")
+            .attr("class", "gridlines")
+            .attr("id", "ra_axis")
+            .style("fill", fillColour)
+            .style("stroke", strokeColour)
+            .style("stroke-width", 1.0)
+            .attr("opacity", 1.0)
+            .attr("transform", "translate(0," + (y_offset) + ")")
+            .call(xAxis)
+            .selectAll("text")
+            .attr("y", 0)
+            .attr("x", 0)
+            .style("fill", fillColour)
+            .attr("dx", "-1.0em")
+            .attr("dy", "1.0em")
+            .attr("transform", "rotate(-45)")
+            .style("text-anchor", "middle");
+    }
+    else {
+        var xAxis = d3.axisTop(x)
+            .tickSize(height)
+            .tickFormat(function (d) {
+                if (d == 0.0 || d == 1.0)
+                    return "";
+
+                var image = imageContainer[va_count - 1];
+                var image_bounding_dims = image.image_bounding_dims;
+
+                var tmp = image_bounding_dims.x1 + d * (image_bounding_dims.width - 1);
+                var orig_x = tmp * fitsData.width / image.width;
+
+                try {
+                    if (fitsData.CTYPE1.indexOf("RA") > -1) {
+                        if (coordsFmt == 'DMS')
+                            return x2dms(orig_x);
+                        else
+                            return x2hms(orig_x);
+                    }
+
+                    if (fitsData.CTYPE1.indexOf("GLON") > -1 || fitsData.CTYPE1.indexOf("ELON") > -1)
+                        return x2dms(orig_x);
+                }
+                catch (err) {
+                    console.log(err);
+                }
+
+                return "";
+            });
+
+        svg.append("g")
+            .attr("class", "gridlines")
+            .attr("id", "ra_axis")
+            .style("fill", fillColour)
+            .style("stroke", strokeColour)
+            .style("stroke-width", 1.0)
+            .attr("opacity", 1.0)
+            .attr("transform", "translate(0," + (height + y_offset) + ")")
+            .call(xAxis)
+            .selectAll("text")
+            .attr("y", 0)
+            .attr("x", 0)
+            .style("fill", fillColour)
+            //.attr("dx", ".35em")
+            .attr("dy", ".35em")
+            .attr("transform", "rotate(-45)")
+            .style("text-anchor", "middle");
+    }
+
+    // Add the Y Axis
+    {
+        var yAxis = d3.axisLeft(y)
+            .tickSize(width)
+            .tickFormat(function (d) {
+                if (d == 0.0 || d == 1.0)
+                    return "";
+
+                var image = imageContainer[va_count - 1];
+                var image_bounding_dims = image.image_bounding_dims;
+
+                var tmp = image_bounding_dims.y1 + d * (image_bounding_dims.height - 1);
+                var orig_y = tmp * fitsData.height / image.height;
+
+                try {
+                    return y2dms(orig_y);
+                }
+                catch (err) {
+                    console.log(err);
+                }
+
+                return "";
+            });
+
+        svg.append("g")
+            .attr("class", "gridlines")
+            .attr("id", "dec_axis")
+            .style("fill", fillColour)
+            .style("stroke", strokeColour)
+            .style("stroke-width", 1.0)
+            .attr("opacity", 1.0)
+            .attr("transform", "translate(" + (width + x_offset) + ",0)")
+            .call(yAxis)
+            .selectAll("text")
+            .attr("y", 0)
+            .attr("x", 0)
+            .style("fill", fillColour)
+            .attr("dx", ".35em")
+            //.attr("dy", "-0.35em")
+            //.attr("transform", "rotate(-45)")
+            .style("text-anchor", "start");//was end, dx -.35, dy 0
+    }
+
+    if (va_count == 1 || composite_view) {
+        var htmlStr = displayGridlines ? '<span class="fas fa-check-square"></span> lon/lat grid lines' : '<span class="far fa-square"></span> lon/lat grid lines';
+        d3.select("#displayGridlines").html(htmlStr);
+
+        var elem = d3.select("#gridlines");
+        if (displayGridlines)
+            elem.attr("opacity", 1);
+        else
+            elem.attr("opacity", 0);
+    }
 }
