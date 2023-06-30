@@ -4454,19 +4454,15 @@ function display_legend() {
         .attr("width", rectWidth)
         .attr("height", legendHeight);
 
-    init_webgl_legend_buffers(va_count);
-    clear_webgl_legend_buffers(va_count);
+    init_webgl_legend_buffers();
+    clear_webgl_legend_buffers();
 
-    var upper_range;
+    let min_count = imageContainer.pixel_range.min_pixel;
+    let max_count = imageContainer.pixel_range.max_pixel;
 
-    if (flux == "ratio")
-        upper_range = 0.999;
-    else
-        upper_range = 1.0;
-
-    var colourScale = d3.scaleLinear()
+    var colourScale = d3.scaleLog()
         .range([0.8 * height, 0])
-        .domain([0, upper_range]);
+        .domain([min_count, max_count]);
 
     var colourAxis = d3.axisRight(colourScale)
         .tickSizeOuter([0])
@@ -4474,22 +4470,22 @@ function display_legend() {
         .tickFormat(function (d) {
             var prefix = "";
 
-            if (d == 0)
+            /*if (d == 0)
                 prefix = "≤";
 
             if (d == 1)
-                prefix = "≥";
+                prefix = "≥";*/
 
-            var pixelVal = get_pixel_flux(d, va_count);
+            var pixelVal = d;
 
-            var number;
+            /*var number;
 
             if (Math.abs(pixelVal) <= 0.001 || Math.abs(pixelVal) >= 1000)
                 number = pixelVal.toExponential(3);
             else
-                number = pixelVal.toPrecision(3);
+                number = pixelVal.toPrecision(3);*/
 
-            return prefix + number;
+            return prefix + pixelVal;
         });
 
     group.append("g")
@@ -4499,15 +4495,9 @@ function display_legend() {
         .attr("transform", "translate(" + ((width - img_width) / 2 - 2.0 * rectWidth) + "," + 0.1 * height + ")")
         .call(colourAxis);
 
-    let fitsData = fitsContainer[va_count - 1];
-
     var bunit = '';
     if (fitsData.BUNIT != '') {
         bunit = fitsData.BUNIT.trim();
-
-        if (fitsData.depth > 1 && has_velocity_info)
-            bunit += '•km/s';
-
         bunit = "[" + bunit + "]";
     }
 
@@ -4522,24 +4512,12 @@ function display_legend() {
         .attr("opacity", 0.8)
         .text(bunit);
 
-    if (va_count == 1) {
-        var elem = d3.select("#legend");
+    var elem = d3.select("#legend");
 
-        if (displayLegend)
-            elem.attr("opacity", 1);
-        else
-            elem.attr("opacity", 0);
-    }
-    else {
-        for (let index = 1; index <= va_count; index++) {
-            var elem = d3.select("#legend" + index);
-
-            if (displayLegend)
-                elem.attr("opacity", 1);
-            else
-                elem.attr("opacity", 0);
-        }
-    }
+    if (displayLegend)
+        elem.attr("opacity", 1);
+    else
+        elem.attr("opacity", 0);
 }
 
 function zoomed(event) {
@@ -5456,4 +5434,154 @@ function setup_image_selection() {
     }
 
     zoom.scaleTo(rect, zoom_scale);
+}
+
+function init_webgl_legend_buffers() {
+    //place the image onto the main canvas
+    var canvas = document.getElementById('legendCanvas');
+    canvas.style.display = "block";// a hack needed by Apple Safari
+    var width = canvas.width;
+    var height = canvas.height;
+
+    if (webgl1 || webgl2) {
+        canvas.addEventListener("webglcontextlost", function (event) {
+            event.preventDefault();
+            console.error("legendCanvas: webglcontextlost");
+        }, false);
+
+        canvas.addEventListener(
+            "webglcontextrestored", function () {
+                console.log("legendCanvas: webglcontextrestored");
+                init_webgl_legend_buffers();
+            }, false);
+    }
+
+    if (webgl2) {
+        var ctx = canvas.getContext("webgl2");
+        imageContainer.legend_gl = ctx;
+        // console.log("init_webgl is using the WebGL2 context.");
+
+        // enable floating-point textures filtering			
+        ctx.getExtension('OES_texture_float_linear');
+
+        // needed by gl.checkFramebufferStatus
+        ctx.getExtension('EXT_color_buffer_float');
+
+        // call the common WebGL renderer
+        webgl_legend_renderer(ctx, width, height);
+    } else if (webgl1) {
+        var ctx = canvas.getContext("webgl");
+        imageContainer.legend_gl = ctx;
+        // console.log("init_webgl is using the WebGL1 context.");
+
+        // enable floating-point textures
+        ctx.getExtension('OES_texture_float');
+        ctx.getExtension('OES_texture_float_linear');
+
+        // call the common WebGL renderer
+        webgl_legend_renderer(ctx, width, height);
+    } else {
+        console.log("WebGL not supported by your browser, falling back onto HTML 2D Canvas (not implemented yet).");
+        return;
+    }
+}
+
+function clear_webgl_legend_buffers() {
+    var image = imageContainer;
+    var gl = image.legend_gl;
+
+    if (gl === undefined || gl == null)
+        return;
+
+    // position buffer	
+    gl.deleteBuffer(image.legend_positionBuffer);
+
+    // program
+    gl.deleteShader(image.legend_program.vShader);
+    gl.deleteShader(image.legend_program.fShader);
+    gl.deleteProgram(image.legend_program);
+
+    //image.legend_gl = null;
+}
+
+function webgl_legend_renderer(gl, width, height) {
+    var image = imageContainer;
+
+    // setup GLSL program
+    var vertexShaderCode = document.getElementById("legend-vertex-shader").text;
+    var fragmentShaderCode = document.getElementById("legend-common-shader").text;
+    fragmentShaderCode += document.getElementById(colourmap + "-shader").text;
+
+    // remove the alpha blending multiplier
+    fragmentShaderCode = fragmentShaderCode.replace(/gl_FragColor.rgb *= gl_FragColor.a;/g, "");
+
+    // WebGL2 accepts WebGL1 shaders so there is no need to update the code	
+    if (webgl2) {
+        var prefix = "#version 300 es\n";
+        vertexShaderCode = prefix + vertexShaderCode;
+        fragmentShaderCode = prefix + fragmentShaderCode;
+
+        // attribute -> in
+        vertexShaderCode = vertexShaderCode.replace(/attribute/g, "in");
+        fragmentShaderCode = fragmentShaderCode.replace(/attribute/g, "in");
+
+        // varying -> out
+        vertexShaderCode = vertexShaderCode.replace(/varying/g, "out");
+
+        // varying -> in
+        fragmentShaderCode = fragmentShaderCode.replace(/varying/g, "in");
+
+        // texture2D -> texture
+        fragmentShaderCode = fragmentShaderCode.replace(/texture2D/g, "texture");
+
+        // replace gl_FragColor with a custom variable, i.e. texColour
+        fragmentShaderCode = fragmentShaderCode.replace(/gl_FragColor/g, "texColour");
+
+        // add the definition of texColour
+        var pos = fragmentShaderCode.indexOf("void main()");
+        fragmentShaderCode = fragmentShaderCode.insert_at(pos, "out vec4 texColour;\n\n");
+    }
+
+    var program = createProgram(gl, vertexShaderCode, fragmentShaderCode);
+    image.legend_program = program;
+
+    // look up where the vertex data needs to go.
+    var positionLocation = gl.getAttribLocation(program, "a_position");
+
+    // Create a position buffer
+    var positionBuffer = gl.createBuffer();
+    image.legend_positionBuffer = positionBuffer;
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    // Put a unit quad in the buffer
+    var positions = [
+        -1, -1,
+        -1, 1,
+        1, -1,
+        1, -1,
+        -1, 1,
+        1, 1,
+    ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+    // no need for an animation loop, just handle the lost context
+    //WebGL how to convert from clip space to pixels	
+    gl.viewport(0, 0, width, height);
+
+    // Clear the canvas
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // drawRegion (execute the GLSL program)
+    // Tell WebGL to use our shader program pair
+    gl.useProgram(program);
+
+    // Setup the attributes to pull data from our buffers
+    gl.enableVertexAttribArray(positionLocation);
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+    // execute the GLSL program
+    // draw the quad (2 triangles, 6 vertices)
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
