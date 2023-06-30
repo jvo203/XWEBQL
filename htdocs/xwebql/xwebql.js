@@ -1496,7 +1496,7 @@ function display_menu() {
         .on("click", show_fits_header)
         .html('display header');
 
-    if (!isLocal && va_count == 1 && (window.location.search.indexOf('ALMA') > 0 || window.location.search.indexOf('ALMB') > 0)) {
+    if (!isLocal && (window.location.search.indexOf('ALMA') > 0 || window.location.search.indexOf('ALMB') > 0)) {
         var url = "";
 
         if (datasetId.localeCompare("ALMA01000000") < 0)
@@ -1649,24 +1649,12 @@ function display_menu() {
             var htmlStr = displayLegend ? '<span class="fas fa-check-square"></span> image legend' : '<span class="far fa-square"></span> image legend';
             d3.select(this).html(htmlStr);
 
-            if (va_count == 1) {
-                var elem = d3.select("#legend");
+            var elem = d3.select("#legend");
 
-                if (displayLegend)
-                    elem.attr("opacity", 1);
-                else
-                    elem.attr("opacity", 0);
-            }
-            else {
-                for (let index = 1; index <= va_count; index++) {
-                    var elem = d3.select("#legend" + index);
-
-                    if (displayLegend)
-                        elem.attr("opacity", 1);
-                    else
-                        elem.attr("opacity", 0);
-                }
-            }
+            if (displayLegend)
+                elem.attr("opacity", 1);
+            else
+                elem.attr("opacity", 0);
         })
         .html(htmlStr);
 
@@ -3500,14 +3488,9 @@ function replot_y_axis() {
     if (intensity_mode == "mean")
         yLabel = "Mean";
 
-    let fitsData = fitsContainer[va_count - 1];
-
     var bunit = '';
     if (fitsData.BUNIT != '') {
         bunit = fitsData.BUNIT.trim();
-
-        if (intensity_mode == "integrated" && has_velocity_info)
-            bunit += '•km/s';
 
         bunit = "[" + bunit + "]";
     }
@@ -5955,4 +5938,144 @@ function webgl_zoom_renderer(gl, height) {
     };
 
     viewport.loopId = requestAnimationFrame(zoom_rendering_loop);
+}
+
+function imageTimeout() {
+    //console.log("image inactive event");
+
+    if (mousedown || streaming)
+        return;
+
+    moving = false;
+
+    //d3.select("#image_rectangle").style('cursor','crosshair');
+
+    //console.log("idle mouse position: ", mouse_position);
+
+    var svg = d3.select("#FrontSVG");
+    var width = parseFloat(svg.attr("width"));
+    var height = parseFloat(svg.attr("height"));
+
+    var image_bounding_dims = imageContainer.image_bounding_dims;
+    var scale = get_image_scale(width, height, image_bounding_dims.width, image_bounding_dims.height);
+    var img_width = scale * image_bounding_dims.width;
+    var img_height = scale * image_bounding_dims.height;
+
+    var rect_elem = d3.select("#image_rectangle");
+
+    var ax = (image_bounding_dims.width - 0) / (rect_elem.attr("width") - 0);
+    var x = image_bounding_dims.x1 + ax * (mouse_position.x - rect_elem.attr("x"));
+
+    var ay = (image_bounding_dims.height - 0) / (rect_elem.attr("height") - 0);
+    var y = (image_bounding_dims.y1 + image_bounding_dims.height - 0) - ay * (mouse_position.y - rect_elem.attr("y"));
+
+    var clipSize = Math.min(image_bounding_dims.width, image_bounding_dims.height) / zoom_scale;
+    var sel_width = clipSize * scale;
+    var sel_height = clipSize * scale;
+
+    var fitsX = x * (fitsData.width - 0) / (imageContainer.width - 0);
+    var fitsY = y * (fitsData.height - 0) / (imageContainer.height - 0);
+    var fitsSize = clipSize * (fitsData.width - 0) / (imageContainer.width - 0);
+
+    var image_update = true;
+
+    if (fitsSize > clipSize)
+        image_update = true;
+    else
+        image_update = false;
+
+    //console.log('idle', 'x = ', x, 'y = ', y, 'clipSize = ', clipSize, 'fitsX = ', fitsX, 'fitsY = ', fitsY, 'fitsSize = ', fitsSize, 'image_update:', image_update);
+
+    //send an image/spectrum request to the server
+    var x1 = Math.round(fitsX - fitsSize);
+    var y1 = Math.round(fitsY - fitsSize);
+    var x2 = Math.round(fitsX + fitsSize);
+    var y2 = Math.round(fitsY + fitsSize);
+
+    var dimx = x2 - x1 + 1;
+    var dimy = y2 - y1 + 1;
+
+    if (dimx != dimy)
+        console.log("unequal dimensions:", dimx, dimy, "fitsX =", fitsX, "fitsY =", fitsY, "fitsSize =", fitsSize);
+
+    var zoomed_size = get_zoomed_size(width, height, img_width, img_height);
+
+    //console.log("zoomed_size:", zoomed_size);
+
+    if (moving || streaming)
+        return;
+
+    viewport_count = 0;
+
+    sent_seq_id++;
+
+    // a real-time websocket request
+    var range = get_axes_range(width, height);
+    var dx = range.xMax - range.xMin;
+
+    if (viewport_zoom_settings != null) {
+        let _width = viewport_zoom_settings.zoomed_size;
+        let _height = viewport_zoom_settings.zoomed_size;
+
+        var request = {
+            type: "realtime_image_spectrum",
+            dx: dx,
+            image: image_update,
+            quality: image_quality,
+            x1: x1 + 1,
+            y1: y1 + 1,
+            x2: x2 + 1,
+            y2: y2 + 1,
+            width: _width,
+            height: _height,
+            beam: zoom_shape,
+            frame_start: data_band_lo,
+            frame_end: data_band_hi,
+            seq_id: sent_seq_id,
+            timestamp: performance.now()
+        };
+
+        if (wsConn != null && wsConn.readyState == 1)
+            wsConn.send(JSON.stringify(request));
+    }
+
+    setup_window_timeout();
+
+    if (moving || streaming)
+        return;
+
+    var zoom_element = d3.select("#zoom");
+    var zoom_cross = d3.select("#zoomCross");
+
+    //in the meantime repaint the selection element and the zoom canvas
+    let mx = mouse_position.x;
+    let my = mouse_position.y;
+
+    if (zoom_shape == "square")
+        zoom_element.attr("x", mx - sel_width).attr("y", my - sel_height).attr("width", 2 * sel_width).attr("height", 2 * sel_height).attr("opacity", 1.0);
+
+    if (zoom_shape == "circle")
+        zoom_element.attr("cx", mx).attr("cy", my).attr("r", Math.round(sel_width)).attr("opacity", 1.0);
+
+    var crossSize = 1.0 * emFontSize;
+    zoom_cross.attr("x", mx - crossSize / 2).attr("y", my - crossSize / 2).attr("width", crossSize).attr("height", crossSize).attr("opacity", 0.75);
+
+    var px, py;
+
+    if (zoom_location == "upper") {
+        px = emStrokeWidth;
+        py = emStrokeWidth;
+    }
+    else {
+        px = width - 1 - emStrokeWidth - zoomed_size;
+        py = height - 1 - emStrokeWidth - zoomed_size;
+    }
+
+    zoomed_size = Math.round(zoomed_size);
+    px = Math.round(px);
+    py = Math.round(py);
+
+    //ctx.clearRect(px, py, zoomed_size, zoomed_size);
+
+    //console.log("imageTimeout::END");
 }
