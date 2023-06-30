@@ -4648,34 +4648,28 @@ function setup_image_selection() {
                 let go_ahead = true;
                 let new_seq_id = 0;
 
-                for (let index = 0; index < va_count; index++) {
-                    let len = spectrum_stack[index].length;
+                let len = spectrum_stack.length;
 
-                    if (len > 0) {
-                        let id = spectrum_stack[index][len - 1].id;
+                if (len > 0) {
+                    let id = spectrum_stack[len - 1].id;
 
-                        if (id <= last_seq_id)
-                            go_ahead = false;
-                        else
-                            new_seq_id = Math.max(new_seq_id, id);
-                    }
-                    else
+                    if (id <= last_seq_id)
                         go_ahead = false;
+                    else
+                        new_seq_id = Math.max(new_seq_id, id);
                 }
+                else
+                    go_ahead = false;
 
                 if (go_ahead) {
                     last_seq_id = new_seq_id;
                     //console.log("last_seq_id:", last_seq_id);
 
-                    //pop all <va_count> spectrum stacks
-                    var data = [];
+                    //pop the spectrum from the stack
+                    var spectrum = spectrum_stack.pop().spectrum;
+                    spectrum_stack = [];
 
-                    for (let index = 0; index < va_count; index++) {
-                        data.push(spectrum_stack[index].pop().spectrum);
-                        spectrum_stack[index] = [];
-                    }
-
-                    plot_spectrum(data);
+                    plot_spectrum(spectrum);
                     replot_y_axis();
 
                     last_spectrum = data;
@@ -5064,7 +5058,7 @@ function setup_image_selection() {
                 let bunit = fitsData.BUNIT.trim();
 
                 // replace counts by count(s)
-                if (bunit == 'count')
+                if (bunit == 'counts')
                     bunit = 'count(s)';
 
                 if (alpha > 0 && !isNaN(pixel)) {
@@ -5133,7 +5127,7 @@ function setup_image_selection() {
             }
 
             // update image updates      
-            if (!mousedown || d3.select("#pvline").attr("opacity") == 1.0) {
+            if (!mousedown) {
                 var px, py;
 
                 var zoomed_size = Math.round(get_zoomed_size(width, height, img_width, img_height));
@@ -5164,7 +5158,7 @@ function setup_image_selection() {
             elapsed = performance.now() - then;
 
             // predict future mouse positions, send spectrum update requests
-            if (elapsed > fpsInterval + computed + processed && (!mousedown || d3.select("#pvline").attr("opacity") == 1.0))//+ latency, computed, processed
+            if (elapsed > fpsInterval + computed && !mousedown)//+ latency, computed
             {
                 then = now - (elapsed % fpsInterval);
                 //ALMAWS.send('[mouse] t=' + now + ' x=' + offset[0] + ' y=' + offset[1]);
@@ -5193,9 +5187,9 @@ function setup_image_selection() {
                 var ay = (image_bounding_dims.height - 0) / (rect.getAttribute("height") - 0);
                 var pred_y = (image_bounding_dims.y1 + image_bounding_dims.height - 0) - ay * (pred_mouse_y - rect.getAttribute("y"));
 
-                var fitsX = pred_x * (fitsData.width - 0) / (imageContainer[va_count - 1].width - 0);//x or pred_x
-                var fitsY = pred_y * (fitsData.height - 0) / (imageContainer[va_count - 1].height - 0);//y or pred_y
-                var fitsSize = clipSize * (fitsData.width - 0) / (imageContainer[va_count - 1].width - 0);
+                var fitsX = pred_x * (fitsData.width - 0) / (imageContainer.width - 0);//x or pred_x
+                var fitsY = pred_y * (fitsData.height - 0) / (imageContainer.height - 0);//y or pred_y
+                var fitsSize = clipSize * (fitsData.width - 0) / (imageContainer.width - 0);
 
                 //console.log('active', 'x = ', x, 'y = ', y, 'clipSize = ', clipSize, 'fitsX = ', fitsX, 'fitsY = ', fitsY, 'fitsSize = ', fitsSize) ;
                 //let strLog = 'active x = ' + x + ' y = '+ y + ' clipSize = ' + clipSize + ' fitsX = ' + fitsX + ' fitsY = ' + fitsY + ' fitsSize = ' + fitsSize + ' pred_x = ' + pred_x + ' pred_y = ' + pred_y + ' pred_mouse_x = ' + pred_mouse_x + ' pred_mouse_y = ' + pred_mouse_y ;
@@ -5206,41 +5200,37 @@ function setup_image_selection() {
                 var x2 = Math.round(fitsX + fitsSize);
                 var y2 = Math.round(fitsY + fitsSize);
 
-                if (realtime_spectrum && fitsData.depth > 1 && !optical_view) {
+                if (realtime_spectrum && fitsData.depth > 1) {
                     sent_seq_id++;
 
-                    for (let index = 0; index < va_count; index++) {
-                        // a real-time websocket request
-                        var range = get_axes_range(width, height);
-                        var dx = range.xMax - range.xMin;
+                    // a real-time websocket request
+                    var range = get_axes_range(width, height);
+                    var dx = range.xMax - range.xMin;
 
-                        if (viewport_zoom_settings != null) {
-                            let _width = viewport_zoom_settings.zoomed_size;
-                            let _height = viewport_zoom_settings.zoomed_size;
+                    if (viewport_zoom_settings != null) {
+                        let _width = viewport_zoom_settings.zoomed_size;
+                        let _height = viewport_zoom_settings.zoomed_size;
 
-                            var request = {
-                                type: "realtime_image_spectrum",
-                                dx: dx,
-                                image: false,
-                                quality: image_quality,
-                                x1: x1 + 1,
-                                y1: y1 + 1,
-                                x2: x2 + 1,
-                                y2: y2 + 1,
-                                width: _width,
-                                height: _height,
-                                beam: zoom_shape,
-                                intensity: intensity_mode,
-                                frame_start: data_band_lo,
-                                frame_end: data_band_hi,
-                                ref_freq: RESTFRQ,
-                                seq_id: sent_seq_id,
-                                timestamp: performance.now()
-                            };
+                        var request = {
+                            type: "realtime_image_spectrum",
+                            dx: dx,
+                            image: false,
+                            quality: image_quality,
+                            x1: x1 + 1,
+                            y1: y1 + 1,
+                            x2: x2 + 1,
+                            y2: y2 + 1,
+                            width: _width,
+                            height: _height,
+                            beam: zoom_shape,
+                            frame_start: data_band_lo,
+                            frame_end: data_band_hi,
+                            seq_id: sent_seq_id,
+                            timestamp: performance.now()
+                        };
 
-                            if (wsConn != null && wsConn.readyState == 1)
-                                wsConn.send(JSON.stringify(request));
-                        }
+                        if (wsConn != null && wsConn.readyState == 1)
+                            wsConn.send(JSON.stringify(request));
                     }
                 }
 
