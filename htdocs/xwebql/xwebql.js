@@ -1027,6 +1027,7 @@ async function mainRenderer() {
         poll_heartbeat();
 
         imageContainer = null;
+        wsConn = null;
 
         dataset_timeout = -1;
         fetch_image_spectrum(datasetId, true, false);
@@ -2093,7 +2094,7 @@ function display_scale_info() {
     var img_x = parseFloat(elem.getAttribute("x"));
     var img_y = parseFloat(elem.getAttribute("y"));
 
-    var image = imageContainer[va_count - 1];
+    var image = imageContainer;
     var image_bounding_dims = image.image_bounding_dims;
     var scale = image.height / image_bounding_dims.height;
 
@@ -4770,10 +4771,8 @@ function setup_image_selection() {
                 seq_id: ++sent_seq_id
             };
 
-            for (let index = 0; index < va_count; index++) {
-                if (wsConn[index].readyState == 1)
-                    wsConn[index].send(JSON.stringify(msg));
-            }
+            if (wsConn != null && wsConn.readyState == 1)
+                wsConn.send(JSON.stringify(msg));
 
             setup_window_timeout();
         })
@@ -4786,30 +4785,10 @@ function setup_image_selection() {
                 seq_id: ++sent_seq_id
             };
 
-            for (let index = 0; index < va_count; index++) {
-                if (wsConn[index].readyState == 1)
-                    wsConn[index].send(JSON.stringify(msg));
-            }
+            if (wsConn != null && wsConn.readyState == 1)
+                wsConn.send(JSON.stringify(msg));
 
             setup_window_timeout();
-
-            // cancel the P-V line & re-set the mouse click flag
-            d3.select("#pvline")
-                .attr("x1", 0)
-                .attr("y1", 0)
-                .attr("x2", 0)
-                .attr("y2", 0)
-                .style("stroke-dasharray", ("1, 5, 1"))
-                .attr("opacity", 0.0);
-
-            d3.select("#pvmid")
-                .attr("x1", 0)
-                .attr("y1", 0)
-                .attr("x2", 0)
-                .attr("y2", 0)
-                .attr("opacity", 0.0);
-
-            mouse_click_end = true;
 
             // clear the ViewportCanvas in WebGL
             if (viewport != null) {
@@ -4831,10 +4810,7 @@ function setup_image_selection() {
             if (!event.shiftKey)
                 windowLeft = true;
 
-            spectrum_stack = new Array(va_count);
-            for (let i = 0; i < va_count; i++)
-                spectrum_stack[i] = [];
-
+            spectrum_stack = [];
             image_stack = [];
 
             if (!event.shiftKey) {
@@ -4856,7 +4832,7 @@ function setup_image_selection() {
             if (event.shiftKey)
                 return;
 
-            if (xradec != null && d3.select("#pvline").attr("opacity") < 1.0) {
+            if (xradec != null) {
                 let raText = 'RA N/A';
                 let decText = 'DEC N/A';
 
@@ -4889,44 +4865,15 @@ function setup_image_selection() {
             if (mousedown)
                 return;
 
-            let fitsData = fitsContainer[va_count - 1];
-
             if (fitsData != null) {
                 if (fitsData.depth > 1) {
-                    if (va_count == 1) {
-                        if (intensity_mode == "mean") {
-                            plot_spectrum([fitsData.mean_spectrum]);
-                            replot_y_axis();
-                        }
-
-                        if (intensity_mode == "integrated") {
-                            plot_spectrum([fitsData.integrated_spectrum]);
-                            replot_y_axis();
-                        }
-                    }
-                    else {
-                        if (intensity_mode == "mean") {
-                            plot_spectrum(mean_spectrumContainer);
-                            replot_y_axis();
-                        }
-
-                        if (intensity_mode == "integrated") {
-                            plot_spectrum(integrated_spectrumContainer);
-                            replot_y_axis();
-                        }
-                    }
+                    plot_spectrum(fitsData.spectrum);
+                    replot_y_axis();
                 }
             }
 
-            if (va_count == 1) {
-                clear_webgl_image_buffers(va_count);
-                init_webgl_image_buffers(va_count);
-            } else {
-                if (composite_view) {
-                    clear_webgl_composite_image_buffers();
-                    init_webgl_composite_image_buffers();
-                }
-            }
+            clear_webgl_image_buffers();
+            init_webgl_image_buffers();
         })
         .on("mousemove", (event) => {
             // cancel the image animation loop            
@@ -4967,8 +4914,6 @@ function setup_image_selection() {
 
             event.preventDefault = true;
             if (!has_image) return;
-
-            let fitsData = fitsContainer[va_count - 1];
 
             if (fitsData == null)
                 return;
@@ -5011,7 +4956,7 @@ function setup_image_selection() {
 
             //console.log("mouse position:", mouse_position);
 
-            var image_bounding_dims = imageContainer[va_count - 1].image_bounding_dims;
+            var image_bounding_dims = imageContainer.image_bounding_dims;
             var scale = get_image_scale(width, height, image_bounding_dims.width, image_bounding_dims.height);
 
             var clipSize = Math.min(image_bounding_dims.width, image_bounding_dims.height) / zoom_scale;
@@ -5040,8 +4985,8 @@ function setup_image_selection() {
             var ay = (image_bounding_dims.height - 0) / (rect.getAttribute("height") - 0);
             var y = (image_bounding_dims.y1 + image_bounding_dims.height - 0) - ay * (mouse_position.y - rect.getAttribute("y"));
 
-            var orig_x = x * (fitsData.width - 0) / (imageContainer[va_count - 1].width - 0);
-            var orig_y = y * (fitsData.height - 0) / (imageContainer[va_count - 1].height - 0);
+            var orig_x = x * (fitsData.width - 0) / (imageContainer.width - 0);
+            var orig_y = y * (fitsData.height - 0) / (imageContainer.height - 0);
 
             try {
                 let raText = 'RA N/A';
@@ -5108,9 +5053,8 @@ function setup_image_selection() {
             //for each image
             var pixelText = '';
             var displayPixel = true;
-            var PR = ["R:", "G:", "B:"];
-            for (let index = 1; index <= va_count; index++) {
-                var imageFrame = imageContainer[index - 1];
+            {
+                var imageFrame = imageContainer;
 
                 var pixel_coord = Math.round(y) * imageFrame.width + Math.round(x);
 
@@ -5118,14 +5062,14 @@ function setup_image_selection() {
                 var alpha = imageFrame.alpha[pixel_coord];
 
                 let bunit = fitsData.BUNIT.trim();
-                if (fitsData.depth > 1 && has_velocity_info)
-                    bunit += '•km/s';
+
+                // replace counts by count(s)
+                if (bunit == 'count')
+                    bunit = 'count(s)';
 
                 if (alpha > 0 && !isNaN(pixel)) {
                     //d3.select("#pixel").text(prefix + pixelVal.toPrecision(3) + " " + bunit).attr("opacity", 1.0) ;
-                    if (va_count > 1)
-                        pixelText += PR[index - 1 % PR.length];
-                    pixelText += pixel.toPrecision(3) + " ";
+                    pixelText += Math.round(Math.exp(pixel))/*.toPrecision(3)*/ + " ";
                     displayPixel = displayPixel && true;
                 }
                 else {
@@ -5133,7 +5077,7 @@ function setup_image_selection() {
                     displayPixel = displayPixel && false;
                 }
 
-                if (index == va_count && displayPixel) {
+                if (displayPixel) {
                     pixelText += bunit;
                     d3.select("#pixel").text(pixelText).attr("opacity", 1.0);
                 }
@@ -5294,8 +5238,8 @@ function setup_image_selection() {
                                 timestamp: performance.now()
                             };
 
-                            if (wsConn[index].readyState == 1)
-                                wsConn[index].send(JSON.stringify(request));
+                            if (wsConn != null && wsConn.readyState == 1)
+                                wsConn.send(JSON.stringify(request));
                         }
                     }
                 }
@@ -5760,4 +5704,265 @@ function updateKalman() {
   	
     mouse_position.x = predX.elements[0];
     mouse_position.y = predX.elements[1];*/
+}
+
+function init_webgl_zoom_buffers() {
+    // place the viewport onto the zoom canvas
+    var canvas = document.getElementById('ZOOMCanvas');
+    canvas.style.display = "block";// a hack needed by Apple Safari
+    var height = canvas.height;
+
+    if (webgl1 || webgl2) {
+        canvas.addEventListener("webglcontextlost", function (event) {
+            event.preventDefault();
+
+            cancelAnimationFrame(viewport.loopId);
+            console.error("ZOOMCanvas: webglcontextlost");
+        }, false);
+
+        canvas.addEventListener(
+            "webglcontextrestored", function () {
+                console.log("ZOOMCanvas: webglcontextrestored");
+                init_webgl_zoom_buffers();
+            }, false);
+    }
+
+    if (webgl2) {
+        var ctx = canvas.getContext("webgl2");
+        viewport.gl = ctx;
+        // console.log("init_webgl is using the WebGL2 context.");
+
+        // enable floating-point textures filtering			
+        ctx.getExtension('OES_texture_float_linear');
+
+        // needed by gl.checkFramebufferStatus
+        ctx.getExtension('EXT_color_buffer_float');
+
+        // call the common WebGL renderer
+        webgl_zoom_renderer(ctx, height);
+    } else if (webgl1) {
+        var ctx = canvas.getContext("webgl");
+        viewport.gl = ctx;
+        // console.log("init_webgl is using the WebGL1 context.");
+
+        // enable floating-point textures
+        ctx.getExtension('OES_texture_float');
+        ctx.getExtension('OES_texture_float_linear');
+
+        // call the common WebGL renderer
+        webgl_zoom_renderer(ctx, height);
+    } else {
+        console.log("WebGL not supported by your browser, falling back onto HTML 2D Canvas (not implemented yet).");
+        return;
+    }
+}
+
+function clear_webgl_zoom_buffers() {
+    // cancel the animation loop
+    cancelAnimationFrame(viewport.loopId);
+
+    var gl = viewport.gl;
+
+    if (gl === undefined || gl == null)
+        return;
+
+    // position buffer
+    if (viewport.positionBuffer != undefined)
+        gl.deleteBuffer(viewport.positionBuffer);
+
+    // texture
+    if (viewport.tex != undefined)
+        gl.deleteTexture(viewport.tex);
+
+    // program
+    if (viewport.program != undefined) {
+        gl.deleteShader(viewport.program.vShader);
+        gl.deleteShader(viewport.program.fShader);
+        gl.deleteProgram(viewport.program);
+    }
+
+    viewport.gl = null;
+}
+
+function webgl_zoom_renderer(gl, height) {
+    let image = imageContainer;
+
+    if (image == null) {
+        console.log("webgl_zoom_renderer: null image");
+        return;
+    }
+
+    // setup GLSL program
+    var vertexShaderCode = document.getElementById("vertex-shader").text;
+    var fragmentShaderCode = document.getElementById("common-shader").text + document.getElementById("log-shader").text;
+
+    if (webgl2)
+        fragmentShaderCode = fragmentShaderCode + "\ncolour.a = colour.g;\n";
+
+    fragmentShaderCode += document.getElementById(colourmap + "-shader").text;
+
+    // grey-out pixels for alpha = 0.0
+    var pos = fragmentShaderCode.lastIndexOf("}");
+    fragmentShaderCode = fragmentShaderCode.insert_at(pos, "if (gl_FragColor.a == 0.0) gl_FragColor.rgba = vec4(0.0, 0.0, 0.0, 0.3);\n");
+
+    if (zoom_shape == "circle") {
+        pos = fragmentShaderCode.lastIndexOf("}");
+        fragmentShaderCode = fragmentShaderCode.insert_at(pos, "float r_x = v_texcoord.z;\n float r_y = v_texcoord.w;\n if (r_x * r_x + r_y * r_y > 1.0) gl_FragColor.rgba = vec4(0.0, 0.0, 0.0, 0.0);\n");
+    }
+
+
+    // WebGL2 accepts WebGL1 shaders so there is no need to update the code	
+    if (webgl2) {
+        var prefix = "#version 300 es\n";
+        vertexShaderCode = prefix + vertexShaderCode;
+        fragmentShaderCode = prefix + fragmentShaderCode;
+
+        // attribute -> in
+        vertexShaderCode = vertexShaderCode.replace(/attribute/g, "in");
+        fragmentShaderCode = fragmentShaderCode.replace(/attribute/g, "in");
+
+        // varying -> out
+        vertexShaderCode = vertexShaderCode.replace(/varying/g, "out");
+
+        // varying -> in
+        fragmentShaderCode = fragmentShaderCode.replace(/varying/g, "in");
+
+        // texture2D -> texture
+        fragmentShaderCode = fragmentShaderCode.replace(/texture2D/g, "texture");
+
+        // replace gl_FragColor with a custom variable, i.e. texColour
+        fragmentShaderCode = fragmentShaderCode.replace(/gl_FragColor/g, "texColour");
+
+        // add the definition of texColour
+        var pos = fragmentShaderCode.indexOf("void main()");
+        fragmentShaderCode = fragmentShaderCode.insert_at(pos, "out vec4 texColour;\n\n");
+    }
+
+    var program = createProgram(gl, vertexShaderCode, fragmentShaderCode);
+    viewport.program = program;
+
+    // look up where the vertex data needs to go.
+    var positionLocation = gl.getAttribLocation(program, "a_position");
+
+    // Create a position buffer
+    var positionBuffer = gl.createBuffer();
+    viewport.positionBuffer = positionBuffer;
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    // Put a unit quad in the buffer
+    var positions = [
+        -1, -1,
+        -1, 1,
+        1, -1,
+        1, -1,
+        -1, 1,
+        1, 1,
+    ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+    // load a texture
+    var tex = gl.createTexture();
+    viewport.tex = tex;
+
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    /*gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);*/
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    if (webgl2)
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG32F, image.width, image.height, 0, gl.RG, gl.FLOAT, image.texture);
+    else
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE_ALPHA, image.width, image.height, 0, gl.LUMINANCE_ALPHA, gl.FLOAT, image.texture);
+
+    var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if (status != gl.FRAMEBUFFER_COMPLETE) {
+        console.error(status);
+    }
+
+    var last_viewport_loop = 0;
+    viewport.refresh = true;
+
+    // shoud be done in an animation loop
+    function zoom_rendering_loop() {
+        if (viewport_zoom_settings == null) {
+            // console.log("webgl_zoom_renderer: null viewport_zoom_settings");
+            viewport.loopId = requestAnimationFrame(zoom_rendering_loop);
+            return;
+        }
+
+        let now = performance.now();
+
+        // limit the FPS
+        let _fps = 30;
+        if ((now - last_viewport_loop) < (1000 / _fps)) {
+            viewport.loopId = requestAnimationFrame(zoom_rendering_loop);
+            return;
+        } else {
+            last_viewport_loop = now;
+        }
+
+        if (viewport.gl === undefined || viewport.gl == null) {
+            return;
+        }
+
+        if (!viewport.refresh) {
+            viewport.loopId = requestAnimationFrame(zoom_rendering_loop);
+            return;
+        } else
+            viewport.refresh = false;
+
+        if (invalidateViewport) {
+            clear_webgl_viewport();
+            invalidateViewport = false;
+        }
+
+        //WebGL how to convert from clip space to pixels		
+        let px = viewport_zoom_settings.px;
+        let py = viewport_zoom_settings.py;
+        let viewport_size = viewport_zoom_settings.zoomed_size;
+        py = height - py - viewport_size;
+        gl.viewport(px, py, viewport_size, viewport_size);
+
+        // Clear the canvas
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        // the image bounding box
+        var locationOfBox = gl.getUniformLocation(program, "box");
+
+        // image tone mapping
+        var locationOfParams = gl.getUniformLocation(program, "params");
+
+        // drawRegion (execute the GLSL program)
+        // Tell WebGL to use our shader program pair
+        gl.useProgram(program);
+
+        let xmin = (viewport_zoom_settings.x - viewport_zoom_settings.clipSize) / (image.width - 0); // was - 1
+        let ymin = (viewport_zoom_settings.y - viewport_zoom_settings.clipSize) / (image.height - 0); // was - 1
+        let _width = (2 * viewport_zoom_settings.clipSize + 1) / image.width; // was + 1
+        let _height = (2 * viewport_zoom_settings.clipSize + 1) / image.height; // was + 1
+
+        //console.log("xmin:", xmin, "ymin:", ymin, "_width:", _width, "_height:", _height);		
+        gl.uniform4fv(locationOfBox, [xmin, ymin, _width, _height]);
+
+        // logarithmic tone mapping        
+        var params = [Math.log(image.pixel_range.min_pixel), Math.log(image.pixel_range.max_pixel), 0, 0];
+        gl.uniform4fv(locationOfParams, params);
+
+        // Setup the attributes to pull data from our buffers
+        gl.enableVertexAttribArray(positionLocation);
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+        // execute the GLSL program
+        // draw the quad (2 triangles, 6 vertices)
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+        viewport.loopId = requestAnimationFrame(zoom_rendering_loop);
+    };
+
+    viewport.loopId = requestAnimationFrame(zoom_rendering_loop);
 }
