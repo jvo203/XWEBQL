@@ -830,6 +830,7 @@ async function mainRenderer() {
         idleMouse = -1;
         idleVideo = -1;
         moving = false;
+        enedrag = false;
         data_band_lo = 0;
         data_band_hi = 0;
         latency = 0;
@@ -4527,13 +4528,6 @@ function zoomed(event) {
     console.log("windowLeft:", windowLeft);
 
     if (!windowLeft) {
-        try {
-            zoom_beam();
-        }
-        catch (e) {
-            console.log('NON-CRITICAL:', e);
-        }
-
         var evt = new MouseEvent("mousemove");
         d3.select('#image_rectangle').node().dispatchEvent(evt);
 
@@ -4575,30 +4569,6 @@ function setup_image_selection() {
         .attr("fill", "none")
         .style("stroke", fillColour)
         .style("stroke-dasharray", ("1, 5, 1"))
-        .style("stroke-width", emStrokeWidth)
-        .attr("opacity", 0.0);
-
-    //pv line selection
-    svg.append("line")
-        .attr("id", "pvline")
-        .attr("x1", 0)
-        .attr("y1", 0)
-        .attr("x2", 0)
-        .attr("y2", 0)
-        .attr("marker-start", "url(#head)")
-        .attr("marker-end", "url(#head)")
-        .style("stroke", fillColour)
-        .style("stroke-dasharray", ("1, 5, 1"))
-        .style("stroke-width", emStrokeWidth)
-        .attr("opacity", 0.0);
-
-    svg.append("line")
-        .attr("id", "pvmid")
-        .attr("x1", 0)
-        .attr("y1", 0)
-        .attr("x2", 0)
-        .attr("y2", 0)
-        .style("stroke", fillColour)
         .style("stroke-width", emStrokeWidth)
         .attr("opacity", 0.0);
 
@@ -4910,11 +4880,7 @@ function setup_image_selection() {
             if (event.shiftKey)
                 return;
 
-            setup_csv_export();
-
             if (xradec != null && d3.select("#pvline").attr("opacity") < 1.0) {
-                let fitsData = fitsContainer[va_count - 1];
-
                 let raText = 'RA N/A';
                 let decText = 'DEC N/A';
 
@@ -4987,14 +4953,8 @@ function setup_image_selection() {
             }
         })
         .on("mousemove", (event) => {
-            // cancel the image animation loop
-            if (va_count == 1) {
-                clear_webgl_image_buffers(va_count);
-            } else {
-                if (composite_view) {
-                    clear_webgl_composite_image_buffers();
-                }
-            }
+            // cancel the image animation loop            
+            clear_webgl_image_buffers();
 
             if (!autoscale && event.shiftKey) {
                 d3.select("#scaling")
@@ -5020,66 +4980,11 @@ function setup_image_selection() {
                     .style("stroke", axisColour);
             }
 
-            if (freqdrag || event.shiftKey) {
+            if (enedrag || event.shiftKey) {
                 var node = event.currentTarget;
                 node.style.cursor = 'pointer';
                 return;
             }
-
-            try {
-                // check the opacity attribute of the P-V line
-                if (d3.select("#pvline").attr("opacity") > 0.0 && !mouse_click_end) {
-                    // update the P-V line
-
-                    let x1 = line_x;
-                    let y1 = line_y;
-
-                    let mpos = d3.pointer(event);
-                    let x2 = mpos[0]; let y2 = mpos[1];
-
-                    d3.select("#pvline")
-                        .style("stroke-dasharray", ("1, 5, 1"))
-                        .attr("x1", x1)
-                        .attr("y1", y1)
-                        .attr("x2", x2)
-                        .attr("y2", y2);
-
-                    let dx = x2 - x1;
-                    let dy = y2 - y1;
-
-                    if (Math.abs(dy) > 0) {
-                        let _m = - dx / dy; // a perpendicular line to the P-V line				
-                        let _s = emFontSize / Math.sqrt(1 + _m * _m) / golden_ratio;
-
-                        let _mx = _s;
-                        let _my = _m * _s;
-
-                        let _x = (x1 + x2) / 2; // midpoint of the P-V line
-                        let _y = (y1 + y2) / 2; // midpoint of the P-V line
-
-                        let _x1 = _x - _mx;
-                        let _y1 = _y - _my;
-                        let _x2 = _x + _mx;
-                        let _y2 = _y + _my;
-
-                        d3.select("#pvmid").attr("x1", _x1).attr("y1", _y1).attr("x2", _x2).attr("y2", _y2);
-                    }
-
-                    // return; // disabled to test zoom-in for the P-V line end point           
-                }
-
-                if (d3.select("#pvline").attr("opacity") > 0.0 && mouse_click_end) {
-                    // reset and hide the P-V line
-                    d3.select("#pvline")
-                        .attr("x1", 0)
-                        .attr("y1", 0)
-                        .attr("x2", 0)
-                        .attr("y2", 0)
-                        .attr("opacity", 0.0);
-
-                    d3.select("#pvmid").attr("opacity", 0.0);
-                }
-            } catch (_) { }
 
             // commented out so that the caching 'wait' cursor remains visible
             //d3.select(this).style('cursor', 'none');			
@@ -5424,14 +5329,6 @@ function setup_image_selection() {
 
             idleMouse = setTimeout(imageTimeout, 250);//was 250ms + latency
         });
-
-    let fitsData = fitsContainer[va_count - 1];
-
-    if (fitsData != null) {
-        if (fitsData.depth > 1) {
-            rect.on("click", pv_event);
-        }
-    }
 
     zoom.scaleTo(rect, zoom_scale);
 }
