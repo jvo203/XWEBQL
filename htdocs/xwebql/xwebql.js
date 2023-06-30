@@ -4722,26 +4722,11 @@ function setup_image_selection() {
         .on("mouseenter", (event) => {
             hide_navigation_bar();
 
-            // cancel the image animation loop
-            if (va_count == 1) {
-                clear_webgl_image_buffers(va_count);
-            } else {
-                if (composite_view) {
-                    clear_webgl_composite_image_buffers();
-                }
-            }
+            // cancel the image animation loop            
+            clear_webgl_image_buffers();
 
-            try {
-                zoom_beam();
-            }
-            catch (e) {
-                console.log('NON-CRITICAL:', e);
-            }
-
-            if (d3.select("#pvline").attr("opacity") < 1.0) {
-                zoom_element.attr("opacity", 1.0);
-                zoom_cross.attr("opacity", 0.75);
-            }
+            zoom_element.attr("opacity", 1.0);
+            zoom_cross.attr("opacity", 0.75);
 
             d3.select("#pixel").text("").attr("opacity", 0.0);
 
@@ -4753,10 +4738,7 @@ function setup_image_selection() {
 
             windowLeft = false;
 
-            spectrum_stack = new Array(va_count);
-            for (let i = 0; i < va_count; i++)
-                spectrum_stack[i] = [];
-
+            spectrum_stack = [];
             image_stack = [];
             viewport_zoom_settings = null;
             prev_mouse_position = { x: -1, y: -1 };
@@ -4780,13 +4762,7 @@ function setup_image_selection() {
 
             resetKalman();
 
-            if (va_count == 1) {
-                init_webgl_zoom_buffers();
-            } else {
-                if (composite_view) {
-                    init_webgl_composite_zoom_buffers();
-                }
-            }
+            init_webgl_zoom_buffers();
 
             // send a "Kalman Filter reset" WebSocket message in order to reset the server-side Kalman Filter
             var msg = {
@@ -5481,4 +5457,307 @@ function webgl_legend_renderer(gl, width, height) {
     // execute the GLSL program
     // draw the quad (2 triangles, 6 vertices)
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
+
+function get_zoomed_size(width, height, img_width, img_height) {
+    var zoomed_size = Math.max(width / 2, height / 2) / golden_ratio;
+
+    if (zoom_shape == "square")
+        return Math.round(zoomed_size);
+
+    if (zoom_shape == "circle")
+        return Math.round(1.2 * zoomed_size);
+}
+
+function setup_viewports() {
+    //delete previous instances
+    try {
+        d3.select("#upper").remove();
+        d3.select("#lower").remove();
+        d3.select("#upperCross").remove();
+        d3.select("#lowerCross").remove();
+    }
+    catch (e) { };
+
+    var svg = d3.select("#FrontSVG");
+    var width = parseFloat(svg.attr("width"));
+    var height = parseFloat(svg.attr("height"));
+
+    var elem = d3.select("#image_rectangle");
+    var img_width = parseFloat(elem.attr("width"));
+    var img_height = parseFloat(elem.attr("height"));
+    var zoomed_size = get_zoomed_size(width, height, img_width, img_height);
+
+    if (zoom_shape == "square") {
+        //upper zoom
+        svg.append("rect")
+            .attr("id", "upper")
+            .attr("x", (emStrokeWidth))
+            .attr("y", (emStrokeWidth))
+            .attr("width", zoomed_size)
+            .attr("height", zoomed_size)
+            .attr("fill", "transparent")
+            .style("stroke", "transparent")
+            //.style("stroke-dasharray", ("1, 5, 1"))
+            .style("stroke-width", emStrokeWidth / 2)
+            .attr("opacity", 1.0)
+            .on("mouseover", function () { /*if(windowLeft) return; else swap_viewports();*/ zoom_location = "lower"; var elem = d3.select(this); elem.style("stroke", "transparent"); elem.moveToBack(); d3.select("#lower").moveToFront(); });
+
+        //lower zoom
+        svg.append("rect")
+            .attr("id", "lower")
+            .attr("x", (width - 1 - emStrokeWidth - zoomed_size))
+            .attr("y", (height - 1 - emStrokeWidth - zoomed_size))
+            .attr("width", zoomed_size)
+            .attr("height", zoomed_size)
+            .attr("fill", "transparent")
+            .style("stroke", "transparent")
+            //.style("stroke-dasharray", ("1, 5, 1"))
+            .style("stroke-width", emStrokeWidth / 2)
+            .attr("opacity", 1.0)
+            .on("mouseover", function () { /*if(windowLeft) return; else swap_viewports();*/ zoom_location = "upper"; var elem = d3.select(this); elem.style("stroke", "transparent"); elem.moveToBack(); d3.select("#upper").moveToFront(); });
+    };
+
+    if (zoom_shape == "circle") {
+        //upper zoom
+        svg.append("circle")
+            .attr("id", "upper")
+            .attr("cx", (emStrokeWidth + zoomed_size / 2))
+            .attr("cy", (emStrokeWidth + zoomed_size / 2))
+            .attr("r", zoomed_size / 2)
+            .attr("fill", "transparent")
+            .style("stroke", "transparent")
+            //.style("stroke-dasharray", ("1, 5, 1"))
+            .style("stroke-width", emStrokeWidth / 2)
+            .attr("opacity", 1.0)
+            .on("mouseover", function () { /*if(windowLeft) return; else swap_viewports();*/ zoom_location = "lower"; var elem = d3.select(this); elem.style("stroke", "transparent"); elem.moveToBack(); d3.select("#lower").moveToFront(); });
+
+        //lower zoom
+        svg.append("circle")
+            .attr("id", "lower")
+            .attr("cx", (width - 1 - emStrokeWidth - zoomed_size / 2))
+            .attr("cy", (height - 1 - emStrokeWidth - zoomed_size / 2))
+            .attr("r", zoomed_size / 2)
+            .attr("fill", "transparent")
+            .style("stroke", "transparent")
+            //.style("stroke-dasharray", ("1, 5, 1"))
+            .style("stroke-width", emStrokeWidth / 2)
+            .attr("opacity", 1.0)
+            .on("mouseover", function () { /*if(windowLeft) return; else swap_viewports();*/ zoom_location = "upper"; var elem = d3.select(this); elem.style("stroke", "transparent"); elem.moveToBack(); d3.select("#upper").moveToFront(); });
+    };
+
+    var crossSize = 2.0 * emFontSize;
+
+    //upper cross-hair
+    svg.append("svg:image")
+        .attr("id", "upperCross")
+        .attr("x", (emStrokeWidth + (zoomed_size - crossSize) / 2))
+        .attr("y", (emStrokeWidth + (zoomed_size - crossSize) / 2))
+        //.attr("xlink:href", ROOT_PATH + "plainicon.com-crosshair_white.svg")
+        .attr("xlink:href", "https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/plainicon.com-crosshair_white.svg")
+        .attr("width", crossSize)
+        .attr("height", crossSize)
+        .attr("opacity", 0.0);
+
+    //lower cross-hair
+    svg.append("svg:image")
+        .attr("id", "lowerCross")
+        .attr("x", (width - 1 - emStrokeWidth - (zoomed_size + crossSize) / 2))
+        .attr("y", (height - 1 - emStrokeWidth - (zoomed_size + crossSize) / 2))
+        //.attr("xlink:href", ROOT_PATH + "plainicon.com-crosshair_white.svg")
+        .attr("xlink:href", "https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/plainicon.com-crosshair_white.svg")
+        .attr("width", crossSize)
+        .attr("height", crossSize)
+        .attr("opacity", 0.0);
+}
+
+function swap_viewports() {
+    // swap the zoomed viewports
+    if (viewport != null) {
+        // Clear the ZOOM Canvas
+        //console.log("clearing the ZOOM Canvas");
+        var gl = viewport.gl;
+
+        if (gl !== undefined && gl != null) {
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+        }
+
+        viewport.refresh = true;
+    }
+
+    clear_webgl_viewport();
+
+    d3.select("#" + zoom_location + "Cross").attr("opacity", 0.0);
+    d3.select("#" + zoom_location + "Beam").attr("opacity", 0.0);
+
+    var elem = d3.select('#' + zoom_location);
+    elem.style("stroke", "transparent");
+    elem.attr("pointer-events", "none");
+    elem.moveToBack();
+
+    if (zoom_location == "upper") {
+        d3.select("#lower")
+            .attr("pointer-events", "auto")
+            .moveToFront();
+
+        zoom_location = "lower";
+        return;
+    }
+
+    if (zoom_location == "lower") {
+        d3.select("#upper")
+            .attr("pointer-events", "auto")
+            .moveToFront();
+
+        zoom_location = "upper";
+        return;
+    }
+}
+
+function copy_coordinates(e) {
+    var textToPutOnClipboard = d3.select("#ra").text() + " " + d3.select("#dec").text();
+
+    navigator.clipboard.writeText(textToPutOnClipboard).then(function () {
+        console.log('Async: Copying to clipboard was successful!');
+    }, function (err) {
+        console.error('Async: Could not copy text: ', err);
+    });
+
+    e.preventDefault();
+}
+
+function resetKalman() {
+    last_x = $V([mouse_position.x, mouse_position.y, 0, 0]);
+    //last_x = $V([0, 0, 0, 0]);
+    last_velX = 0;
+    last_velY = 0;
+    last_xPos = mouse_position.x;
+    last_yPos = mouse_position.y;
+    last_t = performance.now();
+}
+
+function initKalman() {
+    A = $M([
+        [1, 0, 1, 0],
+        [0, 1, 0, 1],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1]
+    ]);
+
+    B = $M([
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1]
+    ]);
+
+    H = $M([
+        [1, 0, 1, 0],
+        [0, 1, 0, 1],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+    ]);
+
+    Q = $M([
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0.1, 0],
+        [0, 0, 0, 0.1]
+    ]);
+
+    R = $M([
+        [100, 0, 0, 0],
+        [0, 100, 0, 0],
+        [0, 0, 1000, 0],
+        [0, 0, 0, 1000]
+    ]);
+
+    resetKalman();
+
+    last_P = $M([
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+    ]);
+
+    initKalmanFilter = true;
+}
+
+function updateKalman() {
+    cur_xPos = mouse_position.x;
+    cur_yPos = mouse_position.y;
+
+    var now = performance.now();
+    var dt = now - last_t;
+
+    if (dt == 0)
+        return;
+
+    last_t = now;
+
+    //update A and H to take into account dt
+    A.elements[0][2] = dt;
+    A.elements[1][3] = dt;
+
+    /*** KALMAN FILTER CODE ***/
+    var velX = (cur_xPos - last_x.elements[0]) / dt;
+    var velY = (cur_yPos - last_x.elements[1]) / dt;
+
+    /*var velX = (cur_xPos - last_xPos)/dt;
+    var velY = (cur_yPos - last_yPos)/dt;
+    var accX = (velX - last_velX)/dt;
+    var accY = (velY - last_velY)/dt;
+  	
+    last_xPos = cur_xPos ;
+    last_yPos = cur_yPos ;
+    last_velX = velX ;
+    last_velY = velY ;*/
+
+    var measurement = $V([cur_xPos, cur_yPos, velX, velY]);
+    //var measurement = $V([velX, velY, accX, accY]);
+    var control = $V([0, 0, 0, 0]); // TODO - adjust
+
+    // prediction
+    var x = (A.multiply(last_x)).add(B.multiply(control));
+    var P = ((A.multiply(last_P)).multiply(A.transpose())).add(Q);
+
+    // correction
+    var S = ((H.multiply(P)).multiply(H.transpose())).add(R);
+    var K = (P.multiply(H.transpose())).multiply(S.inverse());
+    var y = measurement.subtract(H.multiply(x));
+
+    var cur_x = x.add(K.multiply(y));
+    var cur_P = ((Matrix.I(4)).subtract(K.multiply(H))).multiply(P);
+
+    last_x = cur_x;
+    last_P = cur_P;
+    /**************************/
+
+    //return ;
+
+    //console.log("mouse_position: x=", mouse_position.x, "y=", mouse_position.y) ;
+    //console.log("K:", K) ;
+    //console.log("Kalman Filter X=", cur_x.elements[0], "Y=",cur_x.elements[1], "Vx=", cur_x.elements[2], "Vy=",cur_x.elements[3]) ;
+    //console.log("Kalman Filter Vx=", cur_x.elements[0], "Vy=",cur_x.elements[1], "Ax=", cur_x.elements[2], "Ay=",cur_x.elements[3]) ;
+
+    return;
+
+    /*mouse_position.x = cur_x.elements[0];
+    mouse_position.y = cur_x.elements[1];
+  	
+    return;
+  	
+    //extrapolation
+    var predX = last_x;
+    var count = 5;//how many frames ahead
+  	
+    for (var i = 0; i < count; i++)
+      predX = (A.multiply(predX)).add(B.multiply(control));
+  	
+    console.log("extrapolation: x=", predX.elements[0], "y=", predX.elements[1]);
+  	
+    mouse_position.x = predX.elements[0];
+    mouse_position.y = predX.elements[1];*/
 }
