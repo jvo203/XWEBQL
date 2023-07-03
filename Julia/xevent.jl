@@ -299,13 +299,35 @@ function getSpectrum(xobject::XDataSet, dx::Integer)
     return (spectrum, E_min, E_max)
 end
 
-function getSpectrum(xobject::XDataSet, E_min::Float32, E_max::Float32, x1::Integer, x2::Integer, y1::Integer, y2::Integer, dx::Integer)
-    energy = log.(xobject.energy)
+function getSquareSpectrum(xobject::XDataSet, E_min::Float32, E_max::Float32, x1::Integer, x2::Integer, y1::Integer, y2::Integer, dx::Integer)
     ΔE = (E_max - E_min) / dx
 
     println("E_min = ", E_min)
     println("E_max = ", E_max)
     println("ΔE = ", ΔE)
+
+    # find X indices between x1 and x2
+    x = xobject.x
+    y = xobject.y
+
+    x_indices = findall(x -> x1 <= x <= x2, x)
+    y_indices = findall(y -> y1 <= y <= y2, y)
+
+    println("x_indices: ", x_indices)
+    println("y_indices: ", y_indices)
+
+    # take an intersection of the two
+    indices = intersect(x_indices, y_indices)
+
+    println("indices: ", indices)
+
+    # get the log-energy values
+    energy = log.(xobject.energy[indices])
+
+    h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
+    spectrum = bincounts(h)
+
+    return spectrum
 end
 
 function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::Integer, y1::Integer, y2::Integer, E1::Float32, E2::Float32, NAXIS3::Integer)
@@ -389,6 +411,8 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     # CRPIX2 = CRPIX2 - y1 + 1
 
     # re-base the axes 1 and 2
+    OFFSETX = x1 - 1
+    OFFSETY = y1 - 1
 
     # get the ra at x1    
     ra = CRVAL1 + (x1 - CRPIX1) * CDELT1
@@ -590,6 +614,8 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
         "CRPIX3" => CRPIX3,
         "CUNIT3" => CUNIT3,
         "CTYPE3" => CTYPE3,
+        "OFFSETX" => OFFSETX,
+        "OFFSETY" => OFFSETY,
         "BUNIT" => BUNIT,
         "BTYPE" => BTYPE,
         "RA_OBJ" => RA_OBJ,
@@ -755,7 +781,7 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
 
     println("dimx: $dimx, dimy: $dimy")
 
-    @time getSpectrum(xobject, energy_start, energy_end, x1, x2, y1, y2, 512)
+    @time getSquareSpectrum(xobject, energy_start, energy_end, x1, x2, y1, y2, 512)
 
     return (Nothing, Nothing)
 end
