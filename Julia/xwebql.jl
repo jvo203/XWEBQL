@@ -941,9 +941,9 @@ function ws_coroutine(ws, ids)
                 error("$datasetid: no events found.")
             end
 
-            #elapsed =
-            #    @elapsed viewport, spectrum = getViewportSpectrum(fits_object, req)
-            #elapsed *= 1000.0 # [ms]
+            elapsed =
+                @elapsed viewport, spectrum = getViewportSpectrum(xobject, req)
+            elapsed *= 1000.0 # [ms]
 
             #=Threads.@spawn begin
                 if viewport != Nothing

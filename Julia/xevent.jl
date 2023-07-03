@@ -693,3 +693,41 @@ function write_html_header(io::IO, hdr::FITSHeader)
         i != n && println(io, "<br/>") # HTML line break
     end
 end
+
+function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
+    x1 = req["x1"]
+    x2 = req["x2"]
+    y1 = req["y1"]
+    y2 = req["y2"]
+
+    image = req["image"]
+    width = req["width"]
+    height = req["height"]
+    dx = req["dx"]
+
+    println("x1: ", x1)
+    println("x2: ", x2)
+    println("y1: ", y1)
+    println("y2: ", y2)
+
+    println("image: ", image)
+    println("width: ", width)
+    println("height: ", height)
+    println("dx: ", dx)
+
+    quality::Quality = medium # by default use medium quality
+    try
+        quality = eval(Meta.parse(req["quality"]))
+    catch _
+    end
+
+    println("quality: ", quality)
+
+    frame_start = Float64(req["frame_start"])
+    frame_end = Float64(req["frame_end"])
+
+    println("frame_start: ", frame_start)
+    println("frame_end: ", frame_end)
+
+    return (Nothing, Nothing)
+end
