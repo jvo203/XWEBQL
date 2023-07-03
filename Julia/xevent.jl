@@ -330,6 +330,34 @@ function getSquareSpectrum(xobject::XDataSet, E_min::Float32, E_max::Float32, x1
     return spectrum
 end
 
+function getSquareSpectrum2(xobject::XDataSet, E_min::Float32, E_max::Float32, x1::Integer, x2::Integer, y1::Integer, y2::Integer, dx::Integer)
+    ΔE = (E_max - E_min) / dx
+
+    println("E_min = ", E_min)
+    println("E_max = ", E_max)
+    println("ΔE = ", ΔE)
+
+    # find X indices between x1 and x2
+    x = xobject.x
+    y = xobject.y
+
+    # make xy a vector of tuples (x,y)
+    xy = [(x[i], y[i]) for i in 1:length(x)]
+
+    println("size(xy) = ", size(xy))
+
+    indices = findall(xy -> x1 <= xy[1] <= x2 && y1 <= xy[2] <= y2, xy)
+    println("#indices: ", length(indices))
+
+    # get the log-energy values
+    energy = log.(xobject.energy[indices])
+
+    h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
+    spectrum = bincounts(h)
+
+    return spectrum
+end
+
 function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::Integer, y1::Integer, y2::Integer, E1::Float32, E2::Float32, NAXIS3::Integer)
     global SERVER_STRING
 
@@ -782,6 +810,7 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
     println("dimx: $dimx, dimy: $dimy")
 
     @time getSquareSpectrum(xobject, energy_start, energy_end, x1, x2, y1, y2, 512)
+    @time getSquareSpectrum2(xobject, energy_start, energy_end, x1, x2, y1, y2, 512)
 
     return (Nothing, Nothing)
 end
