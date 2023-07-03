@@ -313,13 +313,13 @@ function getSquareSpectrum(xobject::XDataSet, E_min::Float32, E_max::Float32, x1
     x_indices = findall(x -> x1 <= x <= x2, x)
     y_indices = findall(y -> y1 <= y <= y2, y)
 
-    println("x_indices: ", x_indices)
-    println("y_indices: ", y_indices)
+    println("#x_indices: ", length(x_indices))
+    println("#y_indices: ", length(y_indices))
 
     # take an intersection of the two
     indices = intersect(x_indices, y_indices)
 
-    println("indices: ", indices)
+    println("#indices: ", length(indices))
 
     # get the log-energy values
     energy = log.(xobject.energy[indices])
