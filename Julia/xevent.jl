@@ -723,11 +723,11 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
 
     println("quality: ", quality)
 
-    frame_start = Float64(req["frame_start"])
-    frame_end = Float64(req["frame_end"])
+    energy_start = Float64(req["frame_start"])
+    energy_end = Float64(req["frame_end"])
 
-    println("frame_start: ", frame_start)
-    println("frame_end: ", frame_end)
+    println("log-energy start: ", energy_start)
+    println("log-energy_end: ", energy_end)
 
     return (Nothing, Nothing)
 end
