@@ -924,6 +924,83 @@ function ws_coroutine(ws, ids)
         end
     end
 
+    viewport_requests = Channel{Dict{String,Any}}(32)
+
+    realtime = @async while true
+        try
+            req = take!(viewport_requests)
+            #println(datasetid, "::", req)
+
+            xobject = get_dataset(datasetid, XOBJECTS, XLOCK)
+
+            if xobject.id == "" || has_error(xobject)
+                error("$datasetid not found.")
+            end
+
+            if !has_events(xobject)
+                error("$datasetid: no events found.")
+            end
+
+            #elapsed =
+            #    @elapsed viewport, spectrum = getViewportSpectrum(fits_object, req)
+            #elapsed *= 1000.0 # [ms]
+
+            #=Threads.@spawn begin
+                if viewport != Nothing
+                    # send a viewport
+                    println("[getViewportSpectrum] elapsed: $elapsed [ms]")
+
+                    resp = IOBuffer()
+
+                    # the header
+                    write(resp, Float32(req["timestamp"]))
+                    write(resp, Int32(req["seq_id"]))
+                    write(resp, Int32(1)) # 0 - spectrum, 1 - viewport
+                    write(resp, Float32(elapsed))
+
+                    # the body
+                    write(resp, take!(viewport))
+
+                    put!(outgoing, resp)
+                    #if !writeguarded(ws, take!(resp))
+                    #    break
+                    #end
+                end
+
+                if spectrum != Nothing
+                    # send a spectrum
+                    println("[getViewportSpectrum] elapsed: $elapsed [ms]")
+
+                    resp = IOBuffer()
+
+                    # the header
+                    write(resp, Float32(req["timestamp"]))
+                    write(resp, Int32(req["seq_id"]))
+                    write(resp, Int32(0)) # 0 - spectrum, 1 - viewport
+                    write(resp, Float32(elapsed))
+
+                    # the body
+                    write(resp, take!(spectrum))
+
+                    put!(outgoing, resp)
+                    #if !writeguarded(ws, take!(resp))
+                    #    break
+                    #end
+                end
+            end
+            =#
+
+            update_timestamp(xobject)
+        catch e
+            if isa(e, InvalidStateException) && e.state == :closed
+                println("real-time viewport task completed")
+                break
+            else
+                println(e)
+            end
+        end
+    end
+
     while isopen(ws)
         data, = readguarded(ws)
         s = String(data)
@@ -967,6 +1044,11 @@ function ws_coroutine(ws, ids)
         try
             msg = JSON.parse(s)
             @info msg
+
+            if msg["type"] == "realtime_image_spectrum"
+                # replace!(viewport_requests, msg)
+                push!(viewport_requests, msg) # there is too much lag
+            end
         catch e
             println("ws_coroutine::$e")
             # @error "ws_coroutine::" exception = (e, catch_backtrace())
@@ -976,6 +1058,9 @@ function ws_coroutine(ws, ids)
 
     close(outgoing)
     wait(sent_task)
+
+    close(viewport_requests)
+    wait(realtime)
 
     @info "$datasetid will now close " ws
 
