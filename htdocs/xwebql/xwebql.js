@@ -5214,8 +5214,8 @@ function setup_image_selection() {
                             width: _width,
                             height: _height,
                             beam: zoom_shape,
-                            frame_start: data_band_lo,
-                            frame_end: data_band_hi,
+                            frame_start: Math.log(1000 * data_band_lo) - 0.5 * fitsData.CDELT3,
+                            frame_end: Math.log(1000 * data_band_hi) + 0.5 * fitsData.CDELT3,
                             seq_id: sent_seq_id,
                             timestamp: performance.now()
                         };
@@ -6056,8 +6056,8 @@ function imageTimeout() {
             width: _width,
             height: _height,
             beam: zoom_shape,
-            frame_start: data_band_lo,
-            frame_end: data_band_hi,
+            frame_start: Math.log(1000 * data_band_lo) - 0.5 * fitsData.CDELT3,
+            frame_end: Math.log(1000 * data_band_hi) + 0.5 * fitsData.CDELT3,
             seq_id: sent_seq_id,
             timestamp: performance.now()
         };
