@@ -3405,7 +3405,7 @@ function plot_spectrum(spectrum) {
 }
 
 function replot_y_axis() {
-    if (!displaySpectrum || optical_view)
+    if (!displaySpectrum)
         return;
 
     var svg = d3.select("#BackSVG");
@@ -5735,6 +5735,25 @@ function init_webgl_zoom_buffers() {
     } else {
         console.log("WebGL not supported by your browser, falling back onto HTML 2D Canvas (not implemented yet).");
         return;
+    }
+}
+
+function clear_webgl_viewport() {
+    var canvas = document.getElementById('ViewportCanvas');
+    canvas.style.display = "block";// a hack needed by Apple Safari
+
+    if (webgl2) {
+        var gl = canvas.getContext("webgl2");
+
+        // Clear the canvas
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+    } else if (webgl1) {
+        var gl = canvas.getContext("webgl");
+
+        // Clear the canvas
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
     }
 }
 

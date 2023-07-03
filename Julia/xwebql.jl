@@ -281,7 +281,7 @@ function exitFunc(exception=false)
     remove_symlinks()
 
     try
-        #println("WebSocket Server .out channel: ", string(take!(ws_server.out)))
+        println("WebSocket Server .out channel: ", string(take!(ws_server.out)))
         close(ws_server)
     catch e
         println(e)
@@ -883,6 +883,103 @@ println(
 
 # Sockets.localhost or Sockets.IPv4(0)
 host = Sockets.IPv4(0)
+
+function ws_coroutine(ws, ids)
+    global XOBJECTS, XLOCK
+
+    datasetid = String(ids[1])
+
+    begin
+        xobject = get_dataset(datasetid, XOBJECTS, XLOCK)
+
+        if xobject.id == "" || has_error(xobject)
+            @error "$datasetid not found, closing a websocket coroutine."
+            writeguarded(ws, "[close]")
+            return
+        end
+    end
+
+    @info "Started a websocket coroutine for $datasetid" ws
+
+    # an outgoing queue for messages to be sent
+    outgoing = RemoteChannel(() -> Channel{Any}(32))
+    sent_task = @async while true
+        try
+            msg = take!(outgoing)
+
+            if typeof(msg) == IOBuffer
+                msg = take!(msg)
+            end
+
+            if !writeguarded(ws, msg)
+                break
+            end
+        catch e
+            if isa(e, InvalidStateException) && e.state == :closed
+                println("sent task completed")
+                break
+            else
+                println(e)
+            end
+        end
+    end
+
+    while isopen(ws)
+        data, = readguarded(ws)
+        s = String(data)
+
+        if s == ""
+            break
+        end
+
+        # ping back heartbeat messages
+        if occursin("[heartbeat]", s)
+            # @info "[ws] heartbeat"
+
+            xobject = get_dataset(datasetid, XOBJECTS, XLOCK)
+
+            if xobject.id == "" || has_error(xobject)
+                @error "$datasetid not found, closing a websocket coroutine."
+                writeguarded(ws, "[close]")
+                break
+            end
+
+            if has_error(xobject)
+                @error "$datasetid: an error detected, closing a websocket coroutine."
+                writeguarded(ws, "[close]")
+                break
+            end
+
+            update_timestamp(xobject)
+
+            try
+                put!(outgoing, s)
+            catch e
+                println(e)
+            finally
+                continue
+            end
+        end
+
+        #@info "Received: $s"
+
+        # convert the message into JSON
+        try
+            msg = JSON.parse(s)
+            @info msg
+        catch e
+            println("ws_coroutine::$e")
+            # @error "ws_coroutine::" exception = (e, catch_backtrace())
+        end
+
+    end
+
+    close(outgoing)
+    wait(sent_task)
+
+    @info "$datasetid will now close " ws
+
+end
 
 function ws_gatekeeper(req, ws)
     orig = WebSockets.origin(req)
