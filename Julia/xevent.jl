@@ -723,6 +723,17 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
 
     println("quality: ", quality)
 
+    beam = eval(Meta.parse(uppercase(req["beam"])))
+    println("beam: ", beam)
+
+    # calculate the centre and squared radius
+    cx = abs(x1 + x2) >> 1
+    cy = abs(y1 + y2) >> 1
+    r = min(abs(x2 - x1) >> 1, abs(y2 - y1) >> 1)
+    r2 = r * r
+
+    println("cx: $cx, cy: $cy, r: $r, r2: $r2")
+
     energy_start = Float64(req["frame_start"])
     energy_end = Float64(req["frame_end"])
 
