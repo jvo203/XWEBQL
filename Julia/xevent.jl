@@ -729,5 +729,11 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
     println("log-energy start: ", energy_start)
     println("log-energy_end: ", energy_end)
 
+    # viewport dimensions
+    dimx = abs(x2 - x1 + 1)
+    dimy = abs(y2 - y1 + 1)
+
+    println("dimx: $dimx, dimy: $dimy")
+
     return (Nothing, Nothing)
 end
