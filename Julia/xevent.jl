@@ -299,6 +299,15 @@ function getSpectrum(xobject::XDataSet, dx::Integer)
     return (spectrum, E_min, E_max)
 end
 
+function getSpectrum(xobject::XDataSet, E_min::Float32, E_max::Float32, x1::Integer, x2::Integer, y1::Integer, y2::Integer, dx::Integer)
+    energy = log.(xobject.energy)
+    ΔE = (E_max - E_min) / dx
+
+    println("E_min = ", E_min)
+    println("E_max = ", E_max)
+    println("ΔE = ", ΔE)
+end
+
 function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::Integer, y1::Integer, y2::Integer, E1::Float32, E2::Float32, NAXIS3::Integer)
     global SERVER_STRING
 
@@ -734,8 +743,8 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
 
     println("cx: $cx, cy: $cy, r: $r, r2: $r2")
 
-    energy_start = Float64(req["frame_start"])
-    energy_end = Float64(req["frame_end"])
+    energy_start = Float32(req["frame_start"])
+    energy_end = Float32(req["frame_end"])
 
     println("log-energy start: ", energy_start)
     println("log-energy_end: ", energy_end)
@@ -745,6 +754,8 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
     dimy = abs(y2 - y1 + 1)
 
     println("dimx: $dimx, dimy: $dimy")
+
+    @time getSpectrum(xobject, energy_start, energy_end, x1, x2, y1, y2, 512)
 
     return (Nothing, Nothing)
 end
