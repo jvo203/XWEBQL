@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-06-30.0";
+    return "JS2023-07-03.0";
 }
 
 function uuidv4() {
@@ -1030,6 +1030,7 @@ async function mainRenderer() {
         wsConn = null;
 
         dataset_timeout = -1;
+        open_websocket_connection(datasetId);
         fetch_image_spectrum(datasetId, true, false);
 
     };
@@ -5144,7 +5145,7 @@ function setup_image_selection() {
             if (elapsed > fpsInterval + computed && !mousedown)//+ latency, computed
             {
                 then = now - (elapsed % fpsInterval);
-                //ALMAWS.send('[mouse] t=' + now + ' x=' + offset[0] + ' y=' + offset[1]);
+                //XWS.send('[mouse] t=' + now + ' x=' + offset[0] + ' y=' + offset[1]);
 
                 //console.log("refresh interval: " + elapsed.toFixed(3) + " [ms]", "fps = ", Math.round(1000 / elapsed));
 
@@ -6078,4 +6079,194 @@ function imageTimeout() {
     //ctx.clearRect(px, py, zoomed_size, zoomed_size);
 
     //console.log("imageTimeout::END");
+}
+
+async function open_websocket_connection(_datasetId, index) {
+    if ("WebSocket" in window) {
+        // make a unique session id
+        var session_id = uuidv4();
+
+        // open a websocket connection
+        var loc = window.location, ws_uri;
+        var prot = loc.protocol;
+
+        if (prot !== "https:") {
+            ws_uri = "ws://" + loc.hostname + ':' + WS_PORT;
+        } else {
+            ws_uri = "wss://" + loc.hostname;
+        }
+
+        // a JVO override (a special exception)
+        if (loc.hostname.indexOf("jvo.") != -1 || loc.hostname.indexOf("jvo-dev.") != -1) {
+            ws_uri = "wss://" + loc.hostname;
+        }
+
+        ws_uri += ROOT_PATH + "websocket/" + encodeURIComponent(_datasetId) + "/" + session_id;
+
+        {
+            d3.select("#ping")
+                .attr("fill", "orange")
+                .attr("opacity", 0.8);
+
+            XWS = new ReconnectingWebSocket(ws_uri, "", { binaryType: 'arraybuffer' });
+            XWS.binaryType = 'arraybuffer';
+
+            XWS.addEventListener("open", function (evt) {
+                d3.select("#ping")
+                    .attr("fill", "green")
+                    .attr("opacity", 0.8);
+
+                XWS.binaryType = 'arraybuffer';
+
+                //let log = wasm_supported ? "WebAssembly is supported" : "WebAssembly is not supported";
+                //XWS.send('[debug] ' + log);
+
+                /*var rect = document.getElementById('mainDiv').getBoundingClientRect();
+                var width = rect.width - 20;
+                var height = rect.height - 20;
+                XWS.send('image/' + width + '/' + height);*/
+
+                if (index == va_count) {
+                    send_ping();
+                }
+            });
+
+            XWS.addEventListener("error", function (evt) {
+
+                d3.select("#ping")
+                    .attr("fill", "red")
+                    .attr("opacity", 0.8);
+
+                d3.select("#latency").text('websocket conn. error');
+            });
+
+            XWS.addEventListener("close", function (evt) { });
+
+            XWS.addEventListener("message", function (evt) {
+                var t = performance.now();
+                var received_msg = evt.data;
+
+                if (evt.data instanceof ArrayBuffer) {
+                    var dv = new DataView(received_msg);
+
+                    latency = performance.now() - dv.getFloat32(0, endianness);
+                    // console.log("[ws] latency = " + latency.toFixed(1) + " [ms]");
+                    recv_seq_id = dv.getUint32(4, endianness);
+                    var type = dv.getUint32(8, endianness);
+
+                }
+
+                if (typeof evt.data === "string") {
+                    var cmd = "[close]";
+                    var pos = received_msg.indexOf(cmd);
+
+                    if (pos >= 0) {
+                        if (XWS != null)
+                            XWS.close();
+
+                        d3.select("#ping")
+                            .attr("fill", "red")
+                            .attr("opacity", 0.8);
+
+                        d3.select("#latency").text('60 min. inactive session time-out');
+
+                        show_timeout();
+
+                        return;
+                    }
+                }
+
+                if (typeof evt.data === "string") {
+                    var cmd = "[heartbeat]";
+                    var pos = received_msg.indexOf(cmd);
+
+                    if (pos >= 0) {
+                        setTimeout(send_ping, 1000 + ping_latency);
+
+                        var previous_t = parseFloat(received_msg.substring(pos + cmd.length));
+
+                        ping_latency = (t - previous_t);
+
+                        if (ping_latency > 0) {
+                            if (realtime_spectrum) {
+                                fps = 1000 / ping_latency;
+                                fps = Math.min(30, fps);
+                                fps = Math.max(10, fps);
+                            }
+                            else
+                                fps = 30;
+
+                            fpsInterval = 1000 / fps;
+                        }
+
+                        //console.log("ping latency = " + ping_latency.toFixed(1) + " [ms]" + ' fps: ' + fps.toFixed()) ;                   
+
+                        if (ping_latency >= 1)
+                            d3.select("#latency").text(`${ping_latency.toFixed()} ms ${fps.toFixed()} fps`);
+                        else
+                            d3.select("#latency").text(`${ping_latency.toFixed(1)} ms ${fps.toFixed()} fps`);
+
+                        return;
+                    }
+
+                    try {
+                        var data = JSON.parse(received_msg);
+
+                        if (data.type == "init_video") {
+                            //console.log(data);
+
+                            var width = data.width;
+                            var height = data.height;
+
+                            if (videoFrame == null) {
+                                let imageFrame = imageContainer;
+
+                                if (imageFrame != null) {
+                                    let tmp = imageFrame.image_bounding_dims;
+                                    let dims = { x1: tmp.x1, y1: height - tmp.y1 - tmp.height, width: tmp.width, height: tmp.height };
+
+                                    videoFrame = {
+                                        width: width,
+                                        height: height,
+                                        padded_width: data.padded_width,
+                                        padded_height: data.padded_height,
+                                        img: null,
+                                        scaleX: imageFrame.width / width,
+                                        scaleY: imageFrame.height / height,
+                                        image_bounding_dims: dims,
+                                        //image_bounding_dims: imageFrame.image_bounding_dims,
+                                        //image_bounding_dims: {x1: 0, y1: 0, width: width, height: height},
+                                    }
+                                }
+                            }
+
+                            try {
+                                //init the HEVC decoder		
+                                Module.hevc_init_frame(1, width, height);
+                            } catch (e) {
+                                //console.log(e);
+                            };
+
+                            // hide the contour plot
+                            if (displayContours)
+                                document.getElementById("ContourSVG").style.display = "none";
+                        }
+
+                        return;
+                    }
+                    catch (e) {
+                        console.error(received_msg, e);
+                    }
+                }
+
+            });
+
+
+            wsConn = XWS;
+
+        }
+    } else {
+        // The browser doesn't support WebSocket
+        alert("WebSocket NOT supported by your Browser!");
+    }
 }
