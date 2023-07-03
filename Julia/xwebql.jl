@@ -907,7 +907,7 @@ function ws_gatekeeper(req, ws)
 
             @info "\n[ws] datasetid $(ids[1])"
 
-            # ws_coroutine(ws, ids)
+            ws_coroutine(ws, ids)
         else
             @info "[ws] Missing datasetid"
         end

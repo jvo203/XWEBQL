@@ -623,6 +623,13 @@ function show_heartbeat() {
         .text("");
 }
 
+function send_ping() {
+    if (wsConn != null) {
+        t = performance.now();
+        wsConn.send('[heartbeat] ' + t);
+    }
+}
+
 function poll_heartbeat() {
     var xmlhttp = new XMLHttpRequest();
     var url = 'heartbeat/' + performance.now();
@@ -6126,9 +6133,7 @@ async function open_websocket_connection(_datasetId, index) {
                 var height = rect.height - 20;
                 XWS.send('image/' + width + '/' + height);*/
 
-                if (index == va_count) {
-                    send_ping();
-                }
+                send_ping();
             });
 
             XWS.addEventListener("error", function (evt) {
