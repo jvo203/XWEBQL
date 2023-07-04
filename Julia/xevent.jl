@@ -835,7 +835,13 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
 
     @time getSquareSpectrum(xobject, energy_start, energy_end, x1, x2, y1, y2, 512)
     @time getSquareSpectrum2(xobject, energy_start, energy_end, x1, x2, y1, y2, 512)
-    @time getSquareSpectrum3(xobject, energy_start, energy_end, x1, x2, y1, y2, 512)
+    @time spectrum = getSquareSpectrum3(xobject, energy_start, energy_end, x1, x2, y1, y2, 512)
 
-    return (Nothing, Nothing)
+    # optionally downsample the spectrum
+    if length(spectrum) > (dx >> 1)
+        println("downsampling spectrum from $(length(spectrum)) to $(dx >> 1)")
+        spectrum = imresize(spectrum, (dx >> 1,))
+    end
+
+    return (Nothing, spectrum)
 end
