@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-07-03.0";
+    return "JS2023-07-04.0";
 }
 
 function uuidv4() {
@@ -3453,12 +3453,11 @@ function replot_y_axis() {
     }
 
     var interval = dmax - dmin;
-
     var range = get_axes_range(width, height);
 
-    var yR = d3.scaleLinear()
+    var yR = d3.scaleLog()
         .range([range.yMax, range.yMin])
-        .domain([dmin - get_spectrum_margin() * interval, dmax + get_spectrum_margin() * interval]);
+        .domain([dmin, dmax + get_spectrum_margin() * interval]);
 
     var yAxis = d3.axisRight(yR)
         .tickSizeOuter([3])
@@ -3491,10 +3490,7 @@ function replot_y_axis() {
         .call(yAxis);
 
     //y-axis label
-    var yLabel = "Integrated";
-
-    if (intensity_mode == "mean")
-        yLabel = "Mean";
+    var yLabel = "EVENTS";
 
     var bunit = '';
     if (fitsData.BUNIT != '') {
@@ -3503,7 +3499,7 @@ function replot_y_axis() {
         bunit = "[" + bunit + "]";
     }
 
-    d3.select("#ylabel").text(yLabel + ' ' + fitsData.BTYPE.trim() + " " + bunit);
+    d3.select("#ylabel").text(yLabel + " " + bunit);
 }
 
 function largestTriangleThreeBuckets(data, threshold) {
