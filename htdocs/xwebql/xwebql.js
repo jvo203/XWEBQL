@@ -6170,7 +6170,7 @@ async function open_websocket_connection(_datasetId, index) {
                     var dv = new DataView(received_msg);
 
                     latency = performance.now() - dv.getFloat32(0, endianness);
-                    // console.log("[ws] latency = " + latency.toFixed(1) + " [ms]");
+                    console.log("[ws] latency = " + latency.toFixed(1) + " [ms]");
                     recv_seq_id = dv.getUint32(4, endianness);
                     var type = dv.getUint32(8, endianness);
 

@@ -871,5 +871,19 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
         spectrum = imresize(spectrum, (dx >> 1,))
     end
 
-    return (Nothing, spectrum)
+    spec_resp = IOBuffer()
+
+    # compress spectrum with ZFP
+    prec = SPECTRUM_MEDIUM_PRECISION
+
+    if image
+        prec = SPECTRUM_HIGH_PRECISION
+    end
+
+    compressed_spectrum = zfp_compress(spectrum, precision=prec)
+
+    write(spec_resp, Int32(length(spectrum)))
+    write(spec_resp, compressed_spectrum)
+
+    return (Nothing, spec_resp)
 end
