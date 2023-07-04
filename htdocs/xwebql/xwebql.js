@@ -3378,7 +3378,7 @@ function plot_spectrum(spectrum) {
     ctx.closePath();
     ctx.restore();
 
-    //plot a zero line        
+    //plot a zero line    
     ctx.save();
     ctx.beginPath();
 
