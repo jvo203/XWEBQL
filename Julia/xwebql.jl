@@ -945,7 +945,7 @@ function ws_coroutine(ws, ids)
                 @elapsed viewport, spectrum = getViewportSpectrum(xobject, req)
             elapsed *= 1000.0 # [ms]
 
-            #=Threads.@spawn begin
+            Threads.@spawn begin
                 if viewport != Nothing
                     # send a viewport
                     println("[getViewportSpectrum] elapsed: $elapsed [ms]")
@@ -962,9 +962,6 @@ function ws_coroutine(ws, ids)
                     write(resp, take!(viewport))
 
                     put!(outgoing, resp)
-                    #if !writeguarded(ws, take!(resp))
-                    #    break
-                    #end
                 end
 
                 if spectrum != Nothing
@@ -983,12 +980,8 @@ function ws_coroutine(ws, ids)
                     write(resp, take!(spectrum))
 
                     put!(outgoing, resp)
-                    #if !writeguarded(ws, take!(resp))
-                    #    break
-                    #end
                 end
             end
-            =#
 
             update_timestamp(xobject)
         catch e
