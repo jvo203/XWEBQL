@@ -299,7 +299,7 @@ function getSpectrum(xobject::XDataSet, dx::Integer)
     return (spectrum, E_min, E_max)
 end
 
-function getSquareSpectrum(xobject::XDataSet, E_min::Float32, E_max::Float32, x1::Integer, x2::Integer, y1::Integer, y2::Integer, dx::Integer)
+function getSquareSpectrum1(xobject::XDataSet, E_min::Float32, E_max::Float32, x1::Integer, x2::Integer, y1::Integer, y2::Integer, dx::Integer)
     ΔE = (E_max - E_min) / dx
 
     println("E_min = ", E_min)
@@ -358,7 +358,7 @@ function getSquareSpectrum2(xobject::XDataSet, E_min::Float32, E_max::Float32, x
     return spectrum
 end
 
-function getSquareSpectrum3(xobject::XDataSet, E_min::Float32, E_max::Float32, x1::Integer, x2::Integer, y1::Integer, y2::Integer, dx::Integer)
+function getSquareSpectrum(xobject::XDataSet, E_min::Float32, E_max::Float32, x1::Integer, x2::Integer, y1::Integer, y2::Integer, dx::Integer)
     ΔE = (E_max - E_min) / dx
 
     println("E_min = ", E_min)
@@ -371,6 +371,30 @@ function getSquareSpectrum3(xobject::XDataSet, E_min::Float32, E_max::Float32, x
 
     # make a mask
     mask = [x1 <= x[i] <= x2 && y1 <= y[i] <= y2 for i in 1:length(x)]
+
+    # get the log-energy values
+    energy = log.(xobject.energy[mask])
+    println("#energy: ", length(energy))
+
+    h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
+    spectrum = bincounts(h)
+
+    return spectrum
+end
+
+function getCircleSpectrum(xobject::XDataSet, E_min::Float32, E_max::Float32, cx::Integer, cy::Integer, r2::Integer, dx::Integer)
+    ΔE = (E_max - E_min) / dx
+
+    println("E_min = ", E_min)
+    println("E_max = ", E_max)
+    println("ΔE = ", ΔE)
+
+    # find X indices between x1 and x2
+    x = xobject.x
+    y = xobject.y
+
+    # make a mask
+    mask = [(x[i] - cx)^2 + (y[i] - cy)^2 <= r2 for i in 1:length(x)]
 
     # get the log-energy values
     energy = log.(xobject.energy[mask])
@@ -782,6 +806,8 @@ function write_html_header(io::IO, hdr::FITSHeader)
 end
 
 function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
+    local spectrum
+
     x1 = req["x1"]
     x2 = req["x2"]
     y1 = req["y1"]
@@ -833,9 +859,11 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
 
     println("dimx: $dimx, dimy: $dimy")
 
-    @time getSquareSpectrum(xobject, energy_start, energy_end, x1, x2, y1, y2, 512)
-    @time getSquareSpectrum2(xobject, energy_start, energy_end, x1, x2, y1, y2, 512)
-    @time spectrum = getSquareSpectrum3(xobject, energy_start, energy_end, x1, x2, y1, y2, 512)
+    if beam == CIRCLE
+        spectrum = getCircleSpectrum(xobject, energy_start, energy_end, cx, cy, r2, 512)
+    elseif beam == SQUARE
+        spectrum = getSquareSpectrum3(xobject, energy_start, energy_end, x1, x2, y1, y2, 512)
+    end
 
     # optionally downsample the spectrum
     if length(spectrum) > (dx >> 1)
