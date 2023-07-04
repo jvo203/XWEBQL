@@ -1251,7 +1251,6 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
                             let elapsed = Math.round(performance.now() - start);
 
                             console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
-                            console.log("spectrum: ", spectrum);
                         } catch (_) {
                             has_spectrum = false;
                         }
@@ -6193,7 +6192,7 @@ async function open_websocket_connection(_datasetId, index) {
                                 const spectrum = Module.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
                                 let elapsed = Math.round(performance.now() - start);
 
-                                console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
+                                // console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
 
                                 if (spectrum.length > 0) {
                                     if (!windowLeft) {

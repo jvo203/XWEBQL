@@ -325,7 +325,7 @@ function getSquareSpectrum1(xobject::XDataSet, E_min::Float32, E_max::Float32, x
     energy = log.(xobject.energy[indices])
 
     h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
-    spectrum = bincounts(h)
+    spectrum = Float32.(bincounts(h))
 
     return spectrum
 end
@@ -353,7 +353,7 @@ function getSquareSpectrum2(xobject::XDataSet, E_min::Float32, E_max::Float32, x
     energy = log.(xobject.energy[indices])
 
     h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
-    spectrum = bincounts(h)
+    spectrum = Float32.(bincounts(h))
 
     return spectrum
 end
@@ -377,7 +377,7 @@ function getSquareSpectrum(xobject::XDataSet, E_min::Float32, E_max::Float32, x1
     println("#energy: ", length(energy))
 
     h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
-    spectrum = bincounts(h)
+    spectrum = Float32.(bincounts(h))
 
     return spectrum
 end
@@ -401,7 +401,7 @@ function getCircleSpectrum(xobject::XDataSet, E_min::Float32, E_max::Float32, cx
     println("#energy: ", length(energy))
 
     h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
-    spectrum = bincounts(h)
+    spectrum = Float32.(bincounts(h))
 
     return spectrum
 end
@@ -862,7 +862,7 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
     if beam == CIRCLE
         spectrum = getCircleSpectrum(xobject, energy_start, energy_end, cx, cy, r2, 512)
     elseif beam == SQUARE
-        spectrum = getSquareSpectrum3(xobject, energy_start, energy_end, x1, x2, y1, y2, 512)
+        spectrum = getSquareSpectrum(xobject, energy_start, energy_end, x1, x2, y1, y2, 512)
     end
 
     # optionally downsample the spectrum
