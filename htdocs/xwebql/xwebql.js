@@ -4659,7 +4659,7 @@ function setup_image_selection() {
                     plot_spectrum(spectrum);
                     replot_y_axis();
 
-                    last_spectrum = data;
+                    last_spectrum = spectrum;
                 }
 
             }
@@ -6170,9 +6170,45 @@ async function open_websocket_connection(_datasetId, index) {
                     var dv = new DataView(received_msg);
 
                     latency = performance.now() - dv.getFloat32(0, endianness);
-                    console.log("[ws] latency = " + latency.toFixed(1) + " [ms]");
+                    // console.log("[ws] latency = " + latency.toFixed(1) + " [ms]");
                     recv_seq_id = dv.getUint32(4, endianness);
                     var type = dv.getUint32(8, endianness);
+
+                    //spectrum
+                    if (type == 0) {
+                        computed = dv.getFloat32(12, endianness);
+
+                        var offset = 16;
+                        var spectrum_len = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        var frame = new Uint8Array(received_msg, offset);
+                        // console.log("computed:", computed, "spectrum length:", spectrum_len, "frame.length:", frame.length);
+
+                        // FPZIP decoder part				
+                        Module.ready
+                            .then(_ => {
+                                let start = performance.now();
+                                var res = Module.decompressZFPspectrum(spectrum_len, frame);
+                                const spectrum = Module.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
+                                let elapsed = Math.round(performance.now() - start);
+
+                                console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
+
+                                if (spectrum.length > 0) {
+                                    if (!windowLeft) {
+                                        spectrum_stack.push({ spectrum: spectrum, id: recv_seq_id });
+                                        // console.log("spectrum_stack length:", spectrum_stack.length);
+                                    };
+                                }
+
+                            })
+                            .catch(e => console.error(e));
+
+                        //console.log("[ws] computed = " + computed.toFixed(1) + " [ms]" + " length: " + length + " spectrum length:" + spectrum.length + " spectrum: " + spectrum);
+
+                        return;
+                    }
 
                 }
 
