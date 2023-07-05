@@ -945,11 +945,11 @@ function ws_coroutine(ws, ids)
                 @elapsed viewport, spectrum = getViewportSpectrum(xobject, req)
             elapsed *= 1000.0 # [ms]
 
+            println("[getViewportSpectrum] elapsed: $elapsed [ms]")
+
             Threads.@spawn begin
                 if viewport != Nothing
-                    # send a viewport
-                    println("[getViewportSpectrum] elapsed: $elapsed [ms]")
-
+                    # send a viewport                    
                     resp = IOBuffer()
 
                     # the header
@@ -966,8 +966,6 @@ function ws_coroutine(ws, ids)
 
                 if spectrum != Nothing
                     # send a spectrum
-                    println("[getViewportSpectrum] elapsed: $elapsed [ms]")
-
                     resp = IOBuffer()
 
                     # the header
