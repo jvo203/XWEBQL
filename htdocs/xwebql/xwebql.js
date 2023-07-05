@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-07-04.0";
+    return "JS2023-07-05.0";
 }
 
 function uuidv4() {
@@ -2945,43 +2945,12 @@ function setup_axes() {
         .range([range.yMax, range.yMin])
         .domain([dmin, dmax + get_spectrum_margin() * interval]);
 
-    var iAxis = d3.axisTop(iR)
-        .tickSizeOuter([3])
-        .ticks(7);
-
     var xAxis = d3.axisTop(xR)
         .tickSizeOuter([3])
         .ticks(7);
-    /*.tickFormat(function(d) {
-      //limit the number of decimal digits shown
-      return parseFloat(d.toPrecision(7)) ;
-    });*/
-    /*.tickFormat(function(d) {var n ;
-           if(fitsData.CDELT3 > 0)
-             n = d * (fitsData.depth-1) + 1 ;
-           else
-             n = (1-d) * (fitsData.depth-1) + 1 ;
-           
-           var freq = fitsData.CRVAL3+fitsData.CDELT3*(n-fitsData.CRPIX3) ;
-           freq /= 1e9 ;//convert from Hz to GHz
-           return freq.toPrecision(6) ;
-    });*/
 
     var yAxis = d3.axisRight(yR)
-        .tickSizeOuter([3])
-        .tickFormat(function (d) {
-            var number;
-
-            if (Math.abs(d) <= 0.001 || Math.abs(d) >= 1000)
-                number = d.toExponential();
-            else
-                number = d;
-
-            if (Math.abs(d) == 0)
-                number = d;
-
-            return number;
-        });
+        .tickSizeOuter([3]);
 
     //x-axis label
     //var strXLabel = '<I>E<SUB>' + 'log' + '</SUB></I> [log eV]';
@@ -3459,21 +3428,7 @@ function replot_y_axis() {
         .domain([dmin, dmax + get_spectrum_margin() * interval]);
 
     var yAxis = d3.axisRight(yR)
-        .tickSizeOuter([3])
-        //.tickFormat(function(d) { return d.toPrecision(3) ; }) ;
-        .tickFormat(function (d) {
-            var number;
-
-            if (Math.abs(d) <= 0.001 || Math.abs(d) >= 1000)
-                number = d.toExponential();
-            else
-                number = d;
-
-            if (Math.abs(d) == 0)
-                number = d;
-
-            return number;
-        });
+        .tickSizeOuter([3]);
 
     d3.select("#yaxis").remove();
     svg = d3.select("#axes");
