@@ -5997,7 +5997,7 @@ function imageTimeout() {
         var request = {
             type: "realtime_image_spectrum",
             dx: dx,
-            image: image_update,
+            image: true, // image_update,// server-side testing
             quality: image_quality,
             x1: fitsData.OFFSETX + x1 + 1,
             y1: fitsData.OFFSETY + y1 + 1,

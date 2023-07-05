@@ -358,6 +358,26 @@ function getSquareSpectrum2(xobject::XDataSet, E_min::Float32, E_max::Float32, x
     return spectrum
 end
 
+function getViewport(xobject::XDataSet, xmin::Integer, xmax::Integer, ymin::Integer, ymax::Integer, emin::Float32, emax::Float32)
+    x = xobject.x
+    y = xobject.y
+    energy = xobject.energy
+
+    # find E indices between emin and emax    
+    # e_indices = findall(x -> x1 <= energy <= x2, energy)    
+
+    # make a mask
+    mask = [xmin <= x[i] <= xmax && ymin <= y[i] <= ymax && emin <= energy[i] <= emax for i in 1:length(x)]
+
+    @time h = Hist2D((x[mask], y[mask]), (xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5), overflow=false)
+    pixels = bincounts(h)
+
+    # make a mask for the pixels
+    mask = pixels .> 0
+
+    return (pixels, mask)
+end
+
 function getSquareSpectrum(xobject::XDataSet, E_min::Float32, E_max::Float32, x1::Integer, x2::Integer, y1::Integer, y2::Integer, dx::Integer)
     ΔE = (E_max - E_min) / dx
 
@@ -806,7 +826,7 @@ function write_html_header(io::IO, hdr::FITSHeader)
 end
 
 function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
-    local spectrum
+    local pixels, mask, spectrum
 
     x1 = req["x1"]
     x2 = req["x2"]
@@ -859,6 +879,16 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
 
     println("dimx: $dimx, dimy: $dimy")
 
+    # get the image
+    if image
+        pixels, mask = getViewport(xobject, x1, x2, y1, y2, energy_start, energy_end)
+        println("pixels: ", size(pixels))
+
+        println(pixels)
+        println(mask)
+    end
+
+    # get the spectrum
     if beam == CIRCLE
         spectrum = getCircleSpectrum(xobject, energy_start, energy_end, cx, cy, r2, 512)
     elseif beam == SQUARE
