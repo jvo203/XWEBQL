@@ -827,6 +827,10 @@ end
 
 function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
     local pixels, mask, spectrum
+    local view_resp, spec_resp
+
+    view_resp = Nothing
+    spec_resp = Nothing
 
     x1 = req["x1"]
     x2 = req["x2"]
@@ -898,6 +902,10 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
         spectrum = imresize(spectrum, (dx >> 1,))
     end
 
+    if image
+        view_resp = IOBuffer()
+    end
+
     spec_resp = IOBuffer()
 
     # compress spectrum with ZFP
@@ -912,5 +920,5 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
     write(spec_resp, Int32(length(spectrum)))
     write(spec_resp, compressed_spectrum)
 
-    return (Nothing, spec_resp)
+    return (view_resp, spec_resp)
 end
