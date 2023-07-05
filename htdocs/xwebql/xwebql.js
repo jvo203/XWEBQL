@@ -6128,7 +6128,7 @@ async function open_websocket_connection(_datasetId, index) {
                     recv_seq_id = dv.getUint32(4, endianness);
                     var type = dv.getUint32(8, endianness);
 
-                    //spectrum
+                    // spectrum
                     if (type == 0) {
                         computed = dv.getFloat32(12, endianness);
 
@@ -6160,6 +6160,54 @@ async function open_websocket_connection(_datasetId, index) {
                             .catch(e => console.error(e));
 
                         //console.log("[ws] computed = " + computed.toFixed(1) + " [ms]" + " length: " + length + " spectrum length:" + spectrum.length + " spectrum: " + spectrum);
+
+                        return;
+                    }
+
+                    // viewport
+                    if (type == 1) {
+                        var offset = 16;
+                        var view_width = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        var view_height = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        var pixels_length = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        // console.log('pixels length:', pixels_length);
+
+                        var frame_pixels = new Uint8Array(received_msg, offset, pixels_length);
+                        offset += pixels_length;
+
+                        var mask_length = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        // console.log('mask length:', mask_length);
+
+                        var frame_mask = new Uint8Array(received_msg, offset, mask_length);
+                        offset += mask_length;
+
+                        // viewport
+                        {
+                            //console.log("processing an HDR viewport");
+                            let start = performance.now();
+
+                            // decompressZFP returns std::vector<float>
+                            // decompressZFPimage returns Float32Array but emscripten::typed_memory_view is buggy
+                            var res = Module.decompressZFPimage(view_width, view_height, frame_pixels);
+                            const pixels = Module.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
+
+                            var res = Module.decompressLZ4mask(view_width, view_height, frame_mask);
+                            const alpha = Module.HEAPU8.slice(res[0], res[0] + res[1]);
+
+                            let elapsed = Math.round(performance.now() - start);
+
+                            console.log("viewport width: ", view_width, "height: ", view_height, "elapsed: ", elapsed, "[ms]");
+
+                            process_hdr_viewport(view_width, view_height, pixels, alpha, index);
+                        }
 
                         return;
                     }
