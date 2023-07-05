@@ -369,7 +369,7 @@ function getViewport(xobject::XDataSet, xmin::Integer, xmax::Integer, ymin::Inte
     # make a mask
     mask = [xmin <= x[i] <= xmax && ymin <= y[i] <= ymax && emin <= energy[i] <= emax for i in 1:length(x)]
 
-    @time h = Hist2D((x[mask], y[mask]), (xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5), overflow=false)
+    h = Hist2D((x[mask], y[mask]), (xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5), overflow=false)
     pixels = bincounts(h)
 
     # make a mask for the pixels
@@ -883,9 +883,6 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
     if image
         pixels, mask = getViewport(xobject, x1, x2, y1, y2, energy_start, energy_end)
         println("pixels: ", size(pixels))
-
-        println(pixels)
-        println(mask)
     end
 
     # get the spectrum
