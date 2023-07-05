@@ -6567,3 +6567,85 @@ function webgl_viewport_renderer(gl, container, height) {
         gl.deleteProgram(program);
     }
 }
+
+function x_axis_mouseleave() {
+    streaming = false;
+    video_stack = [];
+
+    //clear the VideoCanvas and reset the Zoom Viewport
+    d3.select("#upper").style("stroke", "transparent");
+    d3.select("#upperCross").attr("opacity", 0.0);
+    d3.select("#upperBeam").attr("opacity", 0.0);
+    d3.select("#lower").attr("pointer-events", "auto");
+
+    requestAnimationFrame(function () {
+        var c = document.getElementById('VideoCanvas');
+        var ctx = c.getContext("2d");
+
+        var width = c.width;
+        var height = c.height;
+
+        ctx.clearRect(0, 0, width, height);
+        ctx.globalAlpha = 0.0;
+    });
+
+    var elem = d3.select("#legend");
+
+    if (displayLegend)
+        elem.attr("opacity", 1);
+    else
+        elem.attr("opacity", 0);
+
+    d3.select("#fps").text("");
+
+    // show the contour plot
+    if (displayContours) {
+        document.getElementById("ContourSVG").style.display = "block";
+
+        if (!has_contours)
+            update_contours();
+    }
+
+    //send an end_video command via WebSockets
+    var request = {
+        type: "end_video"
+    };
+
+    if (videoFrame != null) {
+        videoFrame.img = null;
+        videoFrame = null;
+
+        if (wsConn != null && wsConn.readyState == 1)
+            wsConn.send(JSON.stringify(request));
+
+        video_stack = [];
+
+        try {
+            Module.hevc_destroy_frame(va_count);
+        } catch (e) {
+            //console.log(e);
+        };
+    }
+
+    shortcut.remove("f");
+    shortcut.remove("Left");
+    shortcut.remove("Right");
+    shortcut.remove("Enter");
+
+    d3.select("#energy").attr("opacity", 0.0);
+    d3.select("#ene_bar").attr("opacity", 0.0);
+
+    d3.select("#xaxis")
+        .style("fill", axisColour)
+        .style("stroke", axisColour);
+
+    d3.select("#jvoText").remove();
+
+    display_legend();
+
+    setup_window_timeout();
+}
+
+function x_axis_mousemove(offset) {
+    x_axis_move(offset);
+}
