@@ -167,7 +167,7 @@ function load_events(xdataset::XDataSet, uri::String)
         xdataset.num_events = nevents
         xdataset.x = x
         xdataset.y = y
-        xdataset.energy = energy
+        xdataset.energy = log.(energy)
         xdataset.has_events[] = true
     catch e
         println("Failed to load events: $e")
@@ -280,7 +280,7 @@ function getImage(xobject::XDataSet)
 end
 
 function getSpectrum(xobject::XDataSet, dx::Integer)
-    energy = log.(xobject.energy)
+    energy = xobject.energy
 
     E_min = Float32(minimum(energy)) # log eV    
     E_max = Float32(maximum(energy)) # log eV
@@ -322,7 +322,7 @@ function getSquareSpectrum1(xobject::XDataSet, E_min::Float32, E_max::Float32, x
     println("#indices: ", length(indices))
 
     # get the log-energy values
-    energy = log.(xobject.energy[indices])
+    energy = xobject.energy[indices]
 
     h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
     spectrum = Float32.(bincounts(h))
@@ -350,7 +350,7 @@ function getSquareSpectrum2(xobject::XDataSet, E_min::Float32, E_max::Float32, x
     println("#indices: ", length(indices))
 
     # get the log-energy values
-    energy = log.(xobject.energy[indices])
+    energy = xobject.energy[indices]
 
     h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
     spectrum = Float32.(bincounts(h))
@@ -373,7 +373,7 @@ function getSquareSpectrum(xobject::XDataSet, E_min::Float32, E_max::Float32, x1
     mask = [x1 <= x[i] <= x2 && y1 <= y[i] <= y2 for i in 1:length(x)]
 
     # get the log-energy values
-    energy = log.(xobject.energy[mask])
+    energy = xobject.energy[mask]
     println("#energy: ", length(energy))
 
     h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
@@ -397,7 +397,7 @@ function getCircleSpectrum(xobject::XDataSet, E_min::Float32, E_max::Float32, cx
     mask = [(x[i] - cx)^2 + (y[i] - cy)^2 <= r2 for i in 1:length(x)]
 
     # get the log-energy values
-    energy = log.(xobject.energy[mask])
+    energy = xobject.energy[mask]
     println("#energy: ", length(energy))
 
     h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
