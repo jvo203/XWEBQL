@@ -6539,22 +6539,6 @@ function webgl_viewport_renderer(gl, container, height) {
     var params = [Math.log(image.pixel_range.min_pixel), Math.log(image.pixel_range.max_pixel), 0, 0];
     gl.uniform4fv(locationOfParams, params);
 
-    // get the multiplier
-    /*var noise_sensitivity = document.getElementById('sensitivity' + index).value;
-    var multiplier = get_noise_sensitivity(noise_sensitivity);
-
-    if (image.tone_mapping.flux == "legacy") {
-        var params = [image.tone_mapping.black, image.tone_mapping.white, image.tone_mapping.lmin, image.tone_mapping.lmax];
-        gl.uniform4fv(locationOfParams, params);
-    } else {
-        if (image.tone_mapping.flux == "ratio")
-            var params = [image.tone_mapping.median, multiplier * image.tone_mapping.ratio_sensitivity, image.tone_mapping.black, image.tone_mapping.white];
-        else
-            var params = [image.tone_mapping.median, multiplier * image.tone_mapping.sensitivity, image.tone_mapping.black, image.tone_mapping.white];
-
-        gl.uniform4fv(locationOfParams, params);
-    }*/
-
     // Setup the attributes to pull data from our buffers
     gl.enableVertexAttribArray(positionLocation);
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
