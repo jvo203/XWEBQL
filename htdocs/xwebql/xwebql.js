@@ -6204,9 +6204,9 @@ async function open_websocket_connection(_datasetId, index) {
 
                             let elapsed = Math.round(performance.now() - start);
 
-                            console.log("viewport width: ", view_width, "height: ", view_height, "elapsed: ", elapsed, "[ms]");
+                            // console.log("viewport width: ", view_width, "height: ", view_height, "elapsed: ", elapsed, "[ms]");
 
-                            process_hdr_viewport(view_width, view_height, pixels, alpha, index);
+                            process_hdr_viewport(view_width, view_height, pixels, alpha);
                         }
 
                         return;
@@ -6327,4 +6327,39 @@ async function open_websocket_connection(_datasetId, index) {
         // The browser doesn't support WebSocket
         alert("WebSocket NOT supported by your Browser!");
     }
+}
+
+function process_hdr_viewport(img_width, img_height, pixels, alpha) {
+    // console.log("process_hdr_viewport: #" + index);
+    if (streaming || moving || windowLeft)
+        return;
+
+    // combine pixels with a mask	
+    let len = pixels.length | 0;
+    var texture = new Float32Array(2 * len);
+    let offset = 0 | 0;
+
+    for (let i = 0 | 0; i < len; i = (i + 1) | 0) {
+        texture[offset] = pixels[i];
+        offset = (offset + 1) | 0;
+
+        texture[offset] = (alpha[i] > 0) ? 1.0 : 0.0;
+        offset = (offset + 1) | 0;
+    }
+
+    //next project the viewport    
+    let viewportContainer = { width: img_width, height: img_height, pixels: pixels, alpha: alpha, texture: texture };
+
+    if (viewport != null) {
+        // Clear the ZOOM Canvas
+        //console.log("clearing the ZOOM Canvas");
+        var gl = viewport.gl;
+
+        if (gl !== undefined && gl != null) {
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+        }
+    }
+
+    init_webgl_viewport_buffers(viewportContainer);
 }
