@@ -5128,8 +5128,8 @@ function setup_image_selection() {
                 var ay = (image_bounding_dims.height - 0) / (rect.getAttribute("height") - 0);
                 var pred_y = (image_bounding_dims.y1 + image_bounding_dims.height - 0) - ay * (pred_mouse_y - rect.getAttribute("y"));
 
-                var fitsX = pred_x * (fitsData.width - 0) / (imageContainer.width - 0);//x or pred_x
-                var fitsY = pred_y * (fitsData.height - 0) / (imageContainer.height - 0);//y or pred_y
+                var fitsX = Math.round(pred_x * (fitsData.width - 0) / (imageContainer.width - 0));//x or pred_x
+                var fitsY = Math.round(pred_y * (fitsData.height - 0) / (imageContainer.height - 0));//y or pred_y
                 var fitsSize = clipSize * (fitsData.width - 0) / (imageContainer.width - 0);
 
                 //console.log('active', 'x = ', x, 'y = ', y, 'clipSize = ', clipSize, 'fitsX = ', fitsX, 'fitsY = ', fitsY, 'fitsSize = ', fitsSize) ;
@@ -5950,8 +5950,8 @@ function imageTimeout() {
     var sel_width = clipSize * scale;
     var sel_height = clipSize * scale;
 
-    var fitsX = x * (fitsData.width - 0) / (imageContainer.width - 0);
-    var fitsY = y * (fitsData.height - 0) / (imageContainer.height - 0);
+    var fitsX = Math.round(x * (fitsData.width - 0) / (imageContainer.width - 0));
+    var fitsY = Math.round(y * (fitsData.height - 0) / (imageContainer.height - 0));
     var fitsSize = clipSize * (fitsData.width - 0) / (imageContainer.width - 0);
 
     var image_update = true;
@@ -5961,7 +5961,7 @@ function imageTimeout() {
     else
         image_update = false;
 
-    //console.log('idle', 'x = ', x, 'y = ', y, 'clipSize = ', clipSize, 'fitsX = ', fitsX, 'fitsY = ', fitsY, 'fitsSize = ', fitsSize, 'image_update:', image_update);
+    // console.log('idle', 'x = ', x, 'y = ', y, 'clipSize = ', clipSize, 'fitsX = ', fitsX, 'fitsY = ', fitsY, 'fitsSize = ', fitsSize, 'image_update:', image_update);
 
     //send an image/spectrum request to the server
     var x1 = Math.round(fitsX - fitsSize);
