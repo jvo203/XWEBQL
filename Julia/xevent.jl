@@ -904,6 +904,28 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
 
     if image
         view_resp = IOBuffer()
+
+        write(view_resp, Int32(dimx))
+        write(view_resp, Int32(dimy))
+
+        # compress pixels with ZFP
+        prec = ZFP_MEDIUM_PRECISION
+
+        if quality == high
+            prec = ZFP_HIGH_PRECISION
+        elseif quality == medium
+            prec = ZFP_MEDIUM_PRECISION
+        elseif quality == low
+            prec = ZFP_LOW_PRECISION
+        end
+
+        compressed_pixels = zfp_compress(Float32.(pixels), precision=prec)
+        write(view_resp, Int32(length(compressed_pixels)))
+        write(view_resp, compressed_pixels)
+
+        compressed_mask = lz4_hc_compress(collect(flatten(UInt8.(mask))))
+        write(view_resp, Int32(length(compressed_mask)))
+        write(view_resp, compressed_mask)
     end
 
     spec_resp = IOBuffer()
