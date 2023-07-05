@@ -375,6 +375,12 @@ function getViewport(xobject::XDataSet, xmin::Integer, xmax::Integer, ymin::Inte
     # make a mask for the pixels
     mask = pixels .> 0
 
+    # apply a logarithm to pixels
+    pixels = Float32.(log.(pixels))
+
+    # replace Infinity by 0.0
+    pixels[isinf.(pixels)] .= Float32(0.0)
+
     return (pixels, mask)
 end
 
@@ -919,7 +925,7 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
             prec = ZFP_LOW_PRECISION
         end
 
-        compressed_pixels = zfp_compress(Float32.(pixels), precision=prec)
+        compressed_pixels = zfp_compress(pixels, precision=prec)
         write(view_resp, Int32(length(compressed_pixels)))
         write(view_resp, compressed_pixels)
 
