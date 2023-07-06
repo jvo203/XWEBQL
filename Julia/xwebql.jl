@@ -5,7 +5,52 @@ using HTTP
 using JSON
 using Sockets
 using WebSockets
+using x265_jll
 using ZfpCompression
+
+# needed by the x265 encoder
+mutable struct x265_picture
+    pts::Clong
+    dts::Clong
+    userData::Ptr{Cvoid}
+    planeR::Ptr{Cuchar}
+    planeG::Ptr{Cuchar}
+    planeB::Ptr{Cuchar}
+    strideR::Cint
+    strideG::Cint
+    strideB::Cint
+    bitDepth::Cint
+end
+
+mutable struct x265_nal
+    type::Cint
+    sizeBytes::Cint
+    # payload::Ptr{Cuchar}
+    payload::Ptr{UInt8}
+end
+
+x265_nal(nal::Ptr, idx::Integer) = unsafe_load(Ptr{x265_nal}(nal), idx)
+x265_picture(picture::Ptr) = unsafe_load(Ptr{x265_picture}(picture))
+
+function x265_apiver()
+    @static if Sys.isapple()
+        parts = split(x265_jll.get_libx265_path(), ".")
+        return parts[length(parts)-1]
+    end
+
+    @static if Sys.islinux()
+        parts = split(readlink(x265_jll.get_libx265_path()), ".")
+        return last(parts)
+    end
+
+    @static if Sys.iswindows()
+        error("Not implemented: don't know how to access a shared lib on Windows")
+    end
+end
+
+# the encoder_open function call uses the x265 API version
+const encoder_open = "x265_encoder_open_" * x265_apiver()
+# end of x265
 
 function parse_commandline()
     s = ArgParseSettings()
