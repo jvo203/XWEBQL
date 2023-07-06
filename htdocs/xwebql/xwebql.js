@@ -1047,8 +1047,8 @@ async function mainRenderer() {
 
 async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
     var rect = document.getElementById('mainDiv').getBoundingClientRect();
-    var width = rect.width - 20;
-    var height = rect.height - 20;
+    var width = Math.round(rect.width - 20);
+    var height = Math.round(rect.height - 20);
 
     var xmlhttp = new XMLHttpRequest();
 
@@ -6609,8 +6609,8 @@ function x_axis_mouseenter(offset) {
         sent_vid_id++;
 
         var rect = document.getElementById('mainDiv').getBoundingClientRect();
-        var width = rect.width - 20;
-        var height = rect.height - 20;
+        var width = Math.round(rect.width - 20);
+        var height = Math.round(rect.height - 20);
 
         let ui = '&width=' + width + '&height=' + height;
 
@@ -6624,6 +6624,10 @@ function x_axis_mouseenter(offset) {
             bitrate: Math.round(target_bitrate),
             width: width,
             height: height,
+            inner_width: fitsData.width,
+            inner_height: fitsData.height,
+            offsetx: fitsData.OFFSETX,
+            offsety: fitsData.OFFSETY,
             timestamp: performance.now()
         };
 
