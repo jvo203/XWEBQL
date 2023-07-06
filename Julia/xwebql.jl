@@ -887,6 +887,16 @@ host = Sockets.IPv4(0)
 function ws_coroutine(ws, ids)
     global XOBJECTS, XLOCK
 
+    # HEVC
+    local param, encoder, picture, planeB, luma, alpha
+    local filter::KalmanFilter, ts
+
+    local video_mtx = ReentrantLock()
+
+    param = C_NULL
+    encoder = C_NULL
+    picture = C_NULL
+
     datasetid = String(ids[1])
 
     begin
@@ -1052,6 +1062,28 @@ function ws_coroutine(ws, ids)
 
     close(viewport_requests)
     wait(realtime)
+
+    # clean up x265
+    if encoder ≠ C_NULL
+        # release the x265 encoder
+        ccall((:x265_encoder_close, libx265), Cvoid, (Ptr{Cvoid},), encoder)
+
+        @info "cleaned up the x265 encoder"
+    end
+
+    if picture ≠ C_NULL
+        # release the x265 picture structure
+        ccall((:x265_picture_free, libx265), Cvoid, (Ptr{Cvoid},), picture)
+
+        @info "cleaned up the x265 picture"
+    end
+
+    if param ≠ C_NULL
+        # release the x265 parameters structure
+        ccall((:x265_param_free, libx265), Cvoid, (Ptr{Cvoid},), param)
+
+        @info "cleaned up x265 parameters"
+    end
 
     @info "$datasetid will now close " ws
 
