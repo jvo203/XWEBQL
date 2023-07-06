@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-07-05.0";
+    return "JS2023-07-06.0";
 }
 
 function uuidv4() {
@@ -2933,9 +2933,9 @@ function setup_axes() {
     var interval = dmax - dmin;
     var range = get_axes_range(width, height);
 
-    var iR = d3.scaleLinear()
+    /*var iR = d3.scaleLinear()
         .range([range.xMin, range.xMax])
-        .domain([data_band_lo, data_band_hi]);
+        .domain([data_band_lo, data_band_hi]);*/
 
     var xR = d3.scaleLog()
         .range([range.xMin, range.xMax])
@@ -6568,6 +6568,121 @@ function webgl_viewport_renderer(gl, container, height) {
     }
 }
 
+function x_axis_mouseenter(offset) {
+    //send an init_video command via WebSockets
+    streaming = true;
+    video_stack = [];
+
+    if (viewport_zoom_settings != null) {
+        d3.select("#upper").style("stroke", "Gray");
+        d3.select("#upperCross").attr("opacity", 0.75);
+        d3.select("#upperBeam").attr("opacity", 0.75);
+    }
+
+    d3.select("#lower").attr("pointer-events", "none");
+
+    //clear the VideoCanvas
+    requestAnimationFrame(function () {
+        var c = document.getElementById('VideoCanvas');
+        var ctx = c.getContext("2d");
+
+        var width = c.width;
+        var height = c.height;
+
+        ctx.clearRect(0, 0, width, height);
+        ctx.globalAlpha = 1.0;
+    });
+
+    var elem = d3.select("#legend"); elem.attr("opacity", 0);
+
+    // Clear the legend canvas
+    var image = imageContainer;
+    var gl = image.legend_gl;
+
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    //if (videoFrame == null)
+    if (wasm_supported) {
+        var data_band = get_mouse_energy(offset);
+
+        sent_vid_id++;
+
+        var rect = document.getElementById('mainDiv').getBoundingClientRect();
+        var width = rect.width - 20;
+        var height = rect.height - 20;
+
+        let ui = '&width=' + width + '&height=' + height;
+
+
+        var request = {
+            type: "init_video",
+            frame_start: Math.log(1000 * data_band) - 0.5 * fitsData.CDELT3,
+            frame_end: Math.log(1000 * data_band) + 0.5 * fitsData.CDELT3,
+            fps: vidFPS,
+            seq_id: sent_vid_id,
+            bitrate: Math.round(target_bitrate),
+            width: width,
+            height: height,
+            timestamp: performance.now()
+        };
+
+        if (wsConn != null && wsConn.readyState == 1)
+            wsConn.send(JSON.stringify(request));
+        video_stack = [];
+    }
+
+    hide_navigation_bar();
+
+    d3.select("#scaling")
+        .style('cursor', '')
+        .attr("opacity", 0.0);
+
+    d3.select("#yaxis")
+        .style("fill", axisColour)
+        .style("stroke", axisColour);
+
+    d3.select("#energy").attr("opacity", 0.5);
+
+    let fillColour = 'white';
+
+    if (theme == 'bright')
+        fillColour = 'black';
+
+    d3.select("#xaxis")
+        .style("fill", fillColour)
+        .style("stroke", fillColour)
+        .attr("opacity", 1.0);
+
+    fillColour = 'white';
+    let strokeColour = 'black';
+
+    if (theme == 'bright') {
+        fillColour = 'black';
+        strokeColour = 'white';
+    }
+
+    var svg = d3.select("#BackSVG");
+    var width = parseFloat(svg.attr("width"));
+    var height = parseFloat(svg.attr("height"));
+
+    d3.select("#FrontSVG").append("text")
+        .attr("id", "XText")
+        .attr("x", width / 2)
+        .attr("y", height / 2)
+        //.attr("font-family", "Arial")		
+        .attr("font-family", "Inconsolata")
+        .attr("font-weight", "regular")
+        .attr("font-size", "5em")
+        .attr("text-anchor", "middle")
+        .attr("fill", fillColour)
+        .attr("stroke", strokeColour)
+        .attr("pointer-events", "none")
+        .attr("opacity", 1.0);
+
+    setup_window_timeout();
+}
+
 function x_axis_mouseleave() {
     streaming = false;
     video_stack = [];
@@ -6627,11 +6742,6 @@ function x_axis_mouseleave() {
         };
     }
 
-    shortcut.remove("f");
-    shortcut.remove("Left");
-    shortcut.remove("Right");
-    shortcut.remove("Enter");
-
     d3.select("#energy").attr("opacity", 0.0);
     d3.select("#ene_bar").attr("opacity", 0.0);
 
@@ -6639,7 +6749,7 @@ function x_axis_mouseleave() {
         .style("fill", axisColour)
         .style("stroke", axisColour);
 
-    d3.select("#jvoText").remove();
+    d3.select("#XText").remove();
 
     display_legend();
 
@@ -6647,5 +6757,118 @@ function x_axis_mouseleave() {
 }
 
 function x_axis_mousemove(offset) {
-    x_axis_move(offset);
+    clearTimeout(idleVideo);
+
+    let strokeColour = 'white';
+
+    if (theme == 'bright')
+        strokeColour = 'black';
+
+    d3.select("#ene_bar")
+        .attr("x1", offset[0])
+        .attr("x2", offset[0])
+        .attr("opacity", 1.0)
+        .style("stroke", strokeColour);
+
+    var data_band = get_mouse_energy(offset);
+
+    if (data_band < 1) {
+        d3.select("#XText").text((1000 * data_band).toPrecision(3) + " " + 'eV');
+    } else if (data_band < 1000) {
+        d3.select("#XText").text(data_band.toPrecision(3) + " " + 'keV');
+    } else {
+        d3.select("#XText").text((data_band / 1000).toPrecision(3) + " " + 'MeV');
+    }
+
+    if (!enedrag && wasm_supported) {
+        //initially assume 10 frames per second for a video
+        //later on use a Kalman Filter to predict the next frame position and request it		
+        vidInterval = 1000 / vidFPS;
+
+        now = performance.now();
+        elapsed = performance.now() - then;
+
+        if (elapsed > vidInterval) {
+            then = now - (elapsed % vidInterval);
+
+            //for each dataset request a video frame via WebSockets
+            sent_vid_id++;
+
+            if (realtime_video) {
+                var fill;
+
+                if (theme == "dark")
+                    fill = 0;
+                else
+                    fill = 255;
+
+                var request = {
+                    type: "video",
+                    frame_start: Math.log(1000 * data_band) - 0.5 * fitsData.CDELT3,
+                    frame_end: Math.log(1000 * data_band) + 0.5 * fitsData.CDELT3,
+                    key: false,
+                    fill: fill,
+                    fps: vidFPS,
+                    seq_id: sent_vid_id,
+                    bitrate: Math.round(target_bitrate),
+                    timestamp: performance.now()
+                };
+
+                if (wsConn != null && wsConn.readyState == 1)
+                    wsConn.send(JSON.stringify(request));
+            };
+        };
+
+        if (videoFrame != null)
+            idleVideo = setTimeout(videoTimeout, 250, data_band);
+    };
+
+    setup_window_timeout();
 }
+
+function videoTimeout(data_band) {
+    if (!streaming)
+        return;
+
+    console.log("video inactive event");
+
+    sent_vid_id++;
+
+    var fill;
+
+    if (theme == "dark")
+        fill = 0;
+    else
+        fill = 255;
+
+    var request = {
+        type: "video",
+        frame_start: Math.log(1000 * data_band) - 0.5 * fitsData.CDELT3,
+        frame_end: Math.log(1000 * data_band) + 0.5 * fitsData.CDELT3,
+        key: true,
+        fill: fill,
+        fps: vidFPS,
+        seq_id: sent_vid_id,
+        bitrate: Math.round(target_bitrate),
+        timestamp: performance.now()
+    };
+
+    if (wsConn != null && wsConn.readyState == 1)
+        wsConn.send(JSON.stringify(request));
+
+    setup_window_timeout();
+}
+
+function get_mouse_energy(offset) {
+    var ene = d3.select("#energy");
+    var dx = parseFloat(ene.attr("width"));
+    var offsetx = parseFloat(ene.attr("x"));
+
+    var xR = d3.scaleLog()
+        .range([offsetx, offsetx + dx])
+        .domain([data_band_lo, data_band_hi]);
+
+    var band = xR.invert(offset[0]);
+
+    return band;
+};
