@@ -52,6 +52,8 @@ end
 const encoder_open = "x265_encoder_open_" * x265_apiver()
 # end of x265
 
+include("kalman.jl")
+
 function parse_commandline()
     s = ArgParseSettings()
 
@@ -931,6 +933,10 @@ host = Sockets.IPv4(0)
 
 function ws_coroutine(ws, ids)
     global XOBJECTS, XLOCK
+
+    local scale::Float32, fps::Integer, bitrate::Integer
+    local last_video_seq::Integer, last_frame_idx::Integer
+    local image_width::Integer, image_height::Integer, bDownsize::Bool
 
     # HEVC
     local param, encoder, picture, planeB, luma, alpha
