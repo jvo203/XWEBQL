@@ -3012,7 +3012,7 @@ function setup_axes() {
 
     {
         svg.append("line")
-            .attr("id", "freq_bar")
+            .attr("id", "ene_bar")
             .attr("x1", range.xMin)
             .attr("y1", 0)
             .attr("x2", range.xMin)
@@ -6774,7 +6774,7 @@ function x_axis_mousemove(offset) {
 
     if (data_band < 1) {
         d3.select("#XText").text((1000 * data_band).toPrecision(3) + " " + 'eV');
-    } else if (data_band < 1000) {
+    } else if (data_band.toPrecision(3) < 1000) {
         d3.select("#XText").text(data_band.toPrecision(3) + " " + 'keV');
     } else {
         d3.select("#XText").text((data_band / 1000).toPrecision(3) + " " + 'MeV');
