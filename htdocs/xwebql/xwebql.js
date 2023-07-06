@@ -6612,8 +6612,6 @@ function x_axis_mouseenter(offset) {
         var width = Math.round(rect.width - 20);
         var height = Math.round(rect.height - 20);
 
-        let ui = '&width=' + width + '&height=' + height;
-
 
         var request = {
             type: "init_video",
