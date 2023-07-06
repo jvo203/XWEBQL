@@ -4374,7 +4374,7 @@ function display_legend() {
     }
 
     try {
-        clear_webgl_legend_buffers(va_count);
+        clear_webgl_legend_buffers();
     }
     catch (e) {
     }
@@ -6755,7 +6755,7 @@ function x_axis_mouseleave() {
         video_stack = [];
 
         try {
-            Module.hevc_destroy_frame(va_count);
+            Module.hevc_destroy_frame(1);
         } catch (e) {
             //console.log(e);
         };
@@ -6871,7 +6871,7 @@ function x_axis_move(offset) {
             idleVideo = setTimeout(videoTimeout, 250, data_band);
     };
 
-    zoom_molecules(line_ene);
+    zoom_lines(line_ene);
 
     setup_window_timeout();
 }
@@ -6923,7 +6923,7 @@ function get_mouse_energy(offset) {
     return band;
 };
 
-function zoom_molecules(ene) {
+function zoom_lines(ene) {
     if (fitsData == null)
         return;
 
