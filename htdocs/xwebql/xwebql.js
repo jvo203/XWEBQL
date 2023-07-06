@@ -834,6 +834,7 @@ async function mainRenderer() {
         video_playback = false;
         video_offset = null;
         video_timeout = -1;
+        line_pos = -1;
         idleMouse = -1;
         idleVideo = -1;
         moving = false;
@@ -875,6 +876,7 @@ async function mainRenderer() {
         zoom_location = 'lower';
         zoom_scale = 25;
         xradec = null;
+        lines = [];
 
         tmp_data_min = 0;
         tmp_data_max = 0;
@@ -910,6 +912,7 @@ async function mainRenderer() {
         displayContours = false;
         displayLegend = localStorage_read_boolean("displayLegend", true);
         displaySpectrum = localStorage_read_boolean("displaySpectrum", true);
+        displayLines = localStorage_read_boolean("displayLines", true);
         displayGridlines = localStorage_read_boolean("displayGridlines", false);
 
         has_contours = false;
@@ -1019,6 +1022,10 @@ async function mainRenderer() {
             .attr("width", 265)
             .attr("height", 162)
             .attr("opacity", 0.5);
+
+        d3.select("body").append("div")
+            .attr("id", "lineidentification")
+            .attr("class", "molecularmodal");
 
         await res3d; display_menu();
 
@@ -1893,9 +1900,16 @@ function display_dataset_info() {
             .attr("height", 5.0 * emFontSize)
             .on("mouseenter", function () {
                 d3.select("#videoControlG").style("opacity", 1.0);
+
+                //hide the line identification list so that it does not obscure the controls!
+                displayLines_bak = displayLines;
+                displayLines = false;
+                document.getElementById('lineidentification').style.display = "none";
             })
             .on("mouseleave", function () {
                 d3.select("#videoControlG").style("opacity", 0.25);
+
+                displayLines = displayLines_bak;
 
                 video_playback = false;
                 clearTimeout(video_timeout);
@@ -6682,6 +6696,10 @@ function x_axis_mouseenter(offset) {
         .attr("pointer-events", "none")
         .attr("opacity", 1.0);
 
+    shortcut.add("Left", x_axis_left);
+    shortcut.add("Right", x_axis_right);
+    shortcut.add("Enter", go_to_atomdb);
+
     setup_window_timeout();
 }
 
@@ -6744,6 +6762,10 @@ function x_axis_mouseleave() {
         };
     }
 
+    shortcut.remove("Left");
+    shortcut.remove("Right");
+    shortcut.remove("Enter");
+
     d3.select("#energy").attr("opacity", 0.0);
     d3.select("#ene_bar").attr("opacity", 0.0);
 
@@ -6753,12 +6775,22 @@ function x_axis_mouseleave() {
 
     d3.select("#XText").remove();
 
+    line_pos = -1;
+    var modal = document.getElementById('lineidentification');
+    modal.style.display = "none";
+
     display_legend();
 
     setup_window_timeout();
 }
 
 function x_axis_mousemove(offset) {
+    line_pos = -1;
+
+    x_axis_move(offset);
+}
+
+function x_axis_move(offset) {
     clearTimeout(idleVideo);
 
     let strokeColour = 'white';
@@ -6781,6 +6813,22 @@ function x_axis_mousemove(offset) {
     } else {
         d3.select("#XText").text((data_band / 1000).toPrecision(3) + " " + 'MeV');
     }
+
+    var modal = document.getElementById('lineidentification');
+
+    var dx = parseFloat(d3.select("#energy").attr("width"));
+    var offsetx = parseFloat(d3.select("#energy").attr("x"));
+
+    if ((offset[0] - offsetx) >= 0.5 * dx) {
+        modal.style.right = null;
+        modal.style.left = "2.5%";
+    }
+    else {
+        modal.style.right = "2.5%";
+        modal.style.left = null;
+    };
+
+    let line_ene = data_band * 1000; // in eV
 
     if (!enedrag && wasm_supported) {
         //initially assume 10 frames per second for a video
@@ -6824,6 +6872,8 @@ function x_axis_mousemove(offset) {
         if (videoFrame != null)
             idleVideo = setTimeout(videoTimeout, 250, data_band);
     };
+
+    zoom_molecules(line_ene);
 
     setup_window_timeout();
 }
@@ -6874,3 +6924,52 @@ function get_mouse_energy(offset) {
 
     return band;
 };
+
+function zoom_molecules(ene) {
+    if (fitsData == null)
+        return;
+
+    if (fitsData.depth <= 1 || lines.length <= 0)
+        return;
+
+    var pos = -1;
+    var minDist = 10 * freq;
+
+    var modal = document.getElementById('lineidentification');
+    var scroller = zenscroll.createScroller(modal);
+
+    var m = document.getElementsByClassName("molecularp");
+
+    for (var i = 0; i < m.length; i++) {
+        m[i].style.color = "inherit";
+        m[i].style.fontSize = "100%";
+        m[i].style.fontWeight = "normal";
+
+        var tmp = parseFloat(m[i].getAttribute("freq"));
+        var dist = Math.abs(freq - tmp);
+
+        if (dist < minDist) {
+            minDist = dist;
+            pos = i;
+        };
+    };
+
+    if (line_pos >= 0)
+        pos = line_pos;
+
+    if (pos > -1) {
+        m[pos].style.color = "yellow";
+        m[pos].style.fontSize = "130%";
+        m[pos].style.fontWeight = "bold";
+
+        pos = Math.max(0, pos - 5);
+
+        //m[pos].scrollIntoView({ block: "start", behavior: "smooth" }); // does not work correctly in Safari
+        scroller.to(m[pos], 0); // 'center' or 'to'
+    };
+
+    if (m.length > 0 && displayLines)
+        modal.style.display = "block";
+    else
+        modal.style.display = "none";
+}
