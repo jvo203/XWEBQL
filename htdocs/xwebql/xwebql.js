@@ -6698,7 +6698,6 @@ function x_axis_mouseenter(offset) {
 
     shortcut.add("Left", x_axis_left);
     shortcut.add("Right", x_axis_right);
-    shortcut.add("Enter", go_to_atomdb);
 
     setup_window_timeout();
 }
@@ -6764,7 +6763,6 @@ function x_axis_mouseleave() {
 
     shortcut.remove("Left");
     shortcut.remove("Right");
-    shortcut.remove("Enter");
 
     d3.select("#energy").attr("opacity", 0.0);
     d3.select("#ene_bar").attr("opacity", 0.0);
