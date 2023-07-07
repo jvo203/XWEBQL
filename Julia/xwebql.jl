@@ -1216,7 +1216,7 @@ function ws_coroutine(ws, ids)
                                     # the header
                                     write(resp, Float32(req["timestamp"]))
                                     write(resp, Int32(req["seq_id"]))
-                                    write(resp, Int32(5)) # 5 - video frame
+                                    write(resp, Int32(2)) # 2 - video frame
                                     write(resp, Float32(elapsed + encoding))
 
                                     # the body
