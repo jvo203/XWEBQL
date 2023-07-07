@@ -974,6 +974,7 @@ function getVideoFrame(
     y2 = offsety + inner_height - 1
 
     frame_pixels, frame_mask = getViewport(xobject, x1, x2, y1, y2, Float32(energy_start), Float32(energy_end))
+    max_count = ThreadsX.maximum(frame_pixels)
 
     dims = size(frame_pixels)
     width = dims[1]
@@ -987,8 +988,8 @@ function getVideoFrame(
         dstHeight = height
     end
 
-    #pixels = Matrix{UInt8}(undef, (dstWidth, dstHeight))
-    #mask = Matrix{UInt8}(undef, (dstWidth, dstHeight))
+    pixels = Matrix{UInt8}(undef, (dstWidth, dstHeight))
+    mask = Matrix{UInt8}(undef, (dstWidth, dstHeight))
 
     if bDownsize
         pixels =
@@ -1007,8 +1008,13 @@ function getVideoFrame(
                 ),
             ) # use Nearest-Neighbours for the mask
     else
-        pixels = UInt8.(frame_pixels)
-        mask = UInt8.(frame_mask)
+        if max_count > 0
+            pixels = round.(UInt8, clamp.(frame_pixels ./ max_count .* 255, 0, 255))
+            mask = UInt8(255) .* UInt8.(frame_mask)
+        else
+            pixels .= 0
+            mask .= 0
+        end
     end
 
     return (pixels, mask)
