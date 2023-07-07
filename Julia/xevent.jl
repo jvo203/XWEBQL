@@ -372,8 +372,6 @@ function getViewport(xobject::XDataSet, xmin::Integer, xmax::Integer, ymin::Inte
     h = Hist2D((x[mask], y[mask]), (xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5), overflow=false)
     pixels = bincounts(h)
 
-    # println("max_count:", maximum(pixels), "sum:", sum(pixels))
-
     # make a mask for the pixels
     mask = pixels .> 0
 
@@ -1012,11 +1010,12 @@ function getVideoFrame(
     else
         if max_count > 0
             pixels = round.(UInt8, clamp.(frame_pixels ./ max_count .* 255, 0, 255))
-            mask = UInt8(255) .* UInt8.(frame_mask)
         else
             pixels .= 0
-            mask .= 0
+            pixels[frame_mask] .= UInt8(255)
         end
+
+        mask = UInt8(255) .* UInt8.(frame_mask)
     end
 
     return (pixels, mask)
