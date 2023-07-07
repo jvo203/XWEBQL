@@ -1071,6 +1071,7 @@ function ws_coroutine(ws, ids)
             end
 
             keyframe = req["key"]
+            fill = UInt8(req["fill"])
 
             # obtain a cube channel
             frame_start = Float64(req["frame_start"])
@@ -1088,7 +1089,7 @@ function ws_coroutine(ws, ids)
                 frame2 = predict(filter, frame, deltat)
 
                 println(
-                    "deltat: $deltat [ms]; frame: $frame, predicted: $frame2",
+                    "deltat: $deltat [ms]; frame: $frame, predicted: $frame2, fill: $fill",
                 )
 
                 # use a predicted frame for non-keyframes
@@ -1119,6 +1120,7 @@ function ws_coroutine(ws, ids)
                     t_image_height = $image_height
                     t_bDownsize = $bDownsize
                     t_keyframe = $keyframe
+                    t_fill = $fill
 
                     try
                         # get a video frame                        
@@ -1134,6 +1136,7 @@ function ws_coroutine(ws, ids)
                             t_image_height,
                             t_bDownsize,
                             t_keyframe,
+                            t_fill,
                         )
                         elapsed *= 1000.0 # [ms]
 

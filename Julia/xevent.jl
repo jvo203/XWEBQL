@@ -963,6 +963,7 @@ function getVideoFrame(
     image_height::Integer,
     bDownsize::Bool,
     keyframe::Bool,
+    fill::UInt8,
 )
     local frame_pixels, frame_mask
     local pixels, mask
@@ -1014,6 +1015,9 @@ function getVideoFrame(
             pixels .= 0
             pixels[frame_mask] .= UInt8(255)
         end
+
+        # fill pixels with the fill colour where mask is false
+        pixels[.!frame_mask] .= fill
 
         mask = UInt8(255) .* UInt8.(frame_mask)
     end
