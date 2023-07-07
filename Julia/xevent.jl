@@ -372,6 +372,8 @@ function getViewport(xobject::XDataSet, xmin::Integer, xmax::Integer, ymin::Inte
     h = Hist2D((x[mask], y[mask]), (xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5), overflow=false)
     pixels = bincounts(h)
 
+    # println("max_count:", maximum(pixels), "sum:", sum(pixels))
+
     # make a mask for the pixels
     mask = pixels .> 0
 
