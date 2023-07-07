@@ -1054,6 +1054,205 @@ function ws_coroutine(ws, ids)
         end
     end
 
+    video_requests = Channel{Dict{String,Any}}(32)
+
+    video = @async while true
+        try
+            req = take!(video_requests)
+
+            xobject = get_dataset(datasetid, XOBJECTS, XLOCK)
+
+            if xobject.id == "" || has_error(xobject)
+                error("$datasetid not found.")
+            end
+
+            if !has_events(xobject)
+                error("$datasetid: no data found.")
+            end
+
+            keyframe = req["key"]
+
+            # obtain a cube channel
+            frame_start = Float64(req["frame_start"])
+            frame_end = Float64(req["frame_end"])
+            frame = (frame_start + frame_end) / 2.0
+
+            try
+                # lock(video_mtx)
+
+                deltat = Float64(Dates.value(now() - ts)) # [ms]
+                ts = now()
+
+                # Kalman Filter tracking/prediction
+                update(filter, frame, deltat)
+                frame2 = predict(filter, frame, deltat)
+
+                println(
+                    "deltat: $deltat [ms]; frame: $frame, predicted: $frame2",
+                )
+
+                # use a predicted frame for non-keyframes
+                if !keyframe
+                    # disable Kalman Filter for now, deltat needs to be reduced
+                    # frame = frame2
+                end
+
+                if !keyframe && (last_frame == frame)
+                    println("skipping a repeat video frame")
+                    continue
+                else
+                    last_frame = frame
+                    println("video frame: $frame; keyframe: $keyframe")
+                end
+
+                # by this point the VideoToneMapping variable is valid                
+
+                Threads.@spawn begin
+                    # interpolate variable values into a thread
+                    t_frame_start = $frame_start
+                    t_frame_end = $frame_end
+                    t_inner_width = $inner_width
+                    t_inner_height = $inner_height
+                    t_offsetx = $offsetx
+                    t_offsety = $offsety
+                    t_image_width = $image_width
+                    t_image_height = $image_height
+                    t_bDownsize = $bDownsize
+                    t_keyframe = $keyframe
+
+                    try
+                        # get a video frame                        
+                        elapsed = @elapsed luma, alpha = getVideoFrame(
+                            xobject,
+                            t_frame_start,
+                            t_frame_end,
+                            t_inner_width,
+                            t_inner_height,
+                            t_offsetx,
+                            t_offsety,
+                            t_image_width,
+                            t_image_height,
+                            t_bDownsize,
+                            t_keyframe,
+                        )
+                        elapsed *= 1000.0 # [ms]
+
+                        println(
+                            typeof(luma),
+                            ";",
+                            typeof(alpha),
+                            ";",
+                            size(luma),
+                            ";",
+                            size(alpha),
+                            "; bDownsize:",
+                            bDownsize,
+                            "; elapsed: $elapsed [ms]",
+                        )
+
+                        lock(video_mtx)
+
+                        if picture != C_NULL
+                            # update the x265_picture structure                
+                            picture_jl = x265_picture(picture)
+
+                            picture_jl.planeR = pointer(luma)
+                            picture_jl.strideR = strides(luma)[2]
+
+                            picture_jl.planeG = pointer(alpha)
+                            picture_jl.strideG = strides(alpha)[2]
+
+                            # sync the Julia structure back to C
+                            unsafe_store!(Ptr{x265_picture}(picture), picture_jl)
+
+                            if encoder != C_NULL
+                                # HEVC-encode the luminance and alpha channels
+                                iNal = Ref{Cint}(0)
+                                pNals = Ref{Ptr{Cvoid}}(C_NULL)
+
+                                # iNal_jll value: iNal[] 
+
+                                # an array of pointers
+                                # local pNals_jll::Ptr{Ptr{Cvoid}} = pNals[]                        
+
+                                # int x265_encoder_encode(x265_encoder *encoder, x265_nal **pp_nal, uint32_t *pi_nal, x265_picture *pic_in, x265_picture *pic_out);
+                                # int ret = x265_encoder_encode(encoder, &pNals, &iNal, picture, NULL);
+
+                                encoding = @elapsed stat = ccall(
+                                    (:x265_encoder_encode, libx265),
+                                    Cint,
+                                    (
+                                        Ptr{Cvoid},
+                                        Ref{Ptr{Cvoid}},
+                                        Ref{Cint},
+                                        Ptr{Cvoid},
+                                        Ptr{Cvoid},
+                                    ),
+                                    encoder,
+                                    pNals,
+                                    iNal,
+                                    picture,
+                                    C_NULL,
+                                )
+                                encoding *= 1000.0 # [ms]
+
+                                println(
+                                    "x265_encoder_encode::stat = $stat, iNal = ",
+                                    iNal[],
+                                    ", pNals($pNals): ",
+                                    pNals[],
+                                    "; elapsed: $encoding [ms]",
+                                )
+
+                                for idx = 1:iNal[]
+                                    nal = x265_nal(pNals[], idx)
+                                    # println("NAL #$idx: $nal")
+
+                                    resp = IOBuffer()
+
+                                    # the header
+                                    write(resp, Float32(req["timestamp"]))
+                                    write(resp, Int32(req["seq_id"]))
+                                    write(resp, Int32(5)) # 5 - video frame
+                                    write(resp, Float32(elapsed + encoding))
+
+                                    # the body
+                                    payload = Vector{UInt8}(undef, nal.sizeBytes)
+                                    unsafe_copyto!(
+                                        pointer(payload),
+                                        nal.payload,
+                                        nal.sizeBytes,
+                                    )
+                                    write(resp, payload)
+
+                                    put!(outgoing, resp)
+                                end
+                            end
+                        end
+
+                    catch e
+                        println("Inner error: ", e)
+                    finally
+                        if islocked(video_mtx)
+                            unlock(video_mtx)
+                        end
+                    end
+                end
+            catch e
+                println("Outer error: ", e)
+            end
+
+            update_timestamp(xobject)
+        catch e
+            if isa(e, InvalidStateException) && e.state == :closed
+                println("real-time video task completed")
+                break
+            else
+                println(e)
+            end
+        end
+    end
+
     while isopen(ws)
         data, = readguarded(ws)
         s = String(data)
@@ -1351,6 +1550,13 @@ function ws_coroutine(ws, ids)
 
                 continue
             end
+
+            # realtime streaming video frame requests
+            if msg["type"] == "video"
+                # replace!(video_requests, msg)
+                push!(video_requests, msg)
+                continue
+            end
         catch e
             println("ws_coroutine::$e")
             # @error "ws_coroutine::" exception = (e, catch_backtrace())
@@ -1363,6 +1569,9 @@ function ws_coroutine(ws, ids)
 
     close(viewport_requests)
     wait(realtime)
+
+    close(video_requests)
+    wait(video)
 
     # clean up x265
     if encoder ≠ C_NULL
