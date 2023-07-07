@@ -953,8 +953,8 @@ end
 
 function getVideoFrame(
     xobject::XDataSet,
-    frame_start::Float64,
-    frame_end::Float64,
+    energy_start::Float64,
+    energy_end::Float64,
     inner_width::Integer,
     inner_height::Integer,
     offsetx::Integer,
@@ -967,6 +967,13 @@ function getVideoFrame(
     local frame_pixels, frame_mask
     local pixels, mask
     local dstWidth, dstHeight
+
+    x1 = offsetx
+    x2 = offsetx + inner_width - 1
+    y1 = offsety
+    y2 = offsety + inner_height - 1
+
+    frame_pixels, frame_mask = getViewport(xobject, x1, x2, y1, y2, Float32(energy_start), Float32(energy_end))
 
     dims = size(frame_pixels)
     width = dims[1]
@@ -983,5 +990,5 @@ function getVideoFrame(
     pixels = Matrix{UInt8}(undef, (dstWidth, dstHeight))
     mask = Matrix{UInt8}(undef, (dstWidth, dstHeight))
 
-    return (pixels, mask)
+    return (framepixels, mask)
 end
