@@ -987,8 +987,29 @@ function getVideoFrame(
         dstHeight = height
     end
 
-    pixels = Matrix{UInt8}(undef, (dstWidth, dstHeight))
-    mask = Matrix{UInt8}(undef, (dstWidth, dstHeight))
+    #pixels = Matrix{UInt8}(undef, (dstWidth, dstHeight))
+    #mask = Matrix{UInt8}(undef, (dstWidth, dstHeight))
 
-    return (framepixels, mask)
+    if bDownsize
+        pixels =
+            round.(
+                UInt8,
+                clamp.(imresize(frame_pixels, (dstWidth, dstHeight)), 0, 255),
+            )
+
+        mask =
+            round.(
+                UInt8,
+                clamp.(
+                    imresize(frame_mask, (dstWidth, dstHeight), method=Constant()),
+                    0,
+                    255,
+                ),
+            ) # use Nearest-Neighbours for the mask
+    else
+        pixels = UInt8.(frame_pixels)
+        mask = UInt8.(frame_mask)
+    end
+
+    return (pixels, mask)
 end
