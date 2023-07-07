@@ -6285,8 +6285,6 @@ async function open_websocket_connection(_datasetId, index) {
                         var data = JSON.parse(received_msg);
 
                         if (data.type == "init_video") {
-                            //console.log(data);
-
                             var width = data.width;
                             var height = data.height;
 
