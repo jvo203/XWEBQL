@@ -177,7 +177,7 @@ fn scan_table_header(header: []const u8, events: *XMeta, allocator: Allocator) !
                 if (value) |columnType| {
                     // get the type size
                     const size = get_column_size(columnType);
-                    events.columns[@intCast(usize, index - 1)] = size;
+                    events.columns[@as(usize, @intCast(index - 1))] = size;
                 }
             }
         }
@@ -193,11 +193,11 @@ fn get_column_offset(columns: []i32, index: i32) usize {
     var i: usize = 0;
 
     while (i < index) {
-        offset += columns[@intCast(usize, i)];
+        offset += columns[@as(usize, @intCast(i))];
         i += 1;
     }
 
-    return @intCast(usize, offset);
+    return @as(usize, @intCast(offset));
 }
 
 fn read_sxs_threaded(data: []const u8, x: []i16, y: []i16, upi: []f32, size: usize, x_offset: usize, y_offset: usize, upi_offset: usize, stride: usize) void {
@@ -207,7 +207,7 @@ fn read_sxs_threaded(data: []const u8, x: []i16, y: []i16, upi: []f32, size: usi
     while (i < size) {
         x[i] = std.mem.readIntSliceBig(i16, data[offset + x_offset ..]);
         y[i] = std.mem.readIntSliceBig(i16, data[offset + y_offset ..]);
-        upi[i] = @bitCast(f32, std.mem.readIntSliceBig(i32, data[offset + upi_offset ..]));
+        upi[i] = @as(f32, @bitCast(std.mem.readIntSliceBig(i32, data[offset + upi_offset ..])));
 
         i += 1;
         offset += stride;
@@ -226,7 +226,7 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
     // mmap the event file
     const sxs = try std.os.mmap(
         null,
-        @intCast(usize, stats.size),
+        @as(usize, @intCast(stats.size)),
         std.os.PROT.READ,
         std.os.MAP.PRIVATE,
         fd,
@@ -336,7 +336,7 @@ pub fn main() !void {
 
     const start = std.time.nanoTimestamp();
     const events = try read_sxs_events(event_filename, allocator);
-    var duration: f64 = @floatFromInt(f64, std.time.nanoTimestamp() - start);
+    var duration: f64 = @floatFromInt(std.time.nanoTimestamp() - start);
     duration /= 1_000_000;
 
     std.debug.print("num_events = {d}, Zig elapsed time: {d:.6} ms\n", .{ events.num_events, duration });
