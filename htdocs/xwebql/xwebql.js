@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-07-06.0";
+    return "JS2023-07-07.0";
 }
 
 function uuidv4() {
@@ -6931,7 +6931,7 @@ function zoom_lines(ene) {
         return;
 
     var pos = -1;
-    var minDist = 10 * freq;
+    var minDist = 10 * ene;
 
     var modal = document.getElementById('lineidentification');
     var scroller = zenscroll.createScroller(modal);
@@ -6943,8 +6943,8 @@ function zoom_lines(ene) {
         m[i].style.fontSize = "100%";
         m[i].style.fontWeight = "normal";
 
-        var tmp = parseFloat(m[i].getAttribute("freq"));
-        var dist = Math.abs(freq - tmp);
+        var tmp = parseFloat(m[i].getAttribute("ene"));
+        var dist = Math.abs(ene - tmp);
 
         if (dist < minDist) {
             minDist = dist;
@@ -6971,3 +6971,82 @@ function zoom_lines(ene) {
     else
         modal.style.display = "none";
 }
+
+function get_line_energy() {
+    var x = parseFloat(d3.select("#ene_bar").attr("x1"));
+
+    var offset = [x, 0];
+
+    var ene = get_mouse_energy(offset);
+
+    return ene;
+};
+
+function x_axis_left() {
+    var ene = round(get_line_energy(), 10);
+
+    //console.log("current line energy = ", ene, "\tline_pos = ", line_pos) ;
+
+    //find the next line to the left
+
+    var m = document.getElementsByClassName("molecularp");
+
+    if (m.length <= 0)
+        return;
+
+    if (line_pos < 0) {
+        line_pos = 0;
+
+        for (var i = 0; i < m.length; i++) {
+            var tmp = round(parseFloat(m[i].getAttribute("ene")), 10);
+
+            if (tmp >= ene)
+                break;
+
+            line_pos = i;
+        };
+    }
+    else {
+        if (line_pos - 1 >= 0)
+            line_pos--;
+    };
+
+    var offset = [parseFloat(m[mol_pos].getAttribute("x")), 0];
+
+    x_axis_move(offset);
+};
+
+function x_axis_right() {
+    var ene = round(get_line_energy(), 10);
+
+    //console.log("current line energy = ", ene, "\tline_pos = ", line_pos) ;
+
+    //find the next line to the left
+
+    var m = document.getElementsByClassName("molecularp");
+
+    if (m.length <= 0)
+        return;
+
+    if (line_pos < 0) {
+        line_pos = m.length - 1;
+
+        for (var i = m.length - 1; i >= 0; i--) {
+            var tmp = round(parseFloat(m[i].getAttribute("ene")), 10);
+
+            if (tmp <= ene)
+                break;
+
+            line_pos = i;
+        };
+    }
+    else {
+        if (line_pos + 1 <= m.length - 1)
+            line_pos++;
+    };
+
+
+    var offset = [parseFloat(m[mol_pos].getAttribute("x")), 0];
+
+    x_axis_move(offset);
+};
