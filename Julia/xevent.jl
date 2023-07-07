@@ -950,3 +950,20 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
 
     return (view_resp, spec_resp)
 end
+
+function getVideoFrame(
+    xobject::XDataSet,
+    frame_start::Float64,
+    frame_end::Float64,
+    inner_width::Integer,
+    inner_height::Integer,
+    offsetx::Integer,
+    offsety::Integer,
+    image_width::Integer,
+    image_height::Integer,
+    bDownsize::Bool,
+    keyframe::Bool,
+)
+
+    return (Nothing, Nothing)
+end
