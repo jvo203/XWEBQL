@@ -964,6 +964,24 @@ function getVideoFrame(
     bDownsize::Bool,
     keyframe::Bool,
 )
+    local frame_pixels, frame_mask
+    local pixels, mask
+    local dstWidth, dstHeight
 
-    return (Nothing, Nothing)
+    dims = size(frame_pixels)
+    width = dims[1]
+    height = dims[2]
+
+    if bDownsize
+        dstWidth = image_width
+        dstHeight = image_height
+    else
+        dstWidth = width
+        dstHeight = height
+    end
+
+    pixels = Matrix{UInt8}(undef, (dstWidth, dstHeight))
+    mask = Matrix{UInt8}(undef, (dstWidth, dstHeight))
+
+    return (pixels, mask)
 end
