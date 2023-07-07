@@ -6280,7 +6280,7 @@ async function open_websocket_connection(_datasetId, index) {
                                 videoFrame.img = img;
 
                                 requestAnimationFrame(function () {
-                                    process_video(index)
+                                    process_video();
                                 });
                             }
                             else {
@@ -7143,3 +7143,72 @@ function x_axis_right() {
 
     x_axis_move(offset);
 };
+
+function process_video() {
+    if (!streaming || videoFrame == null || videoFrame.img == null)
+        return;
+
+    //let image_bounding_dims = imageContainer[index - 1].image_bounding_dims;
+    //{x1: 0, y1: 0, width: w, height: h};
+
+    let imageCanvas = document.createElement('canvas');
+    imageCanvas.style.visibility = "hidden";
+    var context = imageCanvas.getContext('2d');
+
+    let imageData = videoFrame.img;
+    let image_bounding_dims = videoFrame.image_bounding_dims;
+
+    imageCanvas.width = imageData.width;
+    imageCanvas.height = imageData.height;
+    //console.log(imageCanvas.width, imageCanvas.height);
+
+    context.putImageData(imageData, 0, 0);
+
+    //next display the video frame
+    //place the image onto the main canvas
+    var c = document.getElementById('VideoCanvas');
+    var width = c.width;
+    var height = c.height;
+    var ctx = c.getContext("2d");
+
+    ctx.webkitImageSmoothingEnabled = false;
+    ctx.msImageSmoothingEnabled = false;
+    ctx.imageSmoothingEnabled = false;
+
+    var scale = get_image_scale(width, height, image_bounding_dims.width, image_bounding_dims.height);
+
+    var img_width = scale * image_bounding_dims.width;
+    var img_height = scale * image_bounding_dims.height;
+
+    ctx.drawImage(imageCanvas, image_bounding_dims.x1, image_bounding_dims.y1, image_bounding_dims.width, image_bounding_dims.height, (width - img_width) / 2, (height - img_height) / 2, img_width, img_height);
+
+    if (viewport_zoom_settings != null) {
+        let px = emStrokeWidth;
+        let py = emStrokeWidth;
+
+        let viewport = viewport_zoom_settings;
+        let y = imageCanvas.height - viewport.y - (2 * viewport.clipSize + 1);
+
+        //and a zoomed viewport
+        if (zoom_shape == "square") {
+            ctx.fillStyle = "rgba(0,0,0,0.3)";
+            ctx.fillRect(px, py, viewport_zoom_settings.zoomed_size, viewport_zoom_settings.zoomed_size);
+
+            ctx.drawImage(imageCanvas, (viewport_zoom_settings.x - viewport_zoom_settings.clipSize) / videoFrame[index - 1].scaleX, (y + viewport_zoom_settings.clipSize) / videoFrame[index - 1].scaleY, (2 * viewport_zoom_settings.clipSize + 1) / videoFrame[index - 1].scaleX, (2 * viewport_zoom_settings.clipSize + 1) / videoFrame[index - 1].scaleY, px, py, viewport_zoom_settings.zoomed_size, viewport_zoom_settings.zoomed_size);
+        }
+
+        if (zoom_shape == "circle") {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(px + viewport_zoom_settings.zoomed_size / 2, py + viewport_zoom_settings.zoomed_size / 2, viewport_zoom_settings.zoomed_size / 2, 0, 2 * Math.PI, true);
+
+            ctx.fillStyle = "rgba(0,0,0,0.3)";
+            ctx.fill();
+
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(imageCanvas, (viewport_zoom_settings.x - viewport_zoom_settings.clipSize) / videoFrame[index - 1].scaleX, (y + viewport_zoom_settings.clipSize) / videoFrame[index - 1].scaleY, (2 * viewport_zoom_settings.clipSize + 1) / videoFrame[index - 1].scaleX, (2 * viewport_zoom_settings.clipSize + 1) / videoFrame[index - 1].scaleY, px, py, viewport_zoom_settings.zoomed_size, viewport_zoom_settings.zoomed_size);
+            ctx.restore();
+        }
+    }
+}
