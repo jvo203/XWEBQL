@@ -6226,6 +6226,101 @@ async function open_websocket_connection(_datasetId, index) {
                         return;
                     }
 
+                    // video
+                    if (type == 2) {
+                        computed = dv.getFloat32(12, endianness);
+
+                        var frame = new Uint8Array(received_msg, 16);
+
+                        var latency = performance.now() - dv.getFloat32(0, endianness);
+                        var transfer = (latency - computed) / 1000;//[s]
+
+                        if (transfer > 0) {
+                            var bandwidth = (received_msg.byteLength * 8 / 1000) / transfer;//[kilobits per s]
+
+                            //bitrate tracking (variance-tracking Kalman Filter)
+                            //eta = (variance - bitrate*bitrate) / (1 + Math.cosh(bitrate));
+                            bitrate = (1 - eta) * bitrate + eta * bandwidth;
+                            //variance = (1 - eta)*variance + eta * bandwidth*bandwidth;
+                            target_bitrate = 0.8 * bitrate;
+                        }
+
+                        //console.log("[ws] computed = " + computed.toFixed(1) + " [ms], latency = " + latency.toFixed(1) + "[ms], n/w transfer time = " + (1000 * transfer).toFixed(1) + " [ms],  n/w bandwidth = " + Math.round(bandwidth) + " [kbps], frame length:" + frame.length);
+
+                        //call the wasm decoder
+                        {
+                            let start = performance.now();
+
+                            if (streaming && videoFrame != null) {
+                                var img = videoFrame.img;
+                                var data, fill;
+
+                                if (theme == "dark")
+                                    fill = 0;
+                                else
+                                    fill = 255;
+
+                                var data;
+
+                                try {
+                                    // contouring
+                                    var contours = 0;
+
+                                    if (displayContours)
+                                        contours = parseInt(document.getElementById('contour_lines').value) + 1;
+
+                                    //HEVC                                   
+                                    var res = Module.hevc_decode_frame(videoFrame.width, videoFrame.height, frame, 0, colourmap, fill, contours);
+                                    data = new Uint8ClampedArray(Module.HEAPU8.subarray(res[0], res[0] + res[1])); // it's OK to use .subarray() instead of .slice() as a copy is made in "new Uint8ClampedArray()"
+                                } catch (e) {
+                                    // console.log(e);
+                                };
+
+                                var img = new ImageData(data, videoFrame.width, videoFrame.height);
+                                videoFrame.img = img;
+
+                                requestAnimationFrame(function () {
+                                    process_video(index)
+                                });
+                            }
+                            else {
+                                try {
+                                    //HEVC, ignore the decompressed output, just purge the HEVC buffers
+                                    Module.hevc_decode_frame(0, 0, frame, 0, 'greyscale', fill, 0);
+                                } catch (e) {
+                                    // console.log(e);
+                                };
+                            }
+
+                            let delta = performance.now() - start;
+
+                            //console.log('total decoding/processing/rendering time: ' + delta.toFixed() + ' [ms]');
+
+                            let log = 'video frame length ' + frame.length + ' bytes, decoding/processing/rendering time: ' + delta.toFixed() + ' [ms], bandwidth: ' + Math.round(bandwidth) + " [kbps], request latency: " + latency.toFixed() + ' [ms]';
+
+                            if (video_fps_control == 'auto') {
+                                //latency > computed or delta, take the greater
+                                if (Math.max(latency, delta) > 0.8 * vidInterval) {
+                                    //reduce the video FPS
+                                    vidFPS = 0.8 * vidFPS;
+                                    vidFPS = Math.max(1, vidFPS);
+                                }
+                                else {
+                                    //increase the video FPS
+                                    vidFPS = 1.2 * vidFPS;
+                                    vidFPS = Math.min(30, vidFPS);
+                                }
+                            }
+
+                            log += ' vidFPS = ' + Math.round(vidFPS);
+
+                            if (videoFrame != null)
+                                d3.select("#fps").text('video: ' + Math.round(vidFPS) + ' fps, bitrate: ' + Math.round(bitrate) + ' kbps');//, η: ' + eta.toFixed(4) + ' var: ' + variance
+                        }
+
+                        return;
+                    }
+
                 }
 
                 if (typeof evt.data === "string") {
