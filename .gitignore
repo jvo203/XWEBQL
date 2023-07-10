@@ -59,5 +59,8 @@ Manifest.toml
 *.out
 *.app
 
+# AtomDB
+*.fits
+
 #Microsoft Visual Code IDE
 /.vscode/
