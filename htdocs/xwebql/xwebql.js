@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-07-07.0";
+    return "JS2023-07-10.0";
 }
 
 function uuidv4() {
@@ -2903,6 +2903,13 @@ function get_spectrum_margin() {
     return 0.1;
 }
 
+function E2T(energy) {
+    // Boltzmann constant
+    const k = 8.6173303e-5; // eV/K
+
+    return energy / k;
+}
+
 function setup_axes() {
     if (fitsData.depth <= 1)
         return;
@@ -2947,19 +2954,23 @@ function setup_axes() {
     var interval = dmax - dmin;
     var range = get_axes_range(width, height);
 
-    /*var iR = d3.scaleLinear()
-        .range([range.xMin, range.xMax])
-        .domain([data_band_lo, data_band_hi]);*/
-
     var xR = d3.scaleLog()
         .range([range.xMin, range.xMax])
         .domain([data_band_lo, data_band_hi]);
+
+    var xT = d3.scaleLog()
+        .range([range.xMin, range.xMax])
+        .domain([E2T(1000 * data_band_lo), E2T(1000 * data_band_hi)]); // keV to eV
 
     var yR = d3.scaleLog()
         .range([range.yMax, range.yMin])
         .domain([dmin, dmax + get_spectrum_margin() * interval]);
 
     var xAxis = d3.axisTop(xR)
+        .tickSizeOuter([3])
+        .ticks(7);
+
+    var TAxis = d3.axisBottom(xT)
         .tickSizeOuter([3])
         .ticks(7);
 
@@ -3013,6 +3024,31 @@ function setup_axes() {
         .attr("stroke", "none")
         .attr("transform", "rotate(-90)")
         .text(yLabel + " " + bunit);
+
+    // Add the T Axis
+    svg.append("g")
+        .attr("class", "axis")
+        .attr("id", "taxis")
+        .style("fill", axisColour)
+        .style("stroke", axisColour)
+        //.style("stroke-width", emStrokeWidth)        
+        .call(TAxis);
+
+    var strTLabel = "<I>TEMPERATURE</I> [K]";
+    var ypos = 2.0 * emFontSize;
+
+    //z-axis label
+    svg.append("foreignObject")
+        .attr("x", (2 * range.xMin + 1.5 * emFontSize))
+        //.attr("y", (0.02*height+1.5*emFontSize))
+        .attr("y", ypos)
+        .attr("width", 20 * emFontSize)
+        .attr("height", 2 * emFontSize)
+        .append("xhtml:div")
+        .attr("id", "temperature_display")
+        .style("display", "inline-block")
+        .attr("class", "axis-label")
+        .html(strTLabel);
 
     // Add the Y Axis
     svg.append("g")
