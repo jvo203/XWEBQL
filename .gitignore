@@ -62,5 +62,8 @@ Manifest.toml
 # AtomDB
 *.fits
 
+#sqlite db files
+*.db
+
 #Microsoft Visual Code IDE
 /.vscode/
