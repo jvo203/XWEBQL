@@ -6933,13 +6933,21 @@ function x_axis_move(offset) {
 
     var data_band = get_mouse_energy(offset);
 
+    var text = "";
+
     if (data_band < 1) {
-        d3.select("#XText").text((1000 * data_band).toPrecision(3) + " " + 'eV');
+        text = (1000 * data_band).toPrecision(3) + " " + 'eV';
     } else if (data_band.toPrecision(3) < 1000) {
-        d3.select("#XText").text(data_band.toPrecision(3) + " " + 'keV');
+        text = data_band.toPrecision(3) + " " + 'keV';
     } else {
-        d3.select("#XText").text((data_band / 1000).toPrecision(3) + " " + 'MeV');
+        text = (data_band / 1000).toPrecision(3) + " " + 'MeV';
     }
+
+    // add the temperature
+    var temperature = E2T(1000 * data_band);
+    text += " (" + temperature.toPrecision(3) + " K)";
+
+    d3.select("#XText").text(text);
 
     var modal = document.getElementById('lineidentification');
 
