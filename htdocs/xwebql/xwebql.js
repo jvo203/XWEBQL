@@ -6917,6 +6917,32 @@ function x_axis_mousemove(offset) {
     x_axis_move(offset);
 }
 
+function replay_video() {
+    if (!video_playback)
+        return;
+
+    x_axis_mousemove(video_offset);
+
+    //simulate a mouse advance
+    var width = parseFloat(d3.select("#energy").attr("width"));
+    var offsetx = parseFloat(d3.select("#energy").attr("x"));
+
+    let fps = 30;
+    let no_frames = fps * video_period;
+
+    let dx = width / no_frames;
+    let dt = 1000.0 / fps;
+
+    var new_video_offset = video_offset[0] + dx;
+    if (new_video_offset > offsetx + width)
+        new_video_offset = offsetx;
+
+    video_offset[0] = new_video_offset;
+    //var dt = video_period / width;
+
+    video_timeout = setTimeout(replay_video, dt);
+}
+
 function x_axis_move(offset) {
     clearTimeout(idleVideo);
 
