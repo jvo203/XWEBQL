@@ -75,9 +75,9 @@ def parse_results(res):
             try:
                 c.execute(strSQL)
             except sqlite3.OperationalError as err:
-                print err, ":", strSQL
+                print(err, ":", strSQL)
             except sqlite3.IntegrityError as err:
-                print err, ":", strSQL
+                print(err, ":", strSQL)
                 
     conn.commit()        
 
