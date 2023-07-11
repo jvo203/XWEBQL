@@ -579,8 +579,8 @@ function streamXEvents(http::HTTP.Streams.Stream)
         "<script src=\"https://kit.fontawesome.com/8433b7dde2.js\" crossorigin=\"anonymous\"></script>\n",
     )
 
-    # HTML5 FileSaver
-    write(http, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/FileSaver.js\"></script>\n")
+    # Bzip2 decoder
+    write(http, "<script src=\"bzip2.js\"></script>\n")
 
     # WebAssembly
     write(http, "<script src=\"client.", WASM_VERSION, ".js\"></script>\n")
