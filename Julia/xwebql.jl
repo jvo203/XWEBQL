@@ -1,5 +1,6 @@
 import Base.Iterators: flatten
 using ArgParse
+using CodecBzip2
 using CodecLz4
 using HTTP
 using JSON
@@ -822,10 +823,53 @@ function streamSpectralLines(http::HTTP.Streams.Stream)
 
     println("get_atomdb::$datasetid; [$ene_start, $ene_end] [keV]")
 
-    # return not implemented
-    HTTP.setstatus(http, 501)
+    # fetch the molecules from AtomDB
+    strSQL = "SELECT * FROM lines WHERE energy>=$ene_start AND energy<=$ene_end;"
+
+    has_lines = false
+    resp = IOBuffer()
+    write(resp, "{\"lines\" : [")
+
+    try
+        for row in SQLite.DBInterface.execute(atom_db, strSQL)
+            has_lines = true
+            json = JSON.json(row)
+            write(resp, json, ",")
+        end
+    catch e
+        println("streamSpectralLines::$e")
+
+        HTTP.setstatus(http, 404)
+        startwrite(http)
+        write(http, "Not Found")
+        return nothing
+    end
+
+    json = String(take!(resp))
+
+    if !has_lines
+        json = "{\"lines\" : []}"
+    else
+        # remove the last character (comma) from json, end an array
+        json = chop(json, tail=1) * "]}"
+    end
+
+    # compress with bzip2 (more efficient than LZ4HC)
+    compressed = transcode(Bzip2Compressor, json)
+    println(
+        "SPECTRAL LINES JSON length: $(length(json)); bzip2-compressed: $(length(compressed))",
+    )
+
+    # cache a response
+    HTTP.setheader(http, "Cache-Control" => "public, max-age=86400")
+
+    # sending binary data
+    HTTP.setheader(http, "Content-Type" => "application/octet-stream")
+
+    HTTP.setstatus(http, 200)
     startwrite(http)
-    write(http, "Not Implemented")
+    write(http, compressed)
+
     return nothing
 end
 
