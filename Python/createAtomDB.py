@@ -20,3 +20,26 @@ try:
     c.execute(strSQL)
 except sqlite3.OperationalError as err:
     print(err, ":", strSQL)
+
+
+def build_url(base, wvl, wvr, unit):
+    url = (
+        base
+        + "?wvl="
+        + str(wvl)
+        + "&wvlunit="
+        + unit
+        + "&wvr="
+        + str(wvr)
+        + "&ems=1.e-18&teunit="
+        + unit
+    )
+    return url
+
+
+server = "http://www.atomdb.org/Webguide/wavelength_region.php"
+
+url = build_url(server, 1.0, 0.1, "keV")
+print(url)
+
+conn.close()
