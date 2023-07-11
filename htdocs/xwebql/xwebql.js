@@ -1046,11 +1046,83 @@ async function mainRenderer() {
         dataset_timeout = -1;
         open_websocket_connection(datasetId);
         fetch_image_spectrum(datasetId, true, false);
+        fetch_spectral_lines(datasetId, 0, 0);
 
     };
 
     firstTime = false;
 }
+
+async function fetch_spectral_lines(datasetId, ene_start, ene_end) {
+    var xmlhttp = new XMLHttpRequest();
+
+    //ene_start, ene_end [keV]
+    var url = 'get_atomdb?datasetId=' + encodeURIComponent(datasetId) + '&ene_start=' + ene_start + '&ene_end=' + ene_end + '&' + encodeURIComponent(get_js_version());
+
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 404) {
+            console.log("No spectral lines found.");
+        }
+
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 502) {
+            console.log("Connection error, re-fetching spectral lines after 1 second.");
+            setTimeout(function () {
+                fetch_spectral_lines(datasetId, ene_start, ene_end);
+            }, 1000);
+        }
+
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 202) {
+            console.log("Server not ready, long-polling spectral lines again after 500 ms.");
+            setTimeout(function () {
+                fetch_spectral_lines(datasetId, ene_start, ene_end);
+            }, 500);
+        }
+
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+            lines = []; // a global variable
+
+            try {
+                var response = JSON.parse(xmlhttp.responseText);
+                lines = response.lines;
+            } catch (err) {
+                var received_msg = xmlhttp.response;
+
+                if (received_msg instanceof ArrayBuffer) {
+
+                    try {
+                        // bzip2 decoder 
+                        var bytes = new Uint8Array(received_msg);
+                        jsonData = bzip2.simple(bzip2.array(bytes));
+
+                        var response = JSON.parse(jsonData);
+                        lines = response.lines;
+                    } catch (e) {
+                        console.log(e);
+                    };
+                };
+            };
+
+            index_lines();
+            console.log("#ATOMDB lines: ", lines.length);
+
+            if (fitsData != null) {
+                if (fitsData.depth > 1)
+                    display_lines();
+            }
+        }
+    }
+
+    xmlhttp.open("GET", url, true);
+
+    sv = htmlData.getAttribute('data-server-version');
+
+    if (sv.charAt(0) == 'J') {
+        xmlhttp.responseType = 'arraybuffer';
+    }
+
+    xmlhttp.timeout = 0;
+    xmlhttp.send();
+};
 
 async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
     var rect = document.getElementById('mainDiv').getBoundingClientRect();
@@ -2599,54 +2671,11 @@ function setup_help() {
         .text("×");
 
     headerDiv.append("h2")
-        .text("FITSWEBQLSE HOW-TO");
+        .text("XWEBQLSE HOW-TO");
 
     var bodyDiv = contentDiv.append("div")
         .attr("id", "modal-body")
         .attr("class", "modal-body");
-
-    bodyDiv.append("h3")
-        .attr("id", "h3")
-        .text("P-V Diagram");
-
-    bodyDiv.append("p")
-        .html("An interactive <b>Position-Velocity Diagram</b> can be displayed for the current image. First left-click on the image to select a starting position.");
-
-    bodyDiv.append("p")
-        .html("Then move a mouse around and left-click again to complete the <i>P-V line</i> selection. The <i>P-V diagram</i> will display shortly.");
-
-    bodyDiv.append("p")
-        .html("In the <b>P-V Diagram view</b> ①, ② and the middle point can be dragged freely to change the <i>P-V line</i>. The <i>P-V diagram</i> will be updated automatically.");
-
-    var pv = bodyDiv.append("video")
-        .attr("width", "100%")
-        .attr("controls", "")
-        .attr("preload", "metadata");
-
-    pv.append("source")
-        .attr("src", "https://cdn.jsdelivr.net/gh/jvo203/FITSWEBQLSE/htdocs/fitswebql/pv_diagram.mp4");
-
-    bodyDiv.append("hr");
-
-    bodyDiv.append("h3")
-        .attr("id", "csv_h3")
-        .text("Spectrum Export");
-
-    bodyDiv.append("p")
-        .html("The current image/viewport spectrum can be exported to a <b>CSV</b> file");
-
-    var csv = bodyDiv.append("video")
-        .attr("width", "100%")
-        .attr("controls", "")
-        .attr("preload", "metadata");
-
-    csv.append("source")
-        .attr("src", "https://cdn.jsdelivr.net/gh/jvo203/FITSWEBQLSE/htdocs/fitswebql/spectrum_export.mp4");
-
-    csv.append("p")
-        .html("Your browser does not support the video tag.");
-
-    bodyDiv.append("hr");
 
     bodyDiv.append("h3")
         .text("3D View");
