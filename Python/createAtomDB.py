@@ -14,7 +14,7 @@ try:
 except sqlite3.OperationalError as err:
     print(err, ":", strSQL)
 
-strSQL = "CREATE TABLE lines (species TEXT, name TEXT, frequency REAL, qn TEXT, cdms_intensity REAL, lovas_intensity REAL, E_L REAL, linelist TEXT, hash TEXT UNIQUE) ;"
+strSQL = "CREATE TABLE lines (ion TEXT, energy REAL, upper REAL, lower REAL, emissivity REAL, te_peak REAL, intensity REAL, hash TEXT UNIQUE) ;"
 
 try:
     c.execute(strSQL)
