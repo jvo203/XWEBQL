@@ -270,13 +270,17 @@ end
 function getImage(xobject::XDataSet)
     x = xobject.x
     y = xobject.y
+    energy = xobject.energy
 
     xmin = minimum(x)
     xmax = maximum(x)
     ymin = minimum(y)
     ymax = maximum(y)
 
-    @time h = Hist2D((x, y), (xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5))
+    # make a mask
+    mask = [energy[i] <= MAXIMUM_ENERGY for i in 1:length(x)]
+
+    @time h = Hist2D((x[mask], y[mask]), (xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5))
     pixels = bincounts(h)
 
     # make a mask for the pixels
