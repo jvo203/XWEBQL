@@ -304,9 +304,6 @@ function getSpectrum(xobject::XDataSet, dx::Integer)
     (E_min, E_max) = ThreadsX.extrema(energy)
     E_max = min(E_max, log(MAXIMUM_ENERGY)) # log eV
 
-    #E_min = Float32(minimum(energy)) # log eV    
-    #E_max = Float32(maximum(energy)) # log eV
-    #E_max = Float32(log(MAXIMUM_ENERGY)) # log eV
     ΔE = (E_max - E_min) / dx
 
     @time h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
