@@ -7337,7 +7337,7 @@ function index_lines() {
         let lower = line.lower;
         let emissivity = line.emissivity;
 
-        line.text = ion + " " + upper + " " + lower + " " + emissivity + "ph cm<sup>3</sup>s<sup>-1</sup>";
+        line.text = ion;// + " " + emissivity + " ph cm<sup>3</sup>s<sup>-1</sup>";
     }
 }
 
@@ -7430,24 +7430,30 @@ function display_lines() {
 
     console.log("valid spectral lines:", num);
 
-    var dx = range.xMax - range.xMin;
+    var div_lines = d3.select("#lineidentification");
+    div_lines.selectAll("*").remove();
+
+    var ene = d3.select("#energy");
+    var dx = parseFloat(ene.attr("width"));
+    var offsetx = parseFloat(ene.attr("x"));
     var offsety = height - 1;
 
-    var div_molecules = d3.select("#molecularlist");
-    div_molecules.selectAll("*").remove();
+    var xR = d3.scaleLog()
+        .range([offsetx, offsetx + dx])
+        .domain([data_band_lo, data_band_hi]);
 
-    for (var i = 0; i < mol_list.length; i++) {
-        let molecule = mol_list[i];
-        let f = molecule.frequency * 1e9;
+    for (var i = 0; i < line_list.length; i++) {
+        let line = line_list[i];
+        let energy = line.energy;
 
-        var x = range.xMin + dx * (f - band_lo) / (band_hi - band_lo);
+        var x = xR(energy);
 
-        var moleculeG = group.append("g")
-            .attr("id", "molecule_group")
+        var lineG = group.append("g")
+            .attr("id", "line_group")
             .attr("x", x);
 
-        moleculeG.append("line")
-            .attr("id", "molecule_line")
+        lineG.append("line")
+            .attr("id", "line_line")
             .attr("x1", x)
             .attr("y1", offsety)
             .attr("x2", x)
@@ -7456,14 +7462,9 @@ function display_lines() {
             .style("stroke-width", 1)
             .attr("opacity", 1.0);
 
-        var text;
+        var text = line.text;
 
-        if (molecule.species.indexOf("Unidentified") > -1)
-            text = "";
-        else
-            text = molecule.species;
-
-        moleculeG.append("foreignObject")
+        lineG.append("foreignObject")
             .attr("x", (x - 0.5 * emFontSize))
             .attr("y", (offsety - 2.0 * emFontSize))
             .attr("width", (20 * emFontSize))
@@ -7480,21 +7481,20 @@ function display_lines() {
 
         //console.log("spectral line @ x = ",x, (f/1e9).toPrecision(7), text.trim()) ;
 
-        try {
+        /*try {
             var htmlStr = molecule.name.trim() + ' ' + text.trim() + ' ' + molecule.qn.trim() + ' <span style="font-size: 80%">(' + molecule.linelist + ')</span>';
         } catch (e) {
-            console.log(molecule);
+            console.log(line);
             console.error(e);
-        }
+        }*/
 
-        if (htmlStr.indexOf("Unidentified") > -1)
-            htmlStr = molecule.name;
+        var htmlStr = text.trim();
 
-        div_molecules.append("p")
+        div_lines.append("p")
             .attr("class", "molecularp")
-            .attr("freq", f)
+            .attr("ene", energy) // was "freq"
             .attr("x", x)
-            .html((f / 1e9).toPrecision(7) + ' GHz' + ' ' + htmlStr);
+            .html(energy.toPrecision(3) + ' keV' + ' ' + htmlStr);
     }
 
     group.moveToBack();
