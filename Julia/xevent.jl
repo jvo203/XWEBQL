@@ -11,6 +11,12 @@ using ThreadsX
 
 finale(x) = @async println("Finalizing $(x.id).$(x.uri)")
 
+# the number of energy channels
+const NUM_CHANNELS = 128
+
+# energy cap
+const MAXIMUM_ENERGY = 30000.0 # eV
+
 mutable struct XDataSet
     id::String
     uri::String
@@ -202,7 +208,7 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     println("min_count = $min_count, max_count = ", max_count)
 
     # the spectrum
-    (spectrum, E_min, E_max) = getSpectrum(xobject, 512)
+    (spectrum, E_min, E_max) = getSpectrum(xobject, NUM_CHANNELS)
     println("E_min = ", E_min)
     println("E_max = ", E_max)
     println("spectrum:", spectrum)
@@ -283,7 +289,8 @@ function getSpectrum(xobject::XDataSet, dx::Integer)
     energy = xobject.energy
 
     E_min = Float32(minimum(energy)) # log eV    
-    E_max = Float32(maximum(energy)) # log eV
+    # E_max = Float32(maximum(energy)) # log eV
+    E_max = Float32(log(MAXIMUM_ENERGY)) # log eV
     ΔE = (E_max - E_min) / dx
 
     @time h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
@@ -897,9 +904,9 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
 
     # get the spectrum
     if beam == CIRCLE
-        spectrum = getCircleSpectrum(xobject, energy_start, energy_end, cx, cy, r2, 512)
+        spectrum = getCircleSpectrum(xobject, energy_start, energy_end, cx, cy, r2, NUM_CHANNELS)
     elseif beam == SQUARE
-        spectrum = getSquareSpectrum(xobject, energy_start, energy_end, x1, x2, y1, y2, 512)
+        spectrum = getSquareSpectrum(xobject, energy_start, energy_end, x1, x2, y1, y2, NUM_CHANNELS)
     end
 
     # optionally downsample the spectrum
