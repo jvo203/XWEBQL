@@ -189,7 +189,6 @@ def build_url(base, wvl, wvr, unit):
 server = "http://www.atomdb.org/Webguide/wavelength_region.php"
 
 url = build_url(server, 1.0, 0.1, "keV")
-print(url)
 fetch_lines(url)
 
 finalize_db()
