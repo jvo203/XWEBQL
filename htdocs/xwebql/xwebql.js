@@ -826,6 +826,8 @@ async function mainRenderer() {
         fps = 30;//target fps; 60 is OK in Chrome but a bit laggish in Firefox
         fpsInterval = 1000 / fps;
 
+        fitsData = null;
+
         frame_multiplier = 1;
         imageData = null;
         initKalmanFilter = false;
@@ -898,6 +900,10 @@ async function mainRenderer() {
         begin_y = 0;
         end_x = 0;
         end_y = 0;
+
+        // displayIntensity = localStorage_read_number("displayIntensity", -1);
+        displayIntensity = 0.5;
+        displayLimit = localStorage_read_number("displayLimit", 500);
 
         coordsFmt = localStorage_read_string("coordsFmt", "HMS");//DMS or HMS
         realtime_spectrum = localStorage_read_boolean("realtime_spectrum", true);
@@ -1421,6 +1427,9 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
                                 setup_axes();
 
                                 plot_spectrum(fitsData.spectrum);
+
+                                if (lines.length > 0)
+                                    display_lines();
                             }
                         }
 
@@ -7310,4 +7319,189 @@ function process_video() {
             ctx.restore();
         }
     }
+}
+
+function index_lines() {
+    if (lines.length <= 0)
+        return;
+
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+
+        // strip any HTML from the name and species (like <sup>, etc.)
+        //let name = stripHTML(molecule.name.toLowerCase()).trim();
+        //let species = stripHTML(molecule.species.toLowerCase()).trim();
+
+        let ion = line.ion;
+        let upper = line.upper;
+        let lower = line.lower;
+        let emissivity = line.emissivity;
+
+        line.text = ion + " " + upper + " " + lower + " " + emissivity + "ph cm<sup>3</sup>s<sup>-1</sup>";
+    }
+}
+
+function stripHTML(html) {
+    try {
+        return $("<p>" + html + "</p>").text(); // jQuery does the heavy lifting
+    } catch (_) {
+        return html;
+    }
+}
+
+function screen_line(line, search) {
+    if (search != '') {
+        if (line.text.indexOf(search) == -1)
+            return false;
+    }
+
+    var intensity = parseFloat(line.intensity);
+
+    if (intensity < displayIntensity)
+        return false;
+
+    return true;
+}
+
+function display_lines() {
+    if (lines.length <= 0)
+        return;
+
+    if (data_band_lo <= 0 || data_band_hi <= 0)
+        return;
+
+    // get the search term (if any)
+    var searchTerm = '';
+    try {
+        searchTerm = stripHTML(document.getElementById('searchInput').value.toLowerCase()).trim();
+    } catch (_) { }
+
+    var svg = d3.select("#BackSVG");
+    var width = parseFloat(svg.attr("width"));
+    var height = parseFloat(svg.attr("height"));
+    var range = get_axes_range(width, height);
+
+    try {
+        d3.select("#lines").remove();
+    }
+    catch (e) {
+    }
+
+    var group = svg.append("g")
+        .attr("id", "lines")
+        .attr("opacity", 0.0);
+
+    // filter the molecules
+    var line_list = [];
+    for (var i = 0; i < lines.length; i++) {
+        let line = lines[i];
+
+        if (!screen_line(line, searchTerm))
+            continue;
+
+        let energy = line.energy;
+
+        if ((energy >= data_band_lo) && (energy <= data_band_hi))
+            line_list.push(line);
+    };
+
+    var num = line_list.length;
+
+    if (num > displayLimit) {
+        console.log("Too many spectral lines to display:", num, ", applying a hard limit of", displayLimit, ". Please refine your search.");
+
+        // randomly select a subset of the molecules
+        line_list = line_list.sort(() => Math.random() - Math.random()).slice(0, displayLimit);
+        num = line_list.length;
+    }
+
+    var fontStyle = Math.round(0.67 * emFontSize) + "px";// Helvetica";
+    var strokeStyle = "#FFCC00";
+
+    if (theme == 'bright')
+        strokeStyle = 'black';
+
+    /*if(colourmap == "rainbow" || colourmap == "hot")
+    strokeStyle = "white";*/
+
+    //and adjust (reduce) the font size if there are too many molecules to display
+    if (num > 20)
+        fontStyle = Math.max(8, Math.round(0.67 * emFontSize * .25)) + "px";// Helvetica";
+
+    console.log("valid spectral lines:", num);
+
+    var dx = range.xMax - range.xMin;
+    var offsety = height - 1;
+
+    var div_molecules = d3.select("#molecularlist");
+    div_molecules.selectAll("*").remove();
+
+    for (var i = 0; i < mol_list.length; i++) {
+        let molecule = mol_list[i];
+        let f = molecule.frequency * 1e9;
+
+        var x = range.xMin + dx * (f - band_lo) / (band_hi - band_lo);
+
+        var moleculeG = group.append("g")
+            .attr("id", "molecule_group")
+            .attr("x", x);
+
+        moleculeG.append("line")
+            .attr("id", "molecule_line")
+            .attr("x1", x)
+            .attr("y1", offsety)
+            .attr("x2", x)
+            .attr("y2", offsety - 1.25 * emFontSize)
+            .style("stroke", strokeStyle)
+            .style("stroke-width", 1)
+            .attr("opacity", 1.0);
+
+        var text;
+
+        if (molecule.species.indexOf("Unidentified") > -1)
+            text = "";
+        else
+            text = molecule.species;
+
+        moleculeG.append("foreignObject")
+            .attr("x", (x - 0.5 * emFontSize))
+            .attr("y", (offsety - 2.0 * emFontSize))
+            .attr("width", (20 * emFontSize))
+            .attr("height", (2 * emFontSize))
+            .attr("transform", 'rotate(-45 ' + (x - 0.5 * emFontSize) + ',' + (offsety - 2.0 * emFontSize) + ')')
+            .attr("opacity", 1.0)
+            .append("xhtml:div")
+            .style("font-size", fontStyle)
+            .style("font-family", "Inconsolata")
+            .style("color", strokeStyle)
+            .style("display", "inline-block")
+            //.append("p")
+            .html(text.trim());
+
+        //console.log("spectral line @ x = ",x, (f/1e9).toPrecision(7), text.trim()) ;
+
+        try {
+            var htmlStr = molecule.name.trim() + ' ' + text.trim() + ' ' + molecule.qn.trim() + ' <span style="font-size: 80%">(' + molecule.linelist + ')</span>';
+        } catch (e) {
+            console.log(molecule);
+            console.error(e);
+        }
+
+        if (htmlStr.indexOf("Unidentified") > -1)
+            htmlStr = molecule.name;
+
+        div_molecules.append("p")
+            .attr("class", "molecularp")
+            .attr("freq", f)
+            .attr("x", x)
+            .html((f / 1e9).toPrecision(7) + ' GHz' + ' ' + htmlStr);
+    }
+
+    group.moveToBack();
+
+    var elem = d3.select("#lines");
+    if (displayLines)
+        elem.attr("opacity", 1);
+    else
+        elem.attr("opacity", 0);
 }
