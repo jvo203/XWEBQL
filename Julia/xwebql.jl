@@ -759,6 +759,69 @@ end
 function streamSpectralLines(http::HTTP.Streams.Stream)
     global atom_db, XOBJECTS, XLOCK
 
+    request::HTTP.Request = http.message
+    request.body = read(http)
+    closeread(http)
+
+    params = HTTP.queryparams(HTTP.URI(request.target))
+    # println(params)    
+
+    datasetid = ""
+    ene_start::Float32 = 0.0
+    ene_end::Float32 = 0.0
+
+    try
+        datasetid = params["datasetId"]
+        ene_start = parse(Float32, params["ene_start"])
+        ene_end = parse(Float32, params["ene_end"])
+    catch e
+        println(e)
+        HTTP.setstatus(http, 404)
+        startwrite(http)
+        write(http, "Not Found")
+        return nothing
+    end
+
+    if ene_start == 0.0 || ene_end == 0.0
+        # get the energy range from the dataset
+
+        xobject = get_dataset(datasetid, XOBJECTS, XLOCK)
+
+        if xobject.id == ""
+            HTTP.setstatus(http, 404)
+            startwrite(http)
+            write(http, "Not Found")
+            return nothing
+        end
+
+        if has_error(xobject)
+            HTTP.setstatus(http, 500)
+            startwrite(http)
+            write(http, "Internal Server Error")
+            return nothing
+        end
+
+        if !has_events(xobject)
+            HTTP.setstatus(http, 202)
+            startwrite(http)
+            write(http, "Accepted")
+            return nothing
+        end
+
+        try
+            ene_start, ene_end = get_energy_range(xobject)
+        catch e
+            println("streamSpectralLines::$e")
+
+            HTTP.setstatus(http, 404)
+            startwrite(http)
+            write(http, "Not Found")
+            return nothing
+        end
+    end
+
+    println("get_atomdb::$datasetid; [$ene_start, $ene_end] [keV]")
+
     # return not implemented
     HTTP.setstatus(http, 501)
     startwrite(http)
@@ -818,14 +881,12 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
         return nothing
     end
 
-
     if has_error(xobject)
         HTTP.setstatus(http, 500)
         startwrite(http)
         write(http, "Internal Server Error")
         return nothing
     end
-
 
     if !has_events(xobject)
         HTTP.setstatus(http, 202)
