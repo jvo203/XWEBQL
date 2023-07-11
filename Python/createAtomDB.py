@@ -27,9 +27,9 @@ def parse_results(res):
         data = row.findAll("td")
 
         if len(data) == 7:
-            print(data)
+            # print(data)
 
-            ion = data[0].text
+            ion = data[0].text.strip()
             energy = float(data[1].text)
             upper = float(data[2].text)
             lower = float(data[3].text)
@@ -111,7 +111,10 @@ def fetch_lines(url):
     page = BeautifulSoup(response.read(), features="html.parser")
     results = page.body.find("table")
 
-    parse_results(results)
+    try:
+        parse_results(results)
+    except AttributeError as err:
+        print(err, ":", url)
 
 
 def finalize_db():
@@ -188,8 +191,21 @@ def build_url(base, wvl, wvr, unit):
 
 server = "http://www.atomdb.org/Webguide/wavelength_region.php"
 
-url = build_url(server, 1.0, 0.1, "keV")
-fetch_lines(url)
+# url = build_url(server, 1.0, 0.1, "keV")
+# fetch_lines(url)
+
+delta = 0.1  # keV
+energy = 0.0  # keV
+end = 15.0  # keV
+
+# sweep through the energy range
+while energy < end:
+    print("energy:", energy, "keV")
+
+    url = build_url(server, energy, delta, "keV")
+    fetch_lines(url)
+
+    energy += delta
 
 finalize_db()
 conn.close()
