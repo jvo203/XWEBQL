@@ -289,12 +289,24 @@ function getImage(xobject::XDataSet)
     return (pixels, mask, xmin, xmax, ymin, ymax)
 end
 
+function get_energy_range(xobject::XDataSet)
+    energy = xobject.energy
+
+    (E_min, E_max) = ThreadsX.extrema(energy) # log eV
+    E_max = min(E_max, log(MAXIMUM_ENERGY)) # log eV
+
+    return (exp(E_min) / 1000.0, exp(E_max) / 1000.0) # keV
+end
+
 function getSpectrum(xobject::XDataSet, dx::Integer)
     energy = xobject.energy
 
-    E_min = Float32(minimum(energy)) # log eV    
-    # E_max = Float32(maximum(energy)) # log eV
-    E_max = Float32(log(MAXIMUM_ENERGY)) # log eV
+    (E_min, E_max) = ThreadsX.extrema(energy)
+    E_max = min(E_max, log(MAXIMUM_ENERGY)) # log eV
+
+    #E_min = Float32(minimum(energy)) # log eV    
+    #E_max = Float32(maximum(energy)) # log eV
+    #E_max = Float32(log(MAXIMUM_ENERGY)) # log eV
     ΔE = (E_max - E_min) / dx
 
     @time h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
