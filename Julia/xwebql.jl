@@ -756,6 +756,16 @@ function streamXEvents(http::HTTP.Streams.Stream)
     return nothing
 end
 
+function streamSpectralLines(http::HTTP.Streams.Stream)
+    global atom_db, XOBJECTS, XLOCK
+
+    # return not implemented
+    HTTP.setstatus(http, 501)
+    startwrite(http)
+    write(http, "Not Implemented")
+    return nothing
+end
+
 function streamImageSpectrum(http::HTTP.Streams.Stream)
     global XOBJECTS, XLOCK
 
@@ -921,6 +931,7 @@ HTTP.register!(XROUTER, "POST", "/*/heartbeat/*", streamHeartBeat)
 HTTP.register!(XROUTER, "GET", "*/*", streamDocument)
 HTTP.register!(XROUTER, "GET", "*", streamDocument)
 HTTP.register!(XROUTER, "GET", "/*/image_spectrum/", streamImageSpectrum)
+HTTP.register!(XROUTER, "GET", "/*/get_atomdb/", streamSpectralLines)
 
 # open an Atom DB connection
 const atom_db = SQLite.DB("atom.db")
