@@ -3,6 +3,7 @@ using ArgParse
 using CodecLz4
 using HTTP
 using JSON
+using SQLite
 using Sockets
 using WebSockets
 using x265_jll
