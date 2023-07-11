@@ -922,6 +922,9 @@ HTTP.register!(XROUTER, "GET", "*/*", streamDocument)
 HTTP.register!(XROUTER, "GET", "*", streamDocument)
 HTTP.register!(XROUTER, "GET", "/*/image_spectrum/", streamImageSpectrum)
 
+# open an Atom DB connection
+const atom_db = SQLite.DB("atom.db")
+
 println("$SERVER_STRING")
 println("DATASET TIMEOUT: $(TIMEOUT)s")
 println("Point your browser to http://localhost:$HTTP_PORT")
