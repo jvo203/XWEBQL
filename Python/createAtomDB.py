@@ -4,7 +4,7 @@ import urllib.request, urllib.error
 import time
 from bs4 import BeautifulSoup
 
-conn = sqlite3.connect("atom.db")
+conn = sqlite3.connect("atom.db", isolation_level=None)
 c = conn.cursor()
 
 strSQL = "DROP TABLE IF EXISTS lines ;"
@@ -114,6 +114,63 @@ def fetch_lines(url):
     parse_results(results)
 
 
+def finalize_db():
+    strSQL = "DROP TABLE IF EXISTS new_lines ;"
+
+    try:
+        c.execute(strSQL)
+    except sqlite3.OperationalError as err:
+        print(err, ":", strSQL)
+
+    #############################################################
+    strSQL = "CREATE TABLE new_lines (ion TEXT, energy REAL, upper REAL, lower REAL, emissivity REAL, te_peak REAL, intensity REAL) ;"
+
+    try:
+        c.execute(strSQL)
+    except sqlite3.OperationalError as err:
+        print(err, ":", strSQL)
+
+    #############################################################
+    strSQL = "INSERT INTO new_lines SELECT ion, energy, upper, lower, emissivity, te_peak, intensity FROM lines;"
+
+    try:
+        c.execute(strSQL)
+    except sqlite3.OperationalError as err:
+        print(err, ":", strSQL)
+
+    #############################################################
+    strSQL = "DROP TABLE IF EXISTS lines ;"
+
+    try:
+        c.execute(strSQL)
+    except sqlite3.OperationalError as err:
+        print(err, ":", strSQL)
+
+    #############################################################
+    strSQL = "ALTER TABLE new_lines RENAME TO lines ;"
+
+    try:
+        c.execute(strSQL)
+    except sqlite3.OperationalError as err:
+        print(err, ":", strSQL)
+
+    #############################################################
+    strSQL = "CREATE INDEX ene_idx ON lines (energy) ;"
+
+    try:
+        c.execute(strSQL)
+    except sqlite3.OperationalError as err:
+        print(err, ":", strSQL)
+
+    #############################################################
+    strSQL = "vacuum ;"
+
+    try:
+        c.execute(strSQL)
+    except sqlite3.OperationalError as err:
+        print(err, ":", strSQL)
+
+
 def build_url(base, wvl, wvr, unit):
     url = (
         base
@@ -135,4 +192,5 @@ url = build_url(server, 1.0, 0.1, "keV")
 print(url)
 fetch_lines(url)
 
+finalize_db()
 conn.close()
