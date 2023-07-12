@@ -1668,11 +1668,11 @@ function display_menu() {
 
         atomdbDropdown.append("li")
             .append("a")
-            .html('<label>intensity cutoff < <span id="intVal">' + relativeIntensity.toFixed(1) + '</span> <input id="intensity" class="slider" type="range" min="0" max="1" step="0.1" value="' + relativeIntensity + '" onmousemove="javascript:change_intensity_threshold(false);" onchange="javascript:change_intensity_threshold(true);"/></label>');
+            .html('<label>only show intensity &GreaterEqual; <span id="intVal">' + relativeIntensity.toFixed(1) + '</span> <input id="intensity" class="slider" type="range" min="0" max="1" step="0.1" value="' + relativeIntensity + '" onmousemove="javascript:change_intensity_threshold(false);" onchange="javascript:change_intensity_threshold(true);"/></label>');
 
         atomdbDropdown.append("li")
             .append("a")
-            .html('<label>&nbsp;search for:&nbsp;<input class="form-control search" type="text" id="searchInput" value="" placeholder="Fe, Si, O ..." onmouseenter="javascript:this.focus();"/></label>');
+            .html('<label>&nbsp;search for:&nbsp;<input class="form-control search" type="text" id="searchInput" value="" placeholder="Fe, Si, XIII ..." onmouseenter="javascript:this.focus();"/></label>');
 
         //add onblur
         var m = document.getElementById('searchInput');
@@ -7611,10 +7611,7 @@ function display_lines() {
 function change_intensity_threshold(refresh) {
     relativeIntensity = parseFloat(document.getElementById('intensity').value);
 
-    var htmlStr = relativeIntensity.toFixed(2);
-
-    /*if (displayIntensity == 0)
-        htmlStr = "-" + htmlStr;*/
+    var htmlStr = relativeIntensity.toFixed(1);
 
     d3.select("#intVal").html(htmlStr);
 
