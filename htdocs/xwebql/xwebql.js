@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-07-10.0";
+    return "JS2023-07-12.0";
 }
 
 function uuidv4() {
@@ -1108,7 +1108,6 @@ async function fetch_spectral_lines(datasetId, ene_start, ene_end) {
                 };
             };
 
-            index_lines();
             console.log("#ATOMDB lines: ", lines.length);
 
             if (fitsData != null) {
@@ -2786,7 +2785,7 @@ function setup_help() {
     bodyDiv.append("hr");
 
     bodyDiv.append("h3")
-        .text("Jump to Splatalogue");
+        .text("Jump to AtomDB");
 
     bodyDiv.append("p")
         .html("press <b>Enter</b> whilst <b>hovering</b> over X-axis");
@@ -2852,29 +2851,10 @@ function setup_help() {
         .text("browser support:");
 
     bodyDiv.append("p")
-        .text("Chrome ◯, Firefox △, Safari ◯, MS Edge △, IE11 ×");
+        .text("Chrome ◯, Firefox △, Safari ◯, MS Edge ◯, IE11 ×");
 
     var footer = contentDiv.append("div")
         .attr("class", "modal-footer");
-
-    if (!isLocal) {
-        footer.append("h3")
-            .text("FITSWebQL Personal Edition:");
-
-        let textColour = 'yellow';
-
-        if (theme == 'bright')
-            textColour = 'red';
-
-        footer.append("p")
-            .html("A local version is available on GitHub: ")
-            .append("a")
-            .style("color", textColour)
-            .attr("href", "https://github.com/jvo203/fits_web_ql")
-            .attr("target", "_blank")
-            .style("target-new", "tab")
-            .html("<b>fits_web_ql installation instructions</b>");
-    }
 
     footer.append("h3")
         .text("CREDITS:");
@@ -7321,26 +7301,6 @@ function process_video() {
     }
 }
 
-function index_lines() {
-    if (lines.length <= 0)
-        return;
-
-    for (var i = 0; i < lines.length; i++) {
-        var line = lines[i];
-
-        // strip any HTML from the name and species (like <sup>, etc.)
-        //let name = stripHTML(molecule.name.toLowerCase()).trim();
-        //let species = stripHTML(molecule.species.toLowerCase()).trim();
-
-        let ion = line.ion;
-        let upper = line.upper;
-        let lower = line.lower;
-        let emissivity = line.emissivity;
-
-        line.text = ion;// + " " + emissivity + " ph cm<sup>3</sup>s<sup>-1</sup>";
-    }
-}
-
 function stripHTML(html) {
     try {
         return $("<p>" + html + "</p>").text(); // jQuery does the heavy lifting
@@ -7351,7 +7311,7 @@ function stripHTML(html) {
 
 function screen_line(line, search) {
     if (search != '') {
-        if (line.text.indexOf(search) == -1)
+        if (line.ion.indexOf(search) == -1)
             return false;
     }
 
@@ -7462,7 +7422,7 @@ function display_lines() {
             .style("stroke-width", 1)
             .attr("opacity", 1.0);
 
-        var text = line.text;
+        var text = line.ion;
 
         lineG.append("foreignObject")
             .attr("x", (x - 0.5 * emFontSize))
@@ -7488,13 +7448,13 @@ function display_lines() {
             console.error(e);
         }*/
 
-        var htmlStr = text.trim();
+        var htmlStr = text.trim() + " " + line.emissivity + " ph cm<sup>3</sup>s<sup>-1</sup>";
 
         div_lines.append("p")
             .attr("class", "molecularp")
             .attr("ene", energy) // was "freq"
             .attr("x", x)
-            .html(energy.toPrecision(3) + ' keV' + ' ' + htmlStr);
+            .html(energy.toPrecision(5) + ' keV' + ' ' + htmlStr);
     }
 
     group.moveToBack();
