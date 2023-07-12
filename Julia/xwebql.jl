@@ -582,6 +582,9 @@ function streamXEvents(http::HTTP.Streams.Stream)
     # Bzip2 decoder
     write(http, "<script src=\"bzip2.js\"></script>\n")
 
+    # scrollIntoView with ZenScroll (the original one does not work in Safari)
+    write(http, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/zenscroll-min.js\"></script>\n")
+
     # WebAssembly
     write(http, "<script src=\"client.", WASM_VERSION, ".js\"></script>\n")
     write(
