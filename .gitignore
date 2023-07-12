@@ -59,11 +59,8 @@ Manifest.toml
 *.out
 *.app
 
-# AtomDB
+# FITS files
 *.fits
-
-#sqlite db files
-*.db
 
 #Microsoft Visual Code IDE
 /.vscode/
