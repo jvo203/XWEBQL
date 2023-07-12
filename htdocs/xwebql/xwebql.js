@@ -7475,7 +7475,6 @@ function display_lines() {
     } catch (_) { }
 
     var svg = d3.select("#BackSVG");
-    var width = parseFloat(svg.attr("width"));
     var height = parseFloat(svg.attr("height"));
 
     try {
