@@ -6975,7 +6975,7 @@ function x_axis_move(offset) {
         .attr("opacity", 1.0)
         .style("stroke", strokeColour);
 
-    var data_band = get_mouse_energy(offset);
+    var data_band = get_mouse_energy(offset); // [keV]
 
     var text = "";
 
@@ -7006,8 +7006,6 @@ function x_axis_move(offset) {
         modal.style.right = "2.5%";
         modal.style.left = null;
     };
-
-    let line_ene = data_band * 1000; // in eV
 
     if (!enedrag && wasm_supported) {
         //initially assume 10 frames per second for a video
@@ -7052,7 +7050,7 @@ function x_axis_move(offset) {
             idleVideo = setTimeout(videoTimeout, 250, data_band);
     };
 
-    zoom_lines(line_ene);
+    zoom_lines(data_band);
 
     setup_window_timeout();
 }
@@ -7192,7 +7190,7 @@ function x_axis_left() {
             line_pos--;
     };
 
-    var offset = [parseFloat(m[mol_pos].getAttribute("x")), 0];
+    var offset = [parseFloat(m[line_pos].getAttribute("x")), 0];
 
     x_axis_move(offset);
 };
@@ -7227,7 +7225,7 @@ function x_axis_right() {
     };
 
 
-    var offset = [parseFloat(m[mol_pos].getAttribute("x")), 0];
+    var offset = [parseFloat(m[line_pos].getAttribute("x")), 0];
 
     x_axis_move(offset);
 };
@@ -7448,13 +7446,19 @@ function display_lines() {
             console.error(e);
         }*/
 
-        var htmlStr = text.trim() + " " + line.emissivity + " ph cm<sup>3</sup>s<sup>-1</sup>";
+        var htmlStr = text.trim() + " Upper(" + line.upper + ") Lower(" + line.lower + ") Emissivity: " + line.emissivity + " ph cm<sup>3</sup>s<sup>-1</sup>";
+
+        if (energy < 1.0) {
+            htmlStr = (energy * 1000).toPrecision(3) + ' eV ' + htmlStr;
+        } else {
+            htmlStr = energy.toPrecision(4) + ' keV ' + htmlStr;
+        }
 
         div_lines.append("p")
             .attr("class", "molecularp")
             .attr("ene", energy) // was "freq"
             .attr("x", x)
-            .html(energy.toPrecision(5) + ' keV' + ' ' + htmlStr);
+            .html(htmlStr);
     }
 
     group.moveToBack();
