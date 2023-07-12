@@ -749,6 +749,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
         "var firstTime = true;",
         "var has_image = false;",
         "var ROOT_PATH = '/xwebql/';",
+        "var idleSearch = -1;",
         "var idleResize = -1;",
         "var idleWindow = -1;",
         "window.onresize = resizeMe;",

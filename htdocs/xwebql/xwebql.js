@@ -901,9 +901,13 @@ async function mainRenderer() {
         end_x = 0;
         end_y = 0;
 
-        // displayIntensity = localStorage_read_number("displayIntensity", -1);
-        displayIntensity = 0.5;
+        relativeIntensity = localStorage_read_number("relativeIntensity", 0.5);
         displayLimit = localStorage_read_number("displayLimit", 500);
+        displayUpper = localStorage_read_boolean("displayUpper", true);
+        displayLower = localStorage_read_boolean("displayLower", true);
+        displayEmissivity = localStorage_read_boolean("displayEmissivity", true);
+        displayTepeak = localStorage_read_boolean("displayTepeak", true);
+        displayIntensity = localStorage_read_boolean("displayIntensity", true);
 
         coordsFmt = localStorage_read_string("coordsFmt", "HMS");//DMS or HMS
         realtime_spectrum = localStorage_read_boolean("realtime_spectrum", true);
@@ -918,8 +922,8 @@ async function mainRenderer() {
         displayContours = false;
         displayLegend = localStorage_read_boolean("displayLegend", true);
         displaySpectrum = localStorage_read_boolean("displaySpectrum", true);
-        displayLines = localStorage_read_boolean("displayLines", true);
         displayGridlines = localStorage_read_boolean("displayGridlines", false);
+        displayLines = localStorage_read_boolean("displayLines", true);
 
         has_contours = false;
         has_preferences = false;
@@ -1646,6 +1650,122 @@ function display_menu() {
     var prefDropdown = prefMenu.append("ul")
         .attr("id", "prefDropdown")
         .attr("class", "dropdown-menu");
+
+    //ATOMDB
+    {
+        var atomdbMenu = mainUL.append("li")
+            .attr("id", "atomdbMenu")
+            .attr("class", "dropdown");
+
+        atomdbMenu.append("a")
+            .attr("class", "dropdown-toggle")
+            .attr("data-toggle", "dropdown")
+            .style('cursor', 'pointer')
+            .html('AtomDB <span class="caret"></span>');
+
+        var atomdbDropdown = atomdbMenu.append("ul")
+            .attr("class", "dropdown-menu");
+
+        atomdbDropdown.append("li")
+            .append("a")
+            .html('<label>intensity cutoff < <span id="intVal">' + relativeIntensity.toFixed(1) + '</span> <input id="intensity" class="slider" type="range" min="0" max="1" step="0.1" value="' + relativeIntensity + '" onmousemove="javascript:change_intensity_threshold(false);" onchange="javascript:change_intensity_threshold(true);"/></label>');
+
+        atomdbDropdown.append("li")
+            .append("a")
+            .html('<label>&nbsp;search for:&nbsp;<input class="form-control search" type="text" id="searchInput" value="" placeholder="Fe, Si, O ..." onmouseenter="javascript:this.focus();"/></label>');
+
+        //add onblur
+        var m = document.getElementById('searchInput');
+        m.onblur = display_lines;
+        m.onmouseleave = display_lines;
+        m.onkeyup = function (e) {
+            var event = e || window.event;
+            var charCode = event.which || event.keyCode;
+
+            if (charCode == '13') {
+                // Enter pressed
+                clearTimeout(idleSearch);
+                display_lines();
+                return false;
+            } else {
+                clearTimeout(idleSearch);
+                idleSearch = setTimeout(display_lines, 250);
+            }
+        }
+
+        var htmlStr;
+
+        htmlStr = displayUpper ? '<span class="fas fa-check-square"></span> Upper Level' : '<span class="far fa-square"></span> Upper Level';
+        atomdbDropdown.append("li")
+            .append("a")
+            .style('cursor', 'pointer')
+            .on("click", function () {
+                displayUpper = !displayUpper;
+                localStorage_write_boolean("displayUpper", displayUpper);
+                let htmlStr = displayUpper ? '<span class="fas fa-check-square"></span> Upper Level' : '<span class="far fa-square"></span> Upper Level';
+                d3.select(this).html(htmlStr);
+                display_lines();
+            })
+            .html(htmlStr);
+
+        htmlStr = displayLower ? '<span class="fas fa-check-square"></span> Lower Level' : '<span class="far fa-square"></span> Lower Level';
+        atomdbDropdown.append("li")
+            .append("a")
+            .style('cursor', 'pointer')
+            .on("click", function () {
+                displayLower = !displayLower;
+                localStorage_write_boolean("displayLower", displayLower);
+                let htmlStr = displayLower ? '<span class="fas fa-check-square"></span> Lower Level' : '<span class="far fa-square"></span> Lower Level';
+                d3.select(this).html(htmlStr);
+                display_lines();
+            })
+            .html(htmlStr);
+
+        htmlStr = displayEmissivity ? '<span class="fas fa-check-square"></span> Emissivity' : '<span class="far fa-square"></span> Emissivity';
+        atomdbDropdown.append("li")
+            .append("a")
+            .style('cursor', 'pointer')
+            .on("click", function () {
+                displayEmissivity = !displayEmissivity;
+                localStorage_write_boolean("displayEmissivity", displayEmissivity);
+                let htmlStr = displayEmissivity ? '<span class="fas fa-check-square"></span> Emissivity' : '<span class="far fa-square"></span> Emissivity';
+                d3.select(this).html(htmlStr);
+                display_lines();
+            })
+            .html(htmlStr);
+
+        htmlStr = displayTepeak ? '<span class="fas fa-check-square"></span> Te peak' : '<span class="far fa-square"></span> Te peak';
+        atomdbDropdown.append("li")
+            .append("a")
+            .style('cursor', 'pointer')
+            .on("click", function () {
+                displayTepeak = !displayTepeak;
+                localStorage_write_boolean("displayTepeak", displayTepeak);
+                let htmlStr = displayTepeak ? '<span class="fas fa-check-square"></span> Te peak' : '<span class="far fa-square"></span> Te peak';
+                d3.select(this).html(htmlStr);
+                display_lines();
+            })
+            .html(htmlStr);
+
+        htmlStr = displayIntensity ? '<span class="fas fa-check-square"></span> Relative Intensity' : '<span class="far fa-square"></span> Relative Intensity';
+        atomdbDropdown.append("li")
+            .append("a")
+            .style('cursor', 'pointer')
+            .on("click", function () {
+                displayIntensity = !displayIntensity;
+                localStorage_write_boolean("displayIntensity", displayIntensity);
+                let htmlStr = displayIntensity ? '<span class="fas fa-check-square"></span> Relative Intensity' : '<span class="far fa-square"></span> Relative Intensity';
+                d3.select(this).html(htmlStr);
+                display_lines();
+            })
+            .html(htmlStr);
+
+        var elem = document.getElementById("atomdbMenu");
+        if (displayLines)
+            elem.style.display = "block";
+        else
+            elem.style.display = "none";
+    }
 
     //VIEW
     var viewMenu = mainUL.append("li")
@@ -7329,13 +7449,13 @@ function stripHTML(html) {
 
 function screen_line(line, search) {
     if (search != '') {
-        if (line.ion.indexOf(search) == -1)
+        if (line.ion.toLowerCase().indexOf(search) == -1)
             return false;
     }
 
     var intensity = parseFloat(line.intensity);
 
-    if (intensity < displayIntensity)
+    if (intensity < relativeIntensity)
         return false;
 
     return true;
@@ -7357,7 +7477,6 @@ function display_lines() {
     var svg = d3.select("#BackSVG");
     var width = parseFloat(svg.attr("width"));
     var height = parseFloat(svg.attr("height"));
-    var range = get_axes_range(width, height);
 
     try {
         d3.select("#lines").remove();
@@ -7488,4 +7607,21 @@ function display_lines() {
         elem.attr("opacity", 1);
     else
         elem.attr("opacity", 0);
+}
+
+function change_intensity_threshold(refresh) {
+    relativeIntensity = parseFloat(document.getElementById('intensity').value);
+
+    var htmlStr = relativeIntensity.toFixed(2);
+
+    /*if (displayIntensity == 0)
+        htmlStr = "-" + htmlStr;*/
+
+    d3.select("#intVal").html(htmlStr);
+
+    if (refresh) {
+        console.log("relativeIntensity:", relativeIntensity);
+        localStorage.setItem("relativeIntensity", relativeIntensity);
+        display_lines();
+    }
 }
