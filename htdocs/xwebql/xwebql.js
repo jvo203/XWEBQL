@@ -6845,6 +6845,7 @@ function x_axis_mouseenter(offset) {
 
     shortcut.add("Left", x_axis_left);
     shortcut.add("Right", x_axis_right);
+    shortcut.add("Enter", go_to_atomdb);
 
     setup_window_timeout();
 }
@@ -6910,6 +6911,7 @@ function x_axis_mouseleave() {
 
     shortcut.remove("Left");
     shortcut.remove("Right");
+    shortcut.remove("Enter");
 
     d3.select("#energy").attr("opacity", 0.0);
     d3.select("#ene_bar").attr("opacity", 0.0);
@@ -7159,6 +7161,24 @@ function get_line_energy() {
     var ene = get_mouse_energy(offset);
 
     return ene;
+};
+
+function go_to_atomdb() {
+    var ene = round(get_line_energy(), 10); // [keV]
+    var delta = 0.5; // [keV]    
+    var unit = "keV";
+
+    var url = "http://www.atomdb.org/Webguide/wavelength_region.php" + "?wvl=" + ene + "&wvlunit=" + unit + "&wvr=" + delta + "&ems=1.e-18&teunit=" + unit;
+
+    var win = window.open(url, '_blank');
+
+    if (win) {
+        //Browser has allowed it to be opened
+        win.focus();
+    } else {
+        //Browser has blocked it
+        alert('Please allow popups for this website');
+    }
 };
 
 function x_axis_left() {
