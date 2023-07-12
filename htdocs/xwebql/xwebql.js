@@ -7466,7 +7466,7 @@ function display_lines() {
             console.error(e);
         }*/
 
-        var htmlStr = text.trim() + " Upper(" + line.upper + ") Lower(" + line.lower + ") Emissivity: " + line.emissivity + " ph cm<sup>3</sup>s<sup>-1</sup>";
+        var htmlStr = text.trim() + " Upper(" + line.upper + ") Lower(" + line.lower + ") Emissivity: " + line.emissivity + " ph cm<sup>3</sup>s<sup>-1</sup>" + " Intensity: " + line.intensity;
 
         if (energy < 1.0) {
             htmlStr = (energy * 1000).toPrecision(3) + ' eV ' + htmlStr;
