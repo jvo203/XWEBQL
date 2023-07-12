@@ -7575,21 +7575,36 @@ function display_lines() {
             //.append("p")
             .html(text.trim());
 
-        //console.log("spectral line @ x = ",x, (f/1e9).toPrecision(7), text.trim()) ;
-
-        /*try {
-            var htmlStr = molecule.name.trim() + ' ' + text.trim() + ' ' + molecule.qn.trim() + ' <span style="font-size: 80%">(' + molecule.linelist + ')</span>';
-        } catch (e) {
-            console.log(line);
-            console.error(e);
-        }*/
-
-        var htmlStr = text.trim() + " Upper(" + line.upper + ") Lower(" + line.lower + ") Emissivity: " + line.emissivity + " ph cm<sup>3</sup>s<sup>-1</sup>" + " Intensity: " + line.intensity;
-
         if (energy < 1.0) {
-            htmlStr = (energy * 1000).toPrecision(3) + ' eV ' + htmlStr;
+            var htmlStr = (energy * 1000).toPrecision(3) + ' eV ';
         } else {
-            htmlStr = energy.toPrecision(4) + ' keV ' + htmlStr;
+            var htmlStr = energy.toPrecision(4) + ' keV ';
+        }
+
+        htmlStr += text.trim();
+
+        if (displayUpper) {
+            htmlStr += " Upper(" + line.upper + ")";
+        }
+
+        if (displayLower) {
+            htmlStr += " Lower(" + line.lower + ")";
+        }
+
+        if (displayEmissivity) {
+            htmlStr += " Emissivity: " + line.emissivity + " ph cm<sup>3</sup>s<sup>-1</sup>";
+        }
+
+        if (displayTepeak) {
+            if (line.te_peak < 1.0) {
+                htmlStr += " Te peak: " + (1000 * line.te_peak).toFixed(1) + " eV";
+            } else {
+                htmlStr += " Te peak: " + line.te_peak + " keV";
+            }
+        }
+
+        if (displayIntensity) {
+            htmlStr += " Intensity: " + line.intensity;
         }
 
         div_lines.append("p")
