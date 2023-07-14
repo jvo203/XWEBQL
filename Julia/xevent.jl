@@ -1016,6 +1016,9 @@ function getVideoFrame(
         else
             pixels .= 0
             pixels[frame_mask] .= UInt8(255)
+
+            println("mask range:", ThreadsX.extrema(frame_mask))
+            println("pixels range:", ThreadsX.extrema(pixels))
         end
 
         # fill pixels with the fill colour where mask is false
