@@ -1063,6 +1063,11 @@ function ws_coroutine(ws, ids)
     local last_video_seq::Integer, last_frame::Float64
     local image_width::Integer, image_height::Integer, bDownsize::Bool
 
+    # user session    
+    x = nothing
+    y = nothing
+    energy = nothing
+
     # HEVC
     local param, encoder, picture, planeB, luma, alpha
     local filter::KalmanFilter, ts
@@ -1127,8 +1132,15 @@ function ws_coroutine(ws, ids)
                 error("$datasetid: no events found.")
             end
 
+            # check if x, y, energy are nothing
+            if x === nothing || y === nothing || energy === nothing
+                x = xobject.x
+                y = xobject.y
+                energy = xobject.energy
+            end
+
             elapsed =
-                @elapsed viewport, spectrum = getViewportSpectrum(xobject, req)
+                @elapsed viewport, spectrum = getViewportSpectrum(x, y, energy, req)
             elapsed *= 1000.0 # [ms]
 
             println("[getViewportSpectrum] elapsed: $elapsed [ms]")
@@ -1194,6 +1206,13 @@ function ws_coroutine(ws, ids)
                 error("$datasetid: no data found.")
             end
 
+            # check if x, y, energy are nothing
+            if x === nothing || y === nothing || energy === nothing
+                x = xobject.x
+                y = xobject.y
+                energy = xobject.energy
+            end
+
             keyframe = req["key"]
             fill = UInt8(req["fill"])
 
@@ -1234,6 +1253,9 @@ function ws_coroutine(ws, ids)
 
                 Threads.@spawn begin
                     # interpolate variable values into a thread
+                    t_x = x
+                    t_y = y
+                    t_energy = energy
                     t_frame_start = $frame_start
                     t_frame_end = $frame_end
                     t_inner_width = $inner_width
@@ -1249,7 +1271,9 @@ function ws_coroutine(ws, ids)
                     try
                         # get a video frame                        
                         elapsed = @elapsed luma, alpha = getVideoFrame(
-                            xobject,
+                            x,
+                            y,
+                            energy,
                             t_frame_start,
                             t_frame_end,
                             t_inner_width,

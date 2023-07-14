@@ -378,11 +378,7 @@ function getSquareSpectrum2(xobject::XDataSet, E_min::Float32, E_max::Float32, x
     return spectrum
 end
 
-function getViewport(xobject::XDataSet, xmin::Integer, xmax::Integer, ymin::Integer, ymax::Integer, emin::Float32, emax::Float32)
-    x = xobject.x
-    y = xobject.y
-    energy = xobject.energy
-
+function getViewport(x, y, energy, xmin::Integer, xmax::Integer, ymin::Integer, ymax::Integer, emin::Float32, emax::Float32)
     # find E indices between emin and emax    
     # e_indices = findall(x -> x1 <= energy <= x2, energy)    
 
@@ -404,49 +400,33 @@ function getViewport(xobject::XDataSet, xmin::Integer, xmax::Integer, ymin::Inte
     return (pixels, mask)
 end
 
-function getSquareSpectrum(xobject::XDataSet, E_min::Float32, E_max::Float32, x1::Integer, x2::Integer, y1::Integer, y2::Integer, dx::Integer)
+function getSquareSpectrum(x, y, energy, E_min::Float32, E_max::Float32, x1::Integer, x2::Integer, y1::Integer, y2::Integer, dx::Integer)
     ΔE = (E_max - E_min) / dx
 
     println("E_min = ", E_min)
     println("E_max = ", E_max)
     println("ΔE = ", ΔE)
 
-    # find X indices between x1 and x2
-    x = xobject.x
-    y = xobject.y
-
-    # make a mask
+    # find points within a square    
     mask = [x1 <= x[i] <= x2 && y1 <= y[i] <= y2 for i in 1:length(x)]
 
-    # get the log-energy values
-    energy = xobject.energy[mask]
-    println("#energy: ", length(energy))
-
-    h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
+    h = Hist1D(energy[mask], E_min:ΔE:E_max, overflow=false)
     spectrum = Float32.(bincounts(h))
 
     return spectrum
 end
 
-function getCircleSpectrum(xobject::XDataSet, E_min::Float32, E_max::Float32, cx::Integer, cy::Integer, r2::Integer, dx::Integer)
+function getCircleSpectrum(x, y, energy, E_min::Float32, E_max::Float32, cx::Integer, cy::Integer, r2::Integer, dx::Integer)
     ΔE = (E_max - E_min) / dx
 
     println("E_min = ", E_min)
     println("E_max = ", E_max)
     println("ΔE = ", ΔE)
 
-    # find X indices between x1 and x2
-    x = xobject.x
-    y = xobject.y
-
-    # make a mask
+    # find points within a circle    
     mask = [(x[i] - cx)^2 + (y[i] - cy)^2 <= r2 for i in 1:length(x)]
 
-    # get the log-energy values
-    energy = xobject.energy[mask]
-    println("#energy: ", length(energy))
-
-    h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
+    h = Hist1D(energy[mask], E_min:ΔE:E_max, overflow=false)
     spectrum = Float32.(bincounts(h))
 
     return spectrum
@@ -851,7 +831,7 @@ function write_html_header(io::IO, hdr::FITSHeader)
     end
 end
 
-function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
+function getViewportSpectrum(x, y, energy, req::Dict{String,Any})
     local pixels, mask, spectrum
     local view_resp, spec_resp
 
@@ -911,15 +891,15 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
 
     # get the image
     if image
-        pixels, mask = getViewport(xobject, x1, x2, y1, y2, energy_start, energy_end)
+        pixels, mask = getViewport(x, y, energy, x1, x2, y1, y2, energy_start, energy_end)
         println("pixels: ", size(pixels))
     end
 
     # get the spectrum
     if beam == CIRCLE
-        spectrum = getCircleSpectrum(xobject, energy_start, energy_end, cx, cy, r2, NUM_CHANNELS)
+        spectrum = getCircleSpectrum(x, y, energy, energy_start, energy_end, cx, cy, r2, NUM_CHANNELS)
     elseif beam == SQUARE
-        spectrum = getSquareSpectrum(xobject, energy_start, energy_end, x1, x2, y1, y2, NUM_CHANNELS)
+        spectrum = getSquareSpectrum(x, y, energy, energy_start, energy_end, x1, x2, y1, y2, NUM_CHANNELS)
     end
 
     # optionally downsample the spectrum
@@ -972,7 +952,9 @@ function getViewportSpectrum(xobject::XDataSet, req::Dict{String,Any})
 end
 
 function getVideoFrame(
-    xobject::XDataSet,
+    x,
+    y,
+    energy,
     energy_start::Float64,
     energy_end::Float64,
     inner_width::Integer,
@@ -994,7 +976,7 @@ function getVideoFrame(
     y1 = offsety
     y2 = offsety + inner_height - 1
 
-    frame_pixels, frame_mask = getViewport(xobject, x1, x2, y1, y2, Float32(energy_start), Float32(energy_end))
+    frame_pixels, frame_mask = getViewport(x, y, energy, x1, x2, y1, y2, Float32(energy_start), Float32(energy_end))
     max_count = ThreadsX.maximum(frame_pixels)
 
     dims = size(frame_pixels)
