@@ -1623,7 +1623,7 @@ function display_menu() {
     }
 
     //IMAGE
-    var imageMenu = mainUL.append("li")
+    /*var imageMenu = mainUL.append("li")
         .attr("class", "dropdown");
 
     imageMenu.append("a")
@@ -1635,7 +1635,7 @@ function display_menu() {
     var imageDropdown = imageMenu.append("ul")
         .attr("id", "imageDropdown")
         .attr("class", "dropdown-menu");
-    //.style("background-color", "rgba(0,0,0,0.4)");    
+    //.style("background-color", "rgba(0,0,0,0.4)");*/
 
     //PREFERENCES
     var prefMenu = mainUL.append("li")
@@ -2641,6 +2641,29 @@ function display_preferences() {
             .html("<option>dark</option><option>bright</option>");
 
         document.getElementById('ui_theme').value = theme;
+    }
+
+    //colourmap
+    {
+        var colourmap_string = "<option>amber</option><option>red</option><option>green</option><option>blue</option><option>greyscale</option><option>negative</option><option disabled>---</option><option>cubehelix</option><option>haxby</option><option>hot</option><option>parula</option><option>rainbow</option><option disabled>---</option><option>inferno</option><option>magma</option><option>plasma</option><option>viridis</option>";
+
+        tmpA = prefDropdown.append("li")
+            //.style("background-color", "#FFF")	
+            .append("a")
+            .style("class", "form-group")
+            .attr("class", "form-horizontal");
+
+        tmpA.append("label")
+            .attr("for", "colourmap")
+            .attr("class", "control-label")
+            .html("colourmap:&nbsp; ");
+
+        tmpA.append("select")
+            .attr("id", "colourmap")
+            .attr("onchange", "javascript:change_colourmap();")
+            .html(colourmap_string);
+
+        document.getElementById('colourmap').value = colourmap;
     }
 
     //coords_fmt
