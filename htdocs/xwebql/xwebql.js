@@ -7630,3 +7630,24 @@ function change_ui_theme() {
     location.reload(); // was reload(false)
     //resizeMe() ;
 }
+
+function change_colourmap() {
+    colourmap = document.getElementById('colourmap').value;
+    localStorage.setItem("xcolourmap", colourmap);
+
+    if (imageContainer != null) {
+        clear_webgl_image_buffers();
+        clear_webgl_legend_buffers();
+    }
+
+    init_webgl_image_buffers();
+
+    display_legend();
+
+    if (fitsData != null) {
+        if (fitsData.depth > 1) {
+            plot_spectrum(fitsData.spectrum);
+            replot_y_axis();
+        }
+    }
+}
