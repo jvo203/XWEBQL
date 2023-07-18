@@ -6432,7 +6432,7 @@ async function open_websocket_connection(_datasetId, index) {
                                 if (theme == "dark")
                                     fill = 0;
                                 else
-                                    fill = 255;
+                                    fill = 200; // 255
 
                                 var data;
 
@@ -7149,7 +7149,7 @@ function x_axis_move(offset) {
                 if (theme == "dark")
                     fill = 0;
                 else
-                    fill = 255;
+                    fill = 200; // 255
 
                 var request = {
                     type: "video",
@@ -7190,7 +7190,7 @@ function videoTimeout(data_band) {
     if (theme == "dark")
         fill = 0;
     else
-        fill = 255;
+        fill = 200; // 255
 
     var request = {
         type: "video",

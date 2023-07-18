@@ -78,6 +78,4 @@ void apply_amber(unsigned char *canvas, int w, int h, const unsigned char *luma,
 
 void apply_greyscale(unsigned char *canvas, int w, int h, const unsigned char *luma, int stride_luma, const unsigned char *alpha, int stride_alpha, bool invert, unsigned char fill);
 
-void apply_composite(unsigned char *canvas, int w, int h, const unsigned char *_r, const unsigned char *_g, const unsigned char *_b, int stride_r, int stride_g, int stride_b);
-
 #endif

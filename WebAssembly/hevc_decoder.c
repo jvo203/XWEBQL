@@ -231,19 +231,6 @@ double hevc_decode_nal_unit(int index, const unsigned char *data, size_t data_le
                 {
                     apply_amber(canvas, w, h, luma, stride_luma, alpha, stride_alpha, fill);
                 }
-                else if (strcmp(colourmap, "composite") == 0)
-                {
-                    const unsigned char *r = avframe[index]->data[0];
-                    int stride_r = avframe[index]->linesize[0];
-
-                    const unsigned char *g = avframe[index]->data[1];
-                    int stride_g = avframe[index]->linesize[1];
-
-                    const unsigned char *b = avframe[index]->data[2];
-                    int stride_b = avframe[index]->linesize[2];
-
-                    apply_composite(canvas, w, h, r, g, b, stride_r, stride_g, stride_b);
-                }
                 else
                 {
                     // no colour by default

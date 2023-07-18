@@ -1019,6 +1019,9 @@ function getVideoFrame(
 
             println("mask range:", ThreadsX.extrema(frame_mask))
             println("pixels range:", ThreadsX.extrema(pixels))
+
+            # count frame_mask == true
+            println("count: ", count(frame_mask))
         end
 
         # fill pixels with the fill colour where mask is false

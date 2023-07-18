@@ -117,27 +117,3 @@ void apply_greyscale(unsigned char *canvas, int w, int h, const unsigned char *l
         }
     }
 }
-
-void apply_composite(unsigned char *canvas, int w, int h, const unsigned char *_r, const unsigned char *_g, const unsigned char *_b, int stride_r, int stride_g, int stride_b)
-{
-    if (canvas == NULL || _r == NULL || _g == NULL || _b == NULL)
-        return;
-
-    size_t dst_offset = 0;
-
-    for (int j = 0; j < h; j++)
-    {
-        // Y-mirror-flip the image
-        size_t r_offset = (h - 1 - j) * stride_r;
-        size_t g_offset = (h - 1 - j) * stride_g;
-        size_t b_offset = (h - 1 - j) * stride_b;
-
-        for (int i = 0; i < w; i++)
-        {
-            canvas[dst_offset++] = _r[r_offset++];
-            canvas[dst_offset++] = _g[g_offset++];
-            canvas[dst_offset++] = _b[b_offset++];
-            canvas[dst_offset++] = 255; // the alpha channel
-        }
-    }
-}
