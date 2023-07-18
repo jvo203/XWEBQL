@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-07-12.0";
+    return "JS2023-07-18.0";
 }
 
 function uuidv4() {
@@ -771,7 +771,7 @@ async function mainRenderer() {
 
     if (localStorage.getItem("xcolourmap") === null) {
         if (theme == 'bright')
-            colourmap = "haxby";
+            colourmap = "rainbow";
         else
             colourmap = "green";
 
@@ -2708,27 +2708,6 @@ function display_preferences() {
     }
     else {
         d3.select('#contour_control_li').style("display", "none");
-    }
-
-    //----------------------------------------
-    if (fitsData.depth > 1) {
-        tmpA = prefDropdown.append("li")
-            //.style("background-color", "#FFF")
-            .append("a")
-            .style("class", "form-group")
-            .attr("class", "form-horizontal");
-
-        tmpA.append("label")
-            .attr("for", "intensity_mode")
-            .attr("class", "control-label")
-            .html("intensity mode:&nbsp; ");
-
-        tmpA.append("select")
-            .attr("id", "intensity_mode")
-            .attr("onchange", "javascript:change_intensity_mode();")
-            .html("<option>mean</option><option>integrated</option>");
-
-        document.getElementById('intensity_mode').value = intensity_mode;
     }
 
     tmpA = prefDropdown.append("li")
@@ -6432,7 +6411,7 @@ async function open_websocket_connection(_datasetId, index) {
                                 if (theme == "dark")
                                     fill = 0;
                                 else
-                                    fill = 200; // 255
+                                    fill = 255;
 
                                 var data;
 
@@ -7149,7 +7128,7 @@ function x_axis_move(offset) {
                 if (theme == "dark")
                     fill = 0;
                 else
-                    fill = 200; // 255
+                    fill = 255;
 
                 var request = {
                     type: "video",
@@ -7190,7 +7169,7 @@ function videoTimeout(data_band) {
     if (theme == "dark")
         fill = 0;
     else
-        fill = 200; // 255
+        fill = 255;
 
     var request = {
         type: "video",
@@ -7635,4 +7614,19 @@ function change_intensity_threshold(refresh) {
         localStorage.setItem("relativeIntensity", relativeIntensity);
         display_lines();
     }
+}
+
+function change_ui_theme() {
+    theme = document.getElementById('ui_theme').value;
+    localStorage.setItem("ui_theme", theme);
+
+    if (theme == 'bright')
+        colourmap = "rainbow";
+    else
+        colourmap = "green";
+
+    localStorage.setItem("xcolourmap", colourmap);
+
+    location.reload(); // was reload(false)
+    //resizeMe() ;
 }
