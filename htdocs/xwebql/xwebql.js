@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-07-19.0";
+    return "JS2023-07-19.1";
 }
 
 function uuidv4() {
@@ -416,6 +416,7 @@ function addStylesheetRules(rules) {
 }
 
 function hide_navigation_bar() {
+    console.log("hide_navigation_bar()");
     try {
         document.getElementById('menu').style.display = "none";
         d3.select("#menu_activation_area").attr("opacity", 0.1);//was 0.7
@@ -1010,7 +1011,14 @@ async function mainRenderer() {
             .attr("id", "FrontSVG")
             .attr("width", width)
             .attr("height", height)
-            .on("mouseenter", hide_navigation_bar)
+            .attr("pointer-events", "auto")
+            .on("mouseenter", function () {
+                console.log("FrontSVG::mouseenter");
+                hide_navigation_bar();
+            })
+            .on("mouseleave", function () {
+                console.log("FrontSVG::mouseleave");
+            })
             .attr('style', 'position: fixed; left: 10px; top: 10px; z-index: 57; cursor: default');
 
         // JVO logo
@@ -1552,10 +1560,25 @@ function show_help() {
 function display_menu() {
     var div = d3.select("body").append("div")
         .attr("id", "menu")
-        .attr("class", "menu");
-    //.on("mouseleave", hide_navigation_bar);
+        .attr("class", "menu")
+        .on("mouseenter", function () {
+            console.log("menu::mouseenter");
 
-    var nav = div.append("nav").attr("class", "navbar navbar-inverse navbar-fixed-top fixed-top navbar-expand-sm navbar-dark");
+            // move focus
+            //document.getElementById("ui_theme").focus();
+            //d3.select("#navbar").style("display", "block");
+            //d3.select("#navbar").moveToFront();
+
+            //d3.select("FrontSVG").attr("pointer-events", "none");
+        })
+        .on("mouseleave", function () {
+            console.log("menu::mouseleave");
+            //d3.select("FrontSVG").attr("pointer-events", "auto");
+            /*hide_navigation_bar();*/
+        });
+
+    var nav = div.append("nav").attr("class", "navbar navbar-inverse navbar-fixed-top fixed-top navbar-expand-sm navbar-dark")
+        .attr("id", "navbar");
 
     var main = nav.append("div")
         .attr("class", "container-fluid");
@@ -2635,9 +2658,15 @@ function display_preferences() {
             .html("ui theme:&nbsp; ");
 
         tmpA.append("select")
-            //.attr("class", "form-control")	
+            //.attr("class", "form-control")            
             .attr("id", "ui_theme")
             .attr("onchange", "javascript:change_ui_theme();")
+            .attr("onmousedown", "javascript:console.log('mousedown');")
+            .attr("onfocus", "javascript:console.log('focus');")
+            .attr("onfocusin", "javascript:console.log('focusin');")
+            .attr("onfocusout", "javascript:console.log('focusout');")
+            .attr("onmouseup", "javascript:console.log('mouseup');")
+            .attr("onclick", "javascript:console.log('click');")
             .html("<option>dark</option><option>bright</option>");
 
         document.getElementById('ui_theme').value = theme;
@@ -3313,6 +3342,7 @@ function setup_axes() {
             if (windowLeft)
                 return;
 
+            console.log("scaling::mouseenter");
             hide_navigation_bar();
 
             d3.select(this)
@@ -4846,6 +4876,7 @@ function setup_image_selection() {
         )*/
         .call(zoom)
         .on("mouseenter", (event) => {
+            console.log("image_rectangle::mouseenter");
             hide_navigation_bar();
 
             // cancel the image animation loop            
@@ -6917,6 +6948,7 @@ function x_axis_mouseenter(offset) {
         video_stack = [];
     }
 
+    console.log("x_axis_mouseenter");
     hide_navigation_bar();
 
     d3.select("#scaling")
