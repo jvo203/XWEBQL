@@ -7237,6 +7237,7 @@ function zoom_lines(ene) {
     var minDist = 10 * ene;
 
     var modal = document.getElementById('lineidentification');
+    // var zenscroll = require('zenscroll');
     var scroller = zenscroll.createScroller(modal);
 
     var m = document.getElementsByClassName("molecularp");
