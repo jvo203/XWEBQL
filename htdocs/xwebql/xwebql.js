@@ -750,7 +750,6 @@ async function mainRenderer() {
         colourmap = "green";
         axisColour = "rgba(255,204,0,0.8)";
 
-
         localStorage.setItem("ui_theme", theme);
         localStorage.setItem("xcolourmap", colourmap);
     }
@@ -1033,13 +1032,19 @@ async function mainRenderer() {
 
         // JAXA logo
         d3.select("#BackSVG").append("svg:image")
-            .attr("id", "jvoLogo")
+            .attr("id", "jaxaLogo")
             .attr("x", (width - 1 - 265))
             .attr("y", (height - 1 - 162))
-            .attr("xlink:href", "https://www.jaxa.jp/images/logo.gif")
+            /*.attr("xlink:href", "https://www.jaxa.jp/images/logo.gif")*/
+            .attr("xlink:href", "logo-unscreen.gif")
+            .attr("id", "jaxaLogo")
             .attr("width", 265)
             .attr("height", 162)
             .attr("opacity", 0.5);
+
+        /*if (theme == 'dark') {
+            d3.select("#jaxaLogo").attr("class", "invert");
+        }*/
 
         d3.select("body").append("div")
             .attr("id", "lineidentification")
