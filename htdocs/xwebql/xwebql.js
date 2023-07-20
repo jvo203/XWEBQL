@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-07-19.1";
+    return "JS2023-07-20.0";
 }
 
 function uuidv4() {
@@ -1042,9 +1042,9 @@ async function mainRenderer() {
             .attr("height", 162)
             .attr("opacity", 0.5);
 
-        /*if (theme == 'dark') {
+        if (theme == 'dark') {
             d3.select("#jaxaLogo").attr("class", "invert");
-        }*/
+        }
 
         d3.select("body").append("div")
             .attr("id", "lineidentification")
