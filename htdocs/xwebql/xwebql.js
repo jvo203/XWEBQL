@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-07-20.0";
+    return "JS2023-07-20.1";
 }
 
 function uuidv4() {
@@ -1570,7 +1570,7 @@ function display_menu() {
             console.log("menu::mouseenter");
 
             // move focus
-            //document.getElementById("ui_theme").focus();
+            //document.getElementById("naoj").focus();
             //d3.select("#navbar").style("display", "block");
             //d3.select("#navbar").moveToFront();
 
@@ -1594,6 +1594,7 @@ function display_menu() {
     header.append("a")
         .attr("href", "https://www.nao.ac.jp/")
         .append("img")
+        .attr("id", "naoj")
         .attr("class", "navbar-left")
         .attr("src", "https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/logo_naoj_nothing_s.png")
         .attr("alt", "NAOJ")
