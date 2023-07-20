@@ -7677,6 +7677,26 @@ function change_intensity_threshold(refresh) {
     }
 }
 
+function change_coords_fmt() {
+    coordsFmt = document.getElementById('coords_fmt').value;
+    localStorage.setItem("coordsFmt", coordsFmt);
+
+    if (xradec != null) {
+        if (fitsData.CTYPE1.indexOf("RA") > -1) {
+            let raText = 'RA N/A';
+
+            if (coordsFmt == 'DMS')
+                raText = 'α: ' + RadiansPrintDMS(xradec[0]);
+            else
+                raText = 'α: ' + RadiansPrintHMS(xradec[0]);
+
+            d3.select("#ra").text(raText);
+
+            display_gridlines();
+        }
+    }
+}
+
 function change_ui_theme() {
     theme = document.getElementById('ui_theme').value;
     localStorage.setItem("ui_theme", theme);
