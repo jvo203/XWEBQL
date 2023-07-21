@@ -886,10 +886,10 @@ async function mainRenderer() {
         user_data_min = null;
         user_data_max = null;
 
-        x_mouse_start = 0;
-        xdrag = false;
-        session_x_start = 0;
-        session_x_end = 0;
+        ene_mouse_start = 0;
+        enedrag = false;
+        session_ene_start = 0;
+        session_ene_end = 0;
         session_frame_start = 0;
         session_frame_end = 0;
         frame_start = 0;
@@ -3250,7 +3250,7 @@ function setup_axes() {
 
     //add the x-axis energy range selection shadow rectangle
     svg.append("rect")
-        .attr("id", "fregion")
+        .attr("id", "eneregion")
         .attr("x", range.xMin)
         .attr("y", 0)
         .attr("width", (range.xMax - range.xMin))
@@ -3311,11 +3311,11 @@ function setup_axes() {
             if (offset[0] >= 0) {
                 x_axis_mousemove(offset);
             };
-        });
-    /*.call(d3.drag()
-        .on("start", dragstart)
-        .on("drag", dragmove)
-        .on("end", dragend));*/
+        })
+        .call(d3.drag()
+            .on("start", dragstart)
+            .on("drag", dragmove)
+            .on("end", dragend));
 
     //shift/zoom Y-Axis
     group = svg.append("g").attr("id", "y_axis_stretching");
@@ -7650,7 +7650,7 @@ function display_lines() {
 
         div_lines.append("p")
             .attr("class", "molecularp")
-            .attr("ene", energy) // was "freq"
+            .attr("ene", energy)
             .attr("x", x)
             .html(htmlStr);
     }
@@ -7740,4 +7740,182 @@ function change_zoom_shape() {
 
     setup_image_selection();
     setup_viewports();
+}
+
+function dragstart(event) {
+    enedrag = true;
+    event.preventDefault = true;
+
+    var offset = d3.pointer(event);
+    ene_mouse_start = offset[0];
+
+    var energy = get_mouse_energy(offset);
+    session_ene_start = energy;
+    session_ene_end = session_ene_start;
+
+    console.log("drag started", enedrag, ene_mouse_start, energy.toPrecision(5), "keV");
+
+    d3.select("#eneregion").moveToFront();
+}
+
+function dragend() {
+    console.log("drag ended");
+    freqdrag = false;
+
+    d3.select("#eneregion").attr("opacity", 0.0);
+    freq_mouse_start = 0;
+
+    d3.select("#eneregion").moveToBack();
+
+    d3.select("#freq_bar").attr("opacity", 0.0);
+
+    var freq_start = session_freq_start;
+    var freq_end = session_freq_end;
+    var tmp = freq_start;
+
+    if (freq_start == freq_end) {
+        console.log("ignoring a single-channel region selection!");
+
+        freq_mouse_start = 0;
+        freqdrag = false;
+        session_freq_start = 0;
+        session_freq_end = 0;
+
+        shortcut.remove("f");
+        shortcut.remove("Left");
+        shortcut.remove("Right");
+        shortcut.remove("Enter");
+        mol_pos = -1;
+
+        return;
+    }
+
+    if (freq_end < freq_start) {
+        freq_start = freq_end;
+        freq_end = tmp;
+    };
+
+    data_band_lo = freq_start;
+    data_band_hi = freq_end;
+
+    frame_start = session_frame_start;
+    frame_end = session_frame_end;
+    //recalculate {data_band_lo,data_band_hi} based on {frame_start,frame_end} 
+
+    //if((freq_start > 0.0) && (freq_end > 0.0))
+    // if((frame_start >= 0) && (frame_end >= 0))
+    {
+        display_hourglass();
+
+        image_count = 0;
+        viewport_count = 0;
+        spectrum_count = 0;
+
+        for (let index = 1; index <= va_count; index++)
+            cube_refresh(index);
+
+        display_molecules();
+    }
+
+    freq_mouse_start = 0;
+    freqdrag = false;
+    session_freq_start = 0;
+    session_freq_end = 0;
+
+    shortcut.remove("f");
+    shortcut.remove("Left");
+    shortcut.remove("Right");
+    shortcut.remove("Enter");
+    mol_pos = -1;
+}
+
+function dragmove(event) {
+    var offset = d3.pointer(event);
+    var frequency = get_mouse_frequency(offset);
+
+    var freq = d3.select("#frequency");
+    var offsetx = parseFloat(freq.attr("x"));
+
+    //console.log("dragmove", frequency.toPrecision(7)) ;
+
+    var x1 = offsetx;
+    var x2 = offsetx + parseFloat(freq.attr("width"));
+    var x = offset[0];
+
+    if (x < x1) x = x1;
+    if (x > x2) x = x2;
+
+    d3.select("#freq_bar").attr("x1", x).attr("x2", x).attr("opacity", 1.0);
+
+    var eneregion = d3.select("#eneregion");
+    var mouseBegin = freq_mouse_start;
+    var mouseEnd = offset[0];
+
+    if (mouseEnd < mouseBegin) {
+        var mouseTmp = mouseBegin;
+        mouseBegin = mouseEnd;
+
+        if (mouseBegin < x1)
+            mouseBegin = x1;
+
+        mouseEnd = mouseTmp;
+    };
+
+    if (mouseBegin < x1)
+        mouseBegin = x1;
+
+    if (mouseEnd > x2)
+        mouseEnd = x2;
+
+    var mouseWidth = mouseEnd - mouseBegin;
+
+    eneregion.attr("x", mouseBegin).attr("width", mouseWidth).attr("opacity", 0.25);
+
+    if (optical_view)
+        session_freq_end = frequency;
+
+    if (has_frequency_info) {
+        if (frequency > 0.0)
+            session_freq_end = frequency;
+    }
+    else
+        if (has_velocity_info)
+            session_freq_end = frequency;
+
+    session_frame_end = get_mouse_frame(offset);
+
+    var freq_start = session_freq_start;
+    var freq_end = session_freq_end;
+    var tmp = freq_start;
+
+    if (freq_end < freq_start) {
+        freq_start = freq_end;
+        freq_end = tmp;
+    };
+
+    if (has_frequency_info)
+        console.log((freq_start / 1e9).toPrecision(7) + " - " + (freq_end / 1e9).toPrecision(7) + " GHz");
+    else
+        if (has_velocity_info)
+            console.log((freq_start / 1e3).toPrecision(5) + " - " + (freq_end / 1e3).toPrecision(5) + " km/s");
+
+    var checkbox = document.getElementById('restcheckbox');
+
+    try {
+        if (checkbox.checked)
+            frequency = relativistic_rest_frequency(frequency);
+    }
+    catch (e) {
+        if (has_velocity_info)
+            d3.select("#jvoText").text((frequency / 1.0e3).toFixed(getVelocityPrecision()) + " km/s");
+    };
+
+    if (optical_view)
+        d3.select("#jvoText").text(Math.round(frequency));
+
+    if (has_frequency_info) {
+        var relvel = Einstein_relative_velocity(frequency, RESTFRQ);
+
+        d3.select("#jvoText").text((frequency / 1.0e9).toPrecision(7) + " " + 'GHz' + ", " + relvel.toFixed(getVelocityPrecision()) + " km/s");
+    }
 }
