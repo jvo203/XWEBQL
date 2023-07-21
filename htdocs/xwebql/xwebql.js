@@ -3154,7 +3154,7 @@ function setup_axes() {
 
     //x-axis label
     //var strXLabel = '<I>E<SUB>' + 'log' + '</SUB></I> [log eV]';
-    var strXLabel = '<I>ENERGY [keV]';
+    var strXLabel = '<I>ENERGY</I> [keV]';
 
     svg.append("foreignObject")
         .attr("x", (2 * range.xMin + 1.5 * emFontSize))
