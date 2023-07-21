@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-07-20.1";
+    return "JS2023-07-21.0";
 }
 
 function uuidv4() {
@@ -7732,4 +7732,12 @@ function change_colourmap() {
             replot_y_axis();
         }
     }
+}
+
+function change_zoom_shape() {
+    zoom_shape = document.getElementById('zoom_shape').value;
+    localStorage.setItem("zoom_shape", zoom_shape);
+
+    setup_image_selection();
+    setup_viewports();
 }
