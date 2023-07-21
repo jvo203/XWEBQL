@@ -7760,43 +7760,41 @@ function dragstart(event) {
 
 function dragend() {
     console.log("drag ended");
-    freqdrag = false;
+    enedrag = false;
 
     d3.select("#eneregion").attr("opacity", 0.0);
-    freq_mouse_start = 0;
+    ene_mouse_start = 0;
 
     d3.select("#eneregion").moveToBack();
+    d3.select("#ene_bar").attr("opacity", 0.0);
 
-    d3.select("#freq_bar").attr("opacity", 0.0);
+    var ene_start = session_ene_start;
+    var ene_end = session_ene_end;
+    var tmp = ene_start;
 
-    var freq_start = session_freq_start;
-    var freq_end = session_freq_end;
-    var tmp = freq_start;
-
-    if (freq_start == freq_end) {
+    if (ene_start == ene_end) {
         console.log("ignoring a single-channel region selection!");
 
-        freq_mouse_start = 0;
-        freqdrag = false;
-        session_freq_start = 0;
-        session_freq_end = 0;
+        ene_mouse_start = 0;
+        enedrag = false;
+        session_ene_start = 0;
+        session_ene_end = 0;
 
-        shortcut.remove("f");
         shortcut.remove("Left");
         shortcut.remove("Right");
         shortcut.remove("Enter");
-        mol_pos = -1;
+        line_pos = -1;
 
         return;
     }
 
-    if (freq_end < freq_start) {
-        freq_start = freq_end;
-        freq_end = tmp;
+    if (ene_end < ene_start) {
+        ene_start = ene_end;
+        ene_end = tmp;
     };
 
-    data_band_lo = freq_start;
-    data_band_hi = freq_end;
+    data_band_lo = ene_start;
+    data_band_hi = ene_end;
 
     frame_start = session_frame_start;
     frame_end = session_frame_end;
@@ -7811,44 +7809,42 @@ function dragend() {
         viewport_count = 0;
         spectrum_count = 0;
 
-        for (let index = 1; index <= va_count; index++)
-            cube_refresh(index);
+        cube_refresh();
 
         display_molecules();
     }
 
-    freq_mouse_start = 0;
-    freqdrag = false;
-    session_freq_start = 0;
-    session_freq_end = 0;
+    ene_mouse_start = 0;
+    enedrag = false;
+    session_ene_start = 0;
+    session_ene_end = 0;
 
-    shortcut.remove("f");
     shortcut.remove("Left");
     shortcut.remove("Right");
     shortcut.remove("Enter");
-    mol_pos = -1;
+    line_pos = -1;
 }
 
 function dragmove(event) {
     var offset = d3.pointer(event);
-    var frequency = get_mouse_frequency(offset);
+    var energy = get_mouse_energy(offset);
 
-    var freq = d3.select("#frequency");
-    var offsetx = parseFloat(freq.attr("x"));
+    var ene = d3.select("#energy");
+    var offsetx = parseFloat(ene.attr("x"));
 
     //console.log("dragmove", frequency.toPrecision(7)) ;
 
     var x1 = offsetx;
-    var x2 = offsetx + parseFloat(freq.attr("width"));
+    var x2 = offsetx + parseFloat(ene.attr("width"));
     var x = offset[0];
 
     if (x < x1) x = x1;
     if (x > x2) x = x2;
 
-    d3.select("#freq_bar").attr("x1", x).attr("x2", x).attr("opacity", 1.0);
+    d3.select("#ene_bar").attr("x1", x).attr("x2", x).attr("opacity", 1.0);
 
     var eneregion = d3.select("#eneregion");
-    var mouseBegin = freq_mouse_start;
+    var mouseBegin = ene_mouse_start;
     var mouseEnd = offset[0];
 
     if (mouseEnd < mouseBegin) {
@@ -7871,51 +7867,36 @@ function dragmove(event) {
 
     eneregion.attr("x", mouseBegin).attr("width", mouseWidth).attr("opacity", 0.25);
 
-    if (optical_view)
-        session_freq_end = frequency;
+    session_ene_end = energy;
 
-    if (has_frequency_info) {
-        if (frequency > 0.0)
-            session_freq_end = frequency;
-    }
-    else
-        if (has_velocity_info)
-            session_freq_end = frequency;
+    session_frame_end = get_mouse_energy(offset);
 
-    session_frame_end = get_mouse_frame(offset);
+    var ene_start = session_ene_start;
+    var ene_end = session_ene_end;
+    var tmp = ene_start;
 
-    var freq_start = session_freq_start;
-    var freq_end = session_freq_end;
-    var tmp = freq_start;
-
-    if (freq_end < freq_start) {
-        freq_start = freq_end;
-        freq_end = tmp;
+    if (ene_end < ene_start) {
+        ene_start = ene_end;
+        ene_end = tmp;
     };
 
-    if (has_frequency_info)
-        console.log((freq_start / 1e9).toPrecision(7) + " - " + (freq_end / 1e9).toPrecision(7) + " GHz");
-    else
-        if (has_velocity_info)
-            console.log((freq_start / 1e3).toPrecision(5) + " - " + (freq_end / 1e3).toPrecision(5) + " km/s");
+    console.log((ene_start).toPrecision(5) + " - " + (ene_end).toPrecision(5) + " keV");
 
-    var checkbox = document.getElementById('restcheckbox');
+    var data_band = energy;
 
-    try {
-        if (checkbox.checked)
-            frequency = relativistic_rest_frequency(frequency);
+    var text = "";
+
+    if (data_band < 1) {
+        text = (1000 * data_band).toPrecision(3) + " " + 'eV';
+    } else if (data_band.toPrecision(3) < 1000) {
+        text = data_band.toPrecision(3) + " " + 'keV';
+    } else {
+        text = (data_band / 1000).toPrecision(3) + " " + 'MeV';
     }
-    catch (e) {
-        if (has_velocity_info)
-            d3.select("#jvoText").text((frequency / 1.0e3).toFixed(getVelocityPrecision()) + " km/s");
-    };
 
-    if (optical_view)
-        d3.select("#jvoText").text(Math.round(frequency));
+    // add the temperature
+    var temperature = E2T(1000 * data_band);
+    text += " (" + temperature.toPrecision(3) + " K)";
 
-    if (has_frequency_info) {
-        var relvel = Einstein_relative_velocity(frequency, RESTFRQ);
-
-        d3.select("#jvoText").text((frequency / 1.0e9).toPrecision(7) + " " + 'GHz' + ", " + relvel.toFixed(getVelocityPrecision()) + " km/s");
-    }
+    d3.select("#XText").text(text);
 }
