@@ -20,7 +20,14 @@
 </head>
 
 <body>
-    <script>init();</script>
+    <script>
+        video_fps_control = "auto";
+        coordsFmt = localStorage_read_string("coordsFmt", "HMS");//DMS or HMS
+        image_quality = "medium";
+        colourmap = localStorage.getItem("xcolourmap");
+        theme = localStorage.getItem("ui_theme");
+        init();
+    </script>
 </body>
 
 </html>
