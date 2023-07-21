@@ -57,7 +57,7 @@ function display_menu() {
         .attr("src", "https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/logo_naoj_nothing_s.png")
         .attr("alt", "NAOJ")
         .attr("max-height", "100%")
-        .attr("height", 50);//2.5*emFontSize);//50
+        .attr("height", 50);
 
     var mainUL = main.append("ul")
         .attr("class", "nav navbar-nav");
