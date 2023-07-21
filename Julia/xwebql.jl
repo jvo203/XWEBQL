@@ -535,7 +535,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
         http,
         "<link href=\"https://fonts.googleapis.com/css?family=Material+Icons\" rel=\"stylesheet\"/>\n",
     )
-    write(http, "<script src=\"https://d3js.org/d3.v7.min.js\"></script>\n")
+    write(http, "<script src=\"https://cdn.jsdelivr.net/npm/d3@7\"></script>\n")
     write(
         http,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/reconnecting-websocket.min.js\"></script>\n",
