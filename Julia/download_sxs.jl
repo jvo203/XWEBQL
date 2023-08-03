@@ -51,7 +51,7 @@ end
 
 function get_file(dir, file)
     # check if the file ends with "_cl.evt.gz"
-    if !endswith(file, "_cl.evt.gz")
+    if !endswith(file, "_cl.evt.gz") || !endswith(file, "_cl.evt")
         return
     end
 
@@ -59,7 +59,7 @@ function get_file(dir, file)
 
     # download the file
     _url = dir * "/" * file
-    _target = homedir() * "/NAO/JAXA/SXS/" * file
+    _target = homedir() * "/NAO/JAXA/HITOMI/" * file
     Downloads.download(_url, _target)
 end
 
