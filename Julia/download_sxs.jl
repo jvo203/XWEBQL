@@ -51,7 +51,7 @@ end
 
 function get_file(dir, file)
     # check if the file ends with "_cl.evt.gz"
-    if !endswith(file, "_cl.evt.gz") || !endswith(file, "_cl.evt")
+    if !endswith(file, "_cl.evt.gz")
         return
     end
 
