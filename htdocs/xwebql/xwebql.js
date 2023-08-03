@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-07-21.0";
+    return "JS2023-08-03.0";
 }
 
 function uuidv4() {
@@ -7900,3 +7900,106 @@ function dragmove(event) {
 
     d3.select("#XText").text(text);
 }
+
+function show_scaling_help() {
+    var modal = document.getElementById('scalingHelp');
+    var span = document.getElementById('scalingHeaderClose');
+
+    // When the user clicks on <span> (x), close the modal
+    span.onclick = function () {
+        $('#scalingHelp').modal('hide');
+        d3.select("#scalingHelp").remove();
+    }
+    // When the user moves a mouse, close it
+    window.onmousemove = function (event) {
+        if (event.target == modal) {
+            $('#scalingHelp').modal('hide');
+            d3.select("#scalingHelp").remove();
+        }
+    }
+}
+
+function display_scale_range_ui(called_from_menu = false) {
+    d3.select("#yaxis")
+        .style("fill", 'white')
+        .style("stroke", 'white')
+        .transition()
+        .duration(500)
+        .style("fill", axisColour)
+        .style("stroke", axisColour);
+
+    var div = d3.select("body")
+        .append("div")
+        .attr("class", "container")
+        .append("div")
+        .attr("id", "scalingHelp")
+        .attr("class", "modal")
+        .attr("role", "dialog")
+        .append("div")
+        .attr("class", "modal-dialog");
+
+    var content = div.append("div")
+        .attr("class", "modal-content");
+
+    var header = content.append("div")
+        .attr("class", "modal-header");
+
+    header.append("span")
+        .attr("id", "scalingHeaderClose")
+        .attr("class", "close")
+        .style("color", "red")
+        .text("×");
+
+    header.append("h3")
+        .text("How to Scale the Y-Axis");
+
+    var body = content.append("div")
+        .attr("class", "modal-body");
+
+    body.append("p")
+        .html("move mouse cursor over to the Y-Axis whilst holding the 「Shift」 key");
+
+    body.append("p")
+        .html("drag the mouse over the Y-Axis to <i>shift</i> it <em>UP</em> and <em>DOWN</em>");
+
+    body.append("p")
+        .html("use the mouse <i>scroll wheel</i> or a two-finger <i>touch gesture</i> to <i>re-scale</i> the Y-Axis range");
+
+    var footer = content.append("div")
+        .attr("class", "modal-footer");
+
+    footer.append("p")
+        .style("color", "#a94442")
+        .html("you can disable showing this dialog via the <i>Preferences</i> menu, <i>display pop-up help</i> checkbox");
+
+    if (called_from_menu)
+        $('#scalingHelp').addClass("modal-center");
+
+    if (displayScalingHelp) {
+        show_scaling_help();
+        $('#scalingHelp').modal('show');
+    }
+}
+
+function set_autoscale_range(called_from_menu = false) {
+    autoscale = false;
+    var htmlStr = autoscale ? '<span class="fas fa-check-square"></span> autoscale y-axis' : '<span class="far fa-square"></span> autoscale y-axis';
+    d3.select("#autoscale").html(htmlStr);
+
+    user_data_min = tmp_data_min;
+    user_data_max = tmp_data_max;
+
+    plot_spectrum(last_spectrum);
+    replot_y_axis();
+
+    // display_scale_range_ui(called_from_menu);
+};
+
+function enable_autoscale() {
+    autoscale = true;
+    var htmlStr = autoscale ? '<span class="fas fa-check-square"></span> autoscale y-axis' : '<span class="far fa-square"></span> autoscale y-axis';
+    d3.select("#autoscale").html(htmlStr);
+
+    user_data_min = null;
+    user_data_max = null;
+};
