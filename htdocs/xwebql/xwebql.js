@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-08-03.0";
+    return "JS2023-08-04.0";
 }
 
 function uuidv4() {
@@ -361,8 +361,8 @@ function enable_3d_view() {
 
         (function () {
             var po = document.createElement('script'); po.type = 'text/javascript'; po.async = false;
-            // po.src = 'surface.js' + '?' + encodeURIComponent(get_js_version());
-            po.src = 'https://cdn.jsdelivr.net/gh/jvo203/FITSWEBQLSE/htdocs/fitswebql/surface.min.js';
+            po.src = 'surface.js' + '?' + encodeURIComponent(get_js_version());
+            // po.src = 'https://cdn.jsdelivr.net/gh/jvo203/FITSWEBQLSE/htdocs/fitswebql/surface.min.js';
             var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);
         })();
 
