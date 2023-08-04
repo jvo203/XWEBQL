@@ -44,48 +44,25 @@ function colourFunction(x, y) {
     var imageFrame, image_bounding_dims;
     var rgb = [0, 0, 0];
 
-    if (composite_view) {
-        image_bounding_dims = compositeImage.image_bounding_dims;
+    imageFrame = imageContainer;
+    image_bounding_dims = imageFrame.image_bounding_dims;
 
-        let aspect = image_bounding_dims.height / image_bounding_dims.width;
-        let xcoord = Math.round(image_bounding_dims.x1 + ((1 - x) - 0.5) * (image_bounding_dims.width - 1));
-        let ycoord = Math.round(image_bounding_dims.y1 + ((- y) / aspect + 0.5) * (image_bounding_dims.height - 1));
-        let pixel = ycoord * compositeImage.width + xcoord;
+    let tone_mapping = imageFrame.tone_mapping;
+    let black = tone_mapping.black;
+    let white = tone_mapping.white;
+    let median = tone_mapping.median;
+    let noise_sensitivity = document.getElementById('sensitivity' + va_count).value;
+    let multiplier = get_noise_sensitivity(noise_sensitivity);
+    let flux = document.getElementById('flux' + va_count).value;
 
-        for (index = 1; index <= va_count; index++) {
-            imageFrame = imageContainer[index - 1];
-            let tone_mapping = imageFrame.tone_mapping;
-            let black = tone_mapping.black;
-            let white = tone_mapping.white;
-            let median = tone_mapping.median;
-            let noise_sensitivity = document.getElementById('sensitivity' + index).value;
-            let multiplier = get_noise_sensitivity(noise_sensitivity);
-            let flux = document.getElementById('flux' + index).value;
+    let aspect = image_bounding_dims.height / image_bounding_dims.width;
+    let xcoord = Math.round(image_bounding_dims.x1 + ((1 - x) - 0.5) * (image_bounding_dims.width - 1));
+    let ycoord = Math.round(image_bounding_dims.y1 + ((- y) / aspect + 0.5) * (image_bounding_dims.height - 1));
+    let pixel = ycoord * imageFrame.width + xcoord;
 
-            let raw = imageFrame.pixels[pixel];
-            rgb[index - 1] = Math.round(get_tone_mapping(raw, flux, black, white, median, multiplier, index));
-        }
-    } else {
-        imageFrame = imageContainer[va_count - 1];
-        image_bounding_dims = imageFrame.image_bounding_dims;
-
-        let tone_mapping = imageFrame.tone_mapping;
-        let black = tone_mapping.black;
-        let white = tone_mapping.white;
-        let median = tone_mapping.median;
-        let noise_sensitivity = document.getElementById('sensitivity' + va_count).value;
-        let multiplier = get_noise_sensitivity(noise_sensitivity);
-        let flux = document.getElementById('flux' + va_count).value;
-
-        let aspect = image_bounding_dims.height / image_bounding_dims.width;
-        let xcoord = Math.round(image_bounding_dims.x1 + ((1 - x) - 0.5) * (image_bounding_dims.width - 1));
-        let ycoord = Math.round(image_bounding_dims.y1 + ((- y) / aspect + 0.5) * (image_bounding_dims.height - 1));
-        let pixel = ycoord * imageFrame.width + xcoord;
-
-        let raw = imageFrame.pixels[pixel];
-        pixel = Math.round(get_tone_mapping(raw, flux, black, white, median, multiplier, va_count));
-        rgb = [pixel, pixel, pixel];
-    }
+    let raw = imageFrame.pixels[pixel];
+    pixel = Math.round(get_tone_mapping(raw, flux, black, white, median, multiplier, va_count));
+    rgb = [pixel, pixel, pixel];
 
     return new THREE.Color("rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")");
 }
