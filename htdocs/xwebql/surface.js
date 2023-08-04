@@ -17,21 +17,17 @@ function meshFunction(x, y, p0) {
     imageFrame = imageContainer;
     image_bounding_dims = imageFrame.image_bounding_dims;
 
-    let tone_mapping = imageFrame.tone_mapping;
-    let black = tone_mapping.black;
-    let white = tone_mapping.white;
-    let median = tone_mapping.median;
-    let noise_sensitivity = document.getElementById('sensitivity' + va_count).value;
-    let multiplier = get_noise_sensitivity(noise_sensitivity);
-    let flux = document.getElementById('flux' + va_count).value;
+    // logarithmic tone mapping        
+    let pmin = Math.log(imageFrame.pixel_range.min_pixel);
+    let pmax = Math.log(imageFrame.pixel_range.max_pixel);
 
     let xcoord = Math.round(image_bounding_dims.x1 + (1 - x) * (image_bounding_dims.width - 1));
     let ycoord = Math.round(image_bounding_dims.y1 + (1 - y) * (image_bounding_dims.height - 1));
 
     let pixel = ycoord * imageFrame.width + xcoord;
     let raw = imageFrame.pixels[pixel];
-    // <raw> needs to be transformed into a pixel range in [0, 255] via the tone mapping function
-    pixel = get_tone_mapping(raw, flux, black, white, median, multiplier, va_count);
+    // <raw> needs to be transformed into a pixel range in [0, 255] via the tone mapping function    
+    pixel = 255 * clamp((raw - pmin) / (pmax - pmin), 0, 1);
     z = pixel - 127;
     //console.log(xcoord, ycoord, "raw:", raw, "pixel:", pixel, "z:", z);    
 
@@ -47,13 +43,9 @@ function colourFunction(x, y) {
     imageFrame = imageContainer;
     image_bounding_dims = imageFrame.image_bounding_dims;
 
-    let tone_mapping = imageFrame.tone_mapping;
-    let black = tone_mapping.black;
-    let white = tone_mapping.white;
-    let median = tone_mapping.median;
-    let noise_sensitivity = document.getElementById('sensitivity' + va_count).value;
-    let multiplier = get_noise_sensitivity(noise_sensitivity);
-    let flux = document.getElementById('flux' + va_count).value;
+    // logarithmic tone mapping        
+    let pmin = Math.log(imageFrame.pixel_range.min_pixel);
+    let pmax = Math.log(imageFrame.pixel_range.max_pixel);
 
     let aspect = image_bounding_dims.height / image_bounding_dims.width;
     let xcoord = Math.round(image_bounding_dims.x1 + ((1 - x) - 0.5) * (image_bounding_dims.width - 1));
@@ -61,7 +53,7 @@ function colourFunction(x, y) {
     let pixel = ycoord * imageFrame.width + xcoord;
 
     let raw = imageFrame.pixels[pixel];
-    pixel = Math.round(get_tone_mapping(raw, flux, black, white, median, multiplier, va_count));
+    pixel = Math.round(255 * clamp((raw - pmin) / (pmax - pmin), 0, 1));
     rgb = [pixel, pixel, pixel];
 
     return new THREE.Color("rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")");
