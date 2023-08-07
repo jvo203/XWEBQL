@@ -1,4 +1,7 @@
 using Images
+using Plots
+
+pyplot()
 
 include("xevent.jl")
 
@@ -101,6 +104,11 @@ for entry in files
 
     println(max_count, extrema(pixels))
 
+    # plot the spectrum as PNG
+    println(spectrum)
+    plot_ref = Plots.plot(spectrum, legend=false, axis=([], false))
+    Plots.savefig(plot_ref, dir * "DEMO/images/" * entry * "_spectrum.png")
+
     # parse the JSON to a dictionary
     json = JSON.parse(json)
 
@@ -112,9 +120,10 @@ for entry in files
     object = replace(object, "_" => " ")
 
     image_link = "images/" * entry * "_image.png"
+    spectrum_link = "images/" * entry * "_spectrum.png"
 
     # append HTML table row
-    write(html, "<tr><td>$count</td><td>$dataset</td><td>$object</td><td>$ra</td><td>$dec</td><td><img src='$image_link'></td><td>spectrum</td><td><a href=\"$xwebql_url\">$xwebql_url</a></td><td><a href=\"$download_url\">$download_url</a></td></tr>\n")
+    write(html, "<tr><td>$count</td><td>$dataset</td><td>$object</td><td>$ra</td><td>$dec</td><td><img src='$image_link'></td><td><img src='$spectrum_link' width='$width'></td><td><a href=\"$xwebql_url\">$xwebql_url</a></td><td><a href=\"$download_url\">$download_url</a></td></tr>\n")
 
     # increment the index
     count = count + 1
