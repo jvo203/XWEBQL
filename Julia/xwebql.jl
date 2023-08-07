@@ -478,6 +478,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
     dir = ""
     dataset = ""
     ext = ""
+    mission = ""
 
     try
         ext = params["ext"]
@@ -489,17 +490,24 @@ function streamXEvents(http::HTTP.Streams.Stream)
     catch _
     end
 
+    if LOCAL_VERSION
+        pattern = "filename"
+    else
+        pattern = "dataset"
+    end
+
     try
-        dataset = params["filename"]
+        dataset = params[pattern]
     catch _
     end
 
     try
-        dataset = params["uri"]
+        mission = params["mission"]
     catch _
     end
 
     println("dir: \"$dir\"")
+    println("mission: \"$mission\"")
     println("dataset: \"$dataset\"")
     println("ext: \"$ext\"")
 
@@ -513,7 +521,14 @@ function streamXEvents(http::HTTP.Streams.Stream)
                 uri *= "." * ext
             end
         else
-            uri = dataset
+            uri = "file://" * XHOME
+
+            if mission != ""
+                # convert mission to uppercase
+                uri *= "/" * uppercase(mission)
+            end
+
+            uri *= "/" * dataset
         end
 
         # create a new dataset

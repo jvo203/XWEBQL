@@ -94,7 +94,7 @@ function get_dataset(datasetid::String, xobjects, xlock)::XDataSet
     try
         dataset = xobjects[datasetid]
     catch e
-        dataset = xDataSet()
+        dataset = XDataSet()
         println("Failed to retrieve a dataset: $e")
     finally
         unlock(xlock)
