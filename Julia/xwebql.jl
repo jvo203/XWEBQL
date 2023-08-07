@@ -401,7 +401,11 @@ function streamDocument(http::HTTP.Streams.Stream)
     path = HT_DOCS * HTTP.unescapeuri(request.target)
 
     if request.target == "/"
-        path *= "index.html"
+        if LOCAL_VERSION
+            path *= "index.html"
+        else
+            path *= "test.html"
+        end
     end
 
     return streamFile(http, path)
