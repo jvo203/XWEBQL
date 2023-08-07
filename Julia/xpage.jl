@@ -65,8 +65,18 @@ for entry in files
 
     @time (pixels, mask, spectrum, header, json, min_count, max_count) = getImageSpectrum(xdataset, width, height)
 
+    # parse the JSON to a dictionary
+    json = JSON.parse(json)
+
+    object = json["OBJECT"]
+    ra = json["RA_OBJ"]
+    dec = json["DEC_OBJ"]
+
+    # replace "_" with " "
+    object = replace(object, "_" => " ")
+
     # append HTML table row
-    write(html, "<tr><td>$count</td><td>$dataset</td><td>unknown</td><td>0.0</td><td>0.0</td><td>image</td><td>spectrum</td><td><a href=\"$xwebql_url\">$xwebql_url</a></td><td><a href=\"$download_url\">$download_url</a></td></tr>\n")
+    write(html, "<tr><td>$count</td><td>$dataset</td><td>$object</td><td>$ra</td><td>$dec</td><td>image</td><td>spectrum</td><td><a href=\"$xwebql_url\">$xwebql_url</a></td><td><a href=\"$download_url\">$download_url</a></td></tr>\n")
 
     # increment the index
     count = count + 1
