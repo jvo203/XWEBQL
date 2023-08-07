@@ -30,6 +30,7 @@ end
 
 dir = "/Volumes/OWC/JAXA/"
 mission = "HITOMI"
+SERVER_STRING = "xpage.jl"
 
 # first get all files in dir
 files = readdir("/Volumes/OWC/JAXA/" * mission)
@@ -39,10 +40,10 @@ write(html, "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n")
 write(html, "<title>" * mission * "</title>\n</head>\n<body>\n")
 
 # HTML h1
-write(html, "<h1>X-ray Event Files</h1>\n")
+write(html, "<h1>X-ray SXS Event Files</h1>\n")
 
 # append HTML table header
-write(html, "<table><tr><th>#</th><th>Dataset</th><th>Object</th><th>Ra [deg]</th><th>Dec [deg]</th><th>QL image</th><th>QL spectrum</th><th>XWEBQL</th><th>Event File</th></tr>\n")
+write(html, "<table><tr><th>#</th><th>Dataset</th><th>Object</th><th>Ra [deg]</th><th>Dec [deg]</th><th>QL image</th><th>QL spectrum</th><th>XWEBQL Preview</th><th>Event File Download</th></tr>\n")
 
 count = 1
 for entry in files
@@ -58,6 +59,11 @@ for entry in files
 
     xdataset = XDataSet(dataset, uri)
     load_events(xdataset, uri)
+
+    width = 128
+    height = 128
+
+    @time (pixels, mask, spectrum, header, json, min_count, max_count) = getImageSpectrum(xdataset, width, height)
 
     # append HTML table row
     write(html, "<tr><td>$count</td><td>$dataset</td><td>unknown</td><td>0.0</td><td>0.0</td><td>image</td><td>spectrum</td><td><a href=\"$xwebql_url\">$xwebql_url</a></td><td><a href=\"$download_url\">$download_url</a></td></tr>\n")

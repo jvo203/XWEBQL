@@ -4,6 +4,7 @@ using Downloads
 using FITSIO
 using FHist
 using ImageTransformations, Interpolations
+using JSON
 using Printf
 using ThreadsX
 
