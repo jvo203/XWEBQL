@@ -479,6 +479,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
     dataset = ""
     ext = ""
     mission = ""
+    uri = ""
 
     try
         ext = params["ext"]
@@ -487,6 +488,11 @@ function streamXEvents(http::HTTP.Streams.Stream)
 
     try
         dir = params["dir"]
+    catch _
+    end
+
+    try
+        uri = params["uri"]
     catch _
     end
 
@@ -506,29 +512,30 @@ function streamXEvents(http::HTTP.Streams.Stream)
     catch _
     end
 
+    println("uri: \"$uri\"")
     println("dir: \"$dir\"")
     println("mission: \"$mission\"")
     println("dataset: \"$dataset\"")
     println("ext: \"$ext\"")
 
     if !dataset_exists(dataset, XOBJECTS, XLOCK)
-        local uri = ""
+        if uri == ""
+            if dir != ""
+                uri = "file://" * dir * "/" * dataset
 
-        if dir != ""
-            uri = "file://" * dir * "/" * dataset
+                if ext != ""
+                    uri *= "." * ext
+                end
+            else
+                uri = "file://" * XHOME
 
-            if ext != ""
-                uri *= "." * ext
+                if mission != ""
+                    # convert mission to uppercase
+                    uri *= "/" * uppercase(mission)
+                end
+
+                uri *= "/" * dataset
             end
-        else
-            uri = "file://" * XHOME
-
-            if mission != ""
-                # convert mission to uppercase
-                uri *= "/" * uppercase(mission)
-            end
-
-            uri *= "/" * dataset
         end
 
         # create a new dataset
