@@ -97,7 +97,7 @@ for entry in files
     img = colorview(Gray, pixels)
 
     # save image as PNG
-    save(dir * "DEMO/images/" * entry * ".png", img)
+    save(dir * "DEMO/images/" * entry * "_image.png", img)
 
     println(max_count, extrema(pixels))
 
@@ -111,7 +111,7 @@ for entry in files
     # replace "_" with " "
     object = replace(object, "_" => " ")
 
-    image_link = "images/" * entry * ".png"
+    image_link = "images/" * entry * "_image.png"
 
     # append HTML table row
     write(html, "<tr><td>$count</td><td>$dataset</td><td>$object</td><td>$ra</td><td>$dec</td><td><img src='$image_link'></td><td>spectrum</td><td><a href=\"$xwebql_url\">$xwebql_url</a></td><td><a href=\"$download_url\">$download_url</a></td></tr>\n")
