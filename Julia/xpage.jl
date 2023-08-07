@@ -48,13 +48,16 @@ count = 1
 for entry in files
     global count
 
-    # extract the dataset name from the URI, take the string after the last slash
-    dataset = String(split(entry, "/")[end])
+    uri = "/Volumes/OWC/JAXA/" * mission * "/" * entry
+    dataset = entry
 
     download_url = get_download_url(dataset)
     xwebql_url = get_xwebql_url(dataset)
 
     println(count, " ", dataset, " ", download_url, " ", xwebql_url)
+
+    xdataset = XDataSet(dataset, uri)
+    load_events(xdataset, uri)
 
     # append HTML table row
     write(html, "<tr><td>$count</td><td>$dataset</td><td>unknown</td><td>0.0</td><td>0.0</td><td>image</td><td>spectrum</td><td><a href=\"$xwebql_url\">$xwebql_url</a></td><td><a href=\"$download_url\">$download_url</a></td></tr>\n")
