@@ -2,6 +2,7 @@ import Base.Iterators: flatten
 using ArgParse
 using CodecBzip2
 using CodecLz4
+using ConfParser
 using HTTP
 using JSON
 using SQLite
@@ -77,6 +78,9 @@ parsed_args = parse_commandline()
 
 LOCAL_VERSION = true
 TIMEOUT = 60 # [s]
+
+XHOME = ".cache"
+XCACHE = ".cache"
 
 const VERSION_MAJOR = 1
 const VERSION_MINOR = 0
@@ -1042,6 +1046,59 @@ HTTP.register!(XROUTER, "GET", "*/*", streamDocument)
 HTTP.register!(XROUTER, "GET", "*", streamDocument)
 HTTP.register!(XROUTER, "GET", "/*/image_spectrum/", streamImageSpectrum)
 HTTP.register!(XROUTER, "GET", "/*/get_atomdb/", streamSpectralLines)
+
+try
+    global CONFIG_FILE = parsed_args["config"]
+catch _
+    println("A config file not supplied. Will try a default config.ini .")
+end
+
+# read the config file (if available)
+try
+    conf = ConfParse(CONFIG_FILE)
+    parse_conf!(conf)
+
+    # [xwebql]
+
+    try
+        global HTTP_PORT = parse(Int64, retrieve(conf, "xwebql", "port"))
+        global WS_PORT = HTTP_PORT + 1
+    catch _
+        # cannot find the port, try the command-line arguments
+        try
+            global HTTP_PORT = parsed_args["port"]
+            global WS_PORT = HTTP_PORT + 1
+        catch _
+        end
+    end
+
+    try
+        global LOCAL_VERSION = parse(Bool, retrieve(conf, "xwebql", "local"))
+    catch _
+    end
+
+    try
+        global TIMEOUT = parse(Int64, retrieve(conf, "xwebql", "timeout"))
+    catch _
+    end
+
+    try
+        global XHOME = retrieve(conf, "xwebql", "home")
+    catch _
+    end
+
+    try
+        global LOGS = retrieve(conf, "xwebql", "logs")
+    catch _
+    end
+
+    try
+        global XCACHE = retrieve(conf, "xwebql", "cache")
+    catch _
+    end
+catch e
+    println("Cannot parse the config file $CONFIG_FILE: $e")
+end
 
 # open an Atom DB connection
 const atom_db = SQLite.DB("atom.db")
