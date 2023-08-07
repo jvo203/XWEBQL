@@ -9,12 +9,22 @@ function view_mission(satellite) {
     var mission = document.getElementById(satellite + "_mission").value.trim();
 
     if (dataset != "") {
-        var url = null;
-
-        url = "/xwebql/events.html?" + "mission=" + encodeURIComponent(mission) + "&dataset=" + encodeURIComponent(dataset);
+        var url = "/xwebql/events.html?" + "mission=" + encodeURIComponent(mission) + "&dataset=" + encodeURIComponent(dataset);
 
         window.location.href = url;
     }
     else
         alert("no dataset found !");
+}
+
+function view_url() {
+    var events_url = document.getElementById("url").value.trim();
+
+    if (events_url != "") {
+        var url = "/xwebql/events.html?" + "url=" + encodeURIComponent(events_url);
+
+        window.location.href = url;
+    }
+    else
+        alert("no X-ray events URL found !");
 }

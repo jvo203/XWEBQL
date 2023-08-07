@@ -492,7 +492,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
     end
 
     try
-        uri = params["uri"]
+        uri = params["url"]
     catch _
     end
 
@@ -536,6 +536,9 @@ function streamXEvents(http::HTTP.Streams.Stream)
 
                 uri *= "/" * dataset
             end
+        else
+            # extract the dataset name from the URI, take the string after the last slash
+            dataset = String(split(uri, "/")[end])
         end
 
         # create a new dataset
