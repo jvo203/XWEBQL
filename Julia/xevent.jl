@@ -1,5 +1,6 @@
 using Dates
 using Distributed
+using Downloads
 using FITSIO
 using FHist
 using ImageTransformations, Interpolations
@@ -153,9 +154,18 @@ function garbage_collector(xobjects, xlock, timeout::Int64)
 end
 
 function load_events(xdataset::XDataSet, uri::String)
+    global XCACHE
+    local f
+
     println("loading $uri::$(xdataset.id)")
 
-    f = FITS(uri)
+    # check if the uri starts with "http" or "ftp"
+    if startswith(uri, "http") || startswith(uri, "ftp")
+        # check if the uri is already in the cache (not implemented yet)
+        f = FITS(Downloads.download(uri))
+    else
+        f = FITS(uri)
+    end
 
     try
         xdataset.header = read_header(f[2])
