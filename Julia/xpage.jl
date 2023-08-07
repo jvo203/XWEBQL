@@ -1,3 +1,5 @@
+using Images
+
 include("xevent.jl")
 
 function get_download_url(filename::String)::String
@@ -64,6 +66,34 @@ for entry in files
     height = 128
 
     @time (pixels, mask, spectrum, header, json, min_count, max_count) = getImageSpectrum(xdataset, width, height)
+    max_count = ThreadsX.maximum(pixels)
+
+    # convert pixels/mask to RGB
+    dims = size(pixels)
+    img_width = dims[1]
+    img_height = dims[2]
+    fill = 0
+
+    if max_count > 0
+        pixels = clamp.(pixels ./ max_count, 0.0, 1.0)
+    else
+        pixels .= Float32(0)
+        pixels[mask] .= Float32(1)
+
+        println("mask range:", ThreadsX.extrema(mask))
+        println("pixels range:", ThreadsX.extrema(pixels))
+    end
+
+    # fill pixels with the fill colour where mask is false
+    pixels[.!mask] .= fill
+
+    # make an image from pixels
+    img = colorview(Gray, pixels)
+
+    # save image as PNG
+    save(dir * "DEMO/images/" * entry * ".png", Gray.(pixels))
+
+    println(max_count, extrema(pixels))
 
     # parse the JSON to a dictionary
     json = JSON.parse(json)
