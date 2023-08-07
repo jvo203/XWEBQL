@@ -87,11 +87,17 @@ for entry in files
     # fill pixels with the fill colour where mask is false
     pixels[.!mask] .= fill
 
+    # transpose the pixels array
+    pixels = pixels'
+
+    # flip the image
+    pixels = reverse(pixels, dims=1)
+
     # make an image from pixels
     img = colorview(Gray, pixels)
 
     # save image as PNG
-    save(dir * "DEMO/images/" * entry * ".png", Gray.(pixels))
+    save(dir * "DEMO/images/" * entry * ".png", img)
 
     println(max_count, extrema(pixels))
 
@@ -105,8 +111,10 @@ for entry in files
     # replace "_" with " "
     object = replace(object, "_" => " ")
 
+    image_link = "images/" * entry * ".png"
+
     # append HTML table row
-    write(html, "<tr><td>$count</td><td>$dataset</td><td>$object</td><td>$ra</td><td>$dec</td><td>image</td><td>spectrum</td><td><a href=\"$xwebql_url\">$xwebql_url</a></td><td><a href=\"$download_url\">$download_url</a></td></tr>\n")
+    write(html, "<tr><td>$count</td><td>$dataset</td><td>$object</td><td>$ra</td><td>$dec</td><td><img src='$image_link'></td><td>spectrum</td><td><a href=\"$xwebql_url\">$xwebql_url</a></td><td><a href=\"$download_url\">$download_url</a></td></tr>\n")
 
     # increment the index
     count = count + 1
