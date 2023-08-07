@@ -30,12 +30,13 @@ function get_download_url(filename::String)::String
 end
 
 function get_xwebql_url(filename::String)::String
-    return "http://zodiac.mtk.nao.ac.jp:9000/xwebql/events.html?mission=" * lowercase(mission) * "&dataset=" * filename
+    return "http://zodiac.mtk.nao.ac.jp:$PORT/xwebql/events.html?mission=" * lowercase(mission) * "&dataset=" * filename
 end
 
 dir = "/Volumes/OWC/JAXA/"
 mission = "HITOMI"
 SERVER_STRING = "xpage.jl"
+PORT = 10000
 
 # first get all files in dir
 files = readdir("/Volumes/OWC/JAXA/" * mission)
@@ -45,7 +46,7 @@ write(html, "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n")
 write(html, "<title>" * mission * "</title>\n</head>\n<body>\n")
 
 # HTML h1
-write(html, "<h1>X-ray SXS Event Files</h1>\n")
+write(html, "<h1>" * mission * " X-ray SXS Event Files</h1>\n")
 
 # append HTML table header
 write(html, "<table><tr><th>#</th><th>Dataset</th><th>Object</th><th>Ra [deg]</th><th>Dec [deg]</th><th>QL image</th><th>QL spectrum</th><th>XWEBQL Preview</th><th>Event File Download</th></tr>\n")
