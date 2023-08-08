@@ -1,4 +1,5 @@
 using CSV
+using DataFrames
 using Images
 using Plots
 
@@ -51,6 +52,15 @@ write(html, "<h1>" * mission * " X-ray SXS Event Files</h1>\n")
 
 # append HTML table header
 write(html, "<table><tr><th>#</th><th>Dataset</th><th>Object</th><th>Ra [deg]</th><th>Dec [deg]</th><th>QL image</th><th>QL spectrum</th><th>XWEBQL Preview</th><th>Event File Download</th></tr>\n")
+
+# open a CSV file for writing
+csv = CSV.open(dir * "DEMO/" * lowercase(mission) * ".csv", "w")
+
+# create an empty DataFrame
+df = DataFrame(index=Integer[], dataset=String[], object=String[], ra=Float64[], dec=Float64[], image=String[], spectrum=String[], xwebql=String[], download=String[])
+
+# write the CSV header
+#CSV.write(csv, IOBuffer(["#", "Dataset", "Object", "Ra [deg]", "Dec [deg]", "QL image", "QL spectrum", "XWEBQL Preview", "Event File Download"]))
 
 count = 1
 for entry in files
@@ -127,6 +137,9 @@ for entry in files
     # append HTML table row
     write(html, "<tr><td>$count</td><td>$dataset</td><td>$object</td><td>$ra</td><td>$dec</td><td><img src='$image_link'></td><td><img src='$spectrum_link' width='$width'></td><td><a href=\"$xwebql_url\">$xwebql_url</a></td><td><a href=\"$download_url\">$download_url</a></td></tr>\n")
 
+    # append the DataFrame row
+    push!(df, [count, dataset, object, ra, dec, image_link, spectrum_link, xwebql_url, download_url])
+
     # increment the index
     count = count + 1
 end
@@ -141,3 +154,6 @@ write(html, "</body>\n</html>\n")
 open(dir * "DEMO/index.html", "w") do f
     write(f, String(take!(html)))
 end
+
+# write the DataFrame to CSV
+CSV.write(dir * "DEMO/" * lowercase(mission) * ".csv", df)
