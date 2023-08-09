@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-08-09.0";
+    return "JS2023-08-09.1";
 }
 
 function uuidv4() {
@@ -2875,7 +2875,7 @@ function setup_help() {
     .html("To enable it check <i>Preferences</i>/<i>3D View (experimental)</i> and a \"3D View\" button should appear towards the bottom of the page") ;*/
 
     bodyDiv.append("p")
-        .html("To view a 3D surface of the FITS cube image, click <i>3D surface</i> in the <i>View</i> menu");
+        .html("To view a 3D surface of the X-ray data cube image, click <i>3D surface</i> in the <i>View</i> menu");
 
     bodyDiv.append("hr");
 
@@ -2896,13 +2896,13 @@ function setup_help() {
 
     bodyDiv.append("h3")
         .attr("id", "h3")
-        .text("Realtime FITS Cube Video Updates");
+        .text("X-ray Energy Channels Realtime Video Updates");
 
     bodyDiv.append("p")
         .html("<i>Preferences/realtime video updates</i> works best over <i>low-latency</i> network connections with available bandwidth <i>over 1 mbps</i>");
 
     bodyDiv.append("p")
-        .html("when disabled the FITS cube video frame will be requested after a 250ms delay since the last movement of the mouse");
+        .html("when disabled the energy channel video frame will be requested after a 250ms delay since the last movement of the mouse");
 
     bodyDiv.append("p")
         .html('<span class="fas fa-play"></span>&nbsp; replay period 10s');
@@ -2935,17 +2935,6 @@ function setup_help() {
     bodyDiv.append("hr");
 
     bodyDiv.append("h3")
-        .text("Save region as FITS");
-
-    bodyDiv.append("p")
-        .html("<b>Ctrl + S</b> (<i>keyboard</i>)");
-
-    bodyDiv.append("p")
-        .html("drag over main image (<i>mouse</i>)");
-
-    bodyDiv.append("hr");
-
-    bodyDiv.append("h3")
         .text("Show Energy Information");
 
     bodyDiv.append("p")
@@ -2954,7 +2943,7 @@ function setup_help() {
     bodyDiv.append("hr");
 
     bodyDiv.append("h3")
-        .text("Skip to the Next Molecular Line");
+        .text("Skip to the Next AtomDB Line");
 
     bodyDiv.append("p")
         .html("press <b>&larr;</b> or <b>&rarr;</b> whilst <b>hovering</b> over X-axis");
@@ -2962,7 +2951,7 @@ function setup_help() {
     bodyDiv.append("hr");
 
     bodyDiv.append("h3")
-        .text("Jump to AtomDB");
+        .text("Jump to AtomDB Online Catalogue");
 
     bodyDiv.append("p")
         .html("press <b>Enter</b> whilst <b>hovering</b> over X-axis");
@@ -2973,7 +2962,7 @@ function setup_help() {
         .text("Select Energy Range");
 
     bodyDiv.append("p")
-        .html("<b>drag</b> over X-axis");
+        .html("<del><b>drag</b> over X-axis</del> to be implemented");
 
     bodyDiv.append("hr");
 
@@ -2983,36 +2972,13 @@ function setup_help() {
     bodyDiv.append("p")
         .html("press <b>s</b> over main image");
 
-    bodyDiv.append("h4")
-        .text("adjust the fixed Y-Axis range");
-
-    bodyDiv.append("p")
-        .html("move mouse cursor over to the Y-Axis whilst holding the 「Shift」 key");
-
-    bodyDiv.append("p")
-        .html("drag the mouse over the Y-Axis to <i>shift</i> it <em>UP</em> and <em>DOWN</em>");
-
-    bodyDiv.append("p")
-        .html("use the mouse <i>scroll wheel</i> or a two-finger <i>touch gesture</i> to <i>re-scale</i> the Y-Axis range");
-
-    var vid = bodyDiv.append("video")
-        .attr("width", "100%")
-        .attr("controls", "")
-        .attr("preload", "metadata");
-
-    vid.append("source")
-        .attr("src", "https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/fixed_scale_y_axis.mp4");
-
-    vid.append("p")
-        .html("Your browser does not support the video tag.");
-
     bodyDiv.append("hr");
 
     bodyDiv.append("h3")
         .text("Hold current view region");
 
     bodyDiv.append("p")
-        .html("keep pressing <b>↑Shift</b>");
+        .html("keep pressing <b>↑Shift</b> whilst moving the mouse outside the main image");
 
     bodyDiv.append("hr");
 
@@ -7481,7 +7447,7 @@ function process_video() {
             ctx.fillStyle = "rgba(0,0,0,0.3)";
             ctx.fillRect(px, py, viewport_zoom_settings.zoomed_size, viewport_zoom_settings.zoomed_size);
 
-            ctx.drawImage(imageCanvas, (viewport_zoom_settings.x - viewport_zoom_settings.clipSize) / videoFrame[index - 1].scaleX, (y + viewport_zoom_settings.clipSize) / videoFrame[index - 1].scaleY, (2 * viewport_zoom_settings.clipSize + 1) / videoFrame[index - 1].scaleX, (2 * viewport_zoom_settings.clipSize + 1) / videoFrame[index - 1].scaleY, px, py, viewport_zoom_settings.zoomed_size, viewport_zoom_settings.zoomed_size);
+            ctx.drawImage(imageCanvas, (viewport_zoom_settings.x - viewport_zoom_settings.clipSize) / videoFrame.scaleX, (y + viewport_zoom_settings.clipSize) / videoFrame.scaleY, (2 * viewport_zoom_settings.clipSize + 1) / videoFrame.scaleX, (2 * viewport_zoom_settings.clipSize + 1) / videoFrame.scaleY, px, py, viewport_zoom_settings.zoomed_size, viewport_zoom_settings.zoomed_size);
         }
 
         if (zoom_shape == "circle") {
@@ -7494,7 +7460,7 @@ function process_video() {
 
             ctx.closePath();
             ctx.clip();
-            ctx.drawImage(imageCanvas, (viewport_zoom_settings.x - viewport_zoom_settings.clipSize) / videoFrame[index - 1].scaleX, (y + viewport_zoom_settings.clipSize) / videoFrame[index - 1].scaleY, (2 * viewport_zoom_settings.clipSize + 1) / videoFrame[index - 1].scaleX, (2 * viewport_zoom_settings.clipSize + 1) / videoFrame[index - 1].scaleY, px, py, viewport_zoom_settings.zoomed_size, viewport_zoom_settings.zoomed_size);
+            ctx.drawImage(imageCanvas, (viewport_zoom_settings.x - viewport_zoom_settings.clipSize) / videoFrame.scaleX, (y + viewport_zoom_settings.clipSize) / videoFrame.scaleY, (2 * viewport_zoom_settings.clipSize + 1) / videoFrame.scaleX, (2 * viewport_zoom_settings.clipSize + 1) / videoFrame.scaleY, px, py, viewport_zoom_settings.zoomed_size, viewport_zoom_settings.zoomed_size);
             ctx.restore();
         }
     }
