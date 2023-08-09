@@ -591,10 +591,6 @@ function streamXEvents(http::HTTP.Streams.Stream)
     )
     write(
         http,
-        "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/colourmaps.min.js\"></script>\n",
-    )
-    write(
-        http,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/lz4.min.js\"></script>\n",
     )
     write(
