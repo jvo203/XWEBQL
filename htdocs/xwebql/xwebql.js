@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-08-07.0";
+    return "JS2023-08-09.0";
 }
 
 function uuidv4() {
@@ -7788,6 +7788,9 @@ function dragend() {
     d3.select("#eneregion").moveToBack();
     d3.select("#ene_bar").attr("opacity", 0.0);
 
+    console.log("this functionality is not supported yet... please try it again later");
+    return;
+
     var ene_start = session_ene_start;
     var ene_end = session_ene_end;
     var tmp = ene_start;
@@ -7831,7 +7834,7 @@ function dragend() {
 
         cube_refresh();
 
-        display_molecules();
+        display_lines();
     }
 
     ene_mouse_start = 0;
