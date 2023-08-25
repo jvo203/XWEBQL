@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-08-25.0";
+    return "JS2023-08-25.1";
 }
 
 function uuidv4() {
@@ -7992,3 +7992,140 @@ function enable_autoscale() {
     user_data_min = null;
     user_data_max = null;
 };
+
+function update_contours() {
+    display_hourglass();
+
+    setTimeout(function () {
+        contour_surface();
+    }, 0);//50, 100    
+}
+
+function contour_surface() {
+    return contour_surface_webworker();
+};
+
+function contour_surface_webworker() {
+    has_contours = false;
+
+    try {
+        d3.selectAll('#contourPlot').remove();
+    }
+    catch (e) { };
+
+    var data = [];
+    var imageFrame = null;
+    var imageData = null;
+    imageFrame = imageContainer;
+
+    var image_bounding_dims = imageFrame.image_bounding_dims;
+
+    var min_value = Number.MAX_VALUE;
+    var max_value = -Number.MAX_VALUE;
+
+    //use imageFrame
+    {
+        min_value = imageFrame.pixel_range.min_pixel;
+        max_value = imageFrame.pixel_range.max_pixel;
+
+        for (let h = image_bounding_dims.height - 1; h >= 0; h--) {
+            let row = [];
+
+            let xcoord = image_bounding_dims.x1;
+            let ycoord = image_bounding_dims.y1 + h;
+            let pixel = ycoord * imageFrame.width + xcoord;
+
+            for (let w = 0; w < image_bounding_dims.width; w++) {
+                let z = imageFrame.pixels[pixel];
+                pixel += 1;
+
+                row.push(z);
+            }
+
+            data.push(row);
+        };
+    }
+
+    // console.log(data);
+    // console.log("min_value:", min_value, "max_value:", max_value);
+
+    var contours = parseInt(document.getElementById('contour_lines').value) + 1;
+    var step = (max_value - min_value) / contours;
+    var zs = d3.range(min_value + step, max_value, step);
+    //console.log("zs:", zs);
+
+    // logarithmic tone mapping        
+    let pmin = Math.log(imageFrame.pixel_range.min_pixel);
+    let pmax = Math.log(imageFrame.pixel_range.max_pixel);
+
+    min_value = 0;
+    max_value = 1;
+    var step = (max_value - min_value) / contours;
+    var zs = d3.range(min_value + step, max_value, step);
+    for (var i = 0; i < zs.length; i++)
+        zs[i] = pmin + zs[i] * (pmax - pmin);
+    //console.log("zs:", zs);
+
+    var completed_levels = 0;
+    //parallel isoBands    
+    for (var i = 1; i < zs.length; i++) {
+        var lowerBand = zs[i - 1];
+        var upperBand = zs[i];
+
+        var CRWORKER = new Worker('data:text/html;base64,' + window.btoa(get_worker_script()));
+
+        CRWORKER.addEventListener('message', function (e) {
+            //console.log('Worker said: ', e.data);
+            completed_levels++;
+
+            var isoBands = [];
+            isoBands.push({ "coords": e.data, "level": i, "val": zs[i] });
+
+            //plot the isoBands
+            var elem = d3.select("#image_rectangle");
+            var width = parseFloat(elem.attr("width"));
+            var height = parseFloat(elem.attr("height"));
+
+            var x = d3.scaleLinear()
+                .range([0, width - 1])
+                .domain([0, data[0].length - 1]);
+
+            var y = d3.scaleLinear()
+                .range([height - 1, 0])
+                .domain([0, data.length - 1]);
+
+            d3.select("#ContourSVG").append("svg")
+                .attr("id", "contourPlot")
+                .attr("x", elem.attr("x"))
+                .attr("y", elem.attr("y"))
+                .attr("width", width)
+                .attr("height", height)
+                .selectAll("path")
+                .data(isoBands)
+                .enter().append("path")
+                .style("fill", "none")
+                .style("stroke", "black")
+                .attr("opacity", 0.5)
+                .attr("d", function (d) {
+                    var p = "";
+                    d.coords.forEach(function (aa, i) {
+                        p += (d3.line()
+                            .x(function (dat) { return x(dat[0]); })
+                            .y(function (dat) { return ((height - 1) - y(dat[1])); })
+                            .curve(d3.curveLinear)
+                        )(aa) + "Z";
+                    });
+                    return p;
+                });
+
+            has_contours = true;
+
+            if (completed_levels == zs.length - 1)
+                hide_hourglass();
+        }, false);
+
+        CRWORKER.postMessage({ data: data, level: i, lowerBand: lowerBand, upperBand: upperBand });
+    };
+
+    has_contours = true;
+}
