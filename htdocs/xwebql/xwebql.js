@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-08-09.1";
+    return "JS2023-08-25.0";
 }
 
 function uuidv4() {
@@ -907,7 +907,7 @@ async function mainRenderer() {
         displayLower = localStorage_read_boolean("displayLower", true);
         displayEmissivity = localStorage_read_boolean("displayEmissivity", true);
         displayTepeak = localStorage_read_boolean("displayTepeak", true);
-        displayIntensity = localStorage_read_boolean("displayIntensity", true);
+        displayIntensity = localStorage_read_boolean("displayRelativeIntensity", true);
 
         coordsFmt = localStorage_read_string("coordsFmt", "HMS");//DMS or HMS
         realtime_spectrum = localStorage_read_boolean("realtime_spectrum", true);
@@ -1802,7 +1802,7 @@ function display_menu() {
             .style('cursor', 'pointer')
             .on("click", function () {
                 displayIntensity = !displayIntensity;
-                localStorage_write_boolean("displayIntensity", displayIntensity);
+                localStorage_write_boolean("displayRelativeIntensity", displayIntensity);
                 let htmlStr = displayIntensity ? '<span class="fas fa-check-square"></span> Relative Intensity' : '<span class="far fa-square"></span> Relative Intensity';
                 d3.select(this).html(htmlStr);
                 display_lines();
