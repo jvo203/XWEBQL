@@ -1,3 +1,6 @@
+# Installing / Running XWEBQL on CentOS
+Prerequisites: Julia, git
+
 # 1. Open up the Ports via a Firewall
 
     https://mebee.info/2019/10/17/post-2369/
@@ -22,6 +25,7 @@
     nano -w config.ini
 
     grid82 example:
+
     [xwebql]
     port=10000 ; optional
     local=false ; optional
