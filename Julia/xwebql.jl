@@ -758,6 +758,10 @@ function streamXEvents(http::HTTP.Streams.Stream)
         SERVER_STRING,
     )
 
+    write(http, "' data-version-major='", VERSION_MAJOR)
+    write(http, "' data-version-minor='", VERSION_MINOR)
+    write(http, "' data-version-sub='", VERSION_SUB)
+
     if LOCAL_VERSION
         write(http, "' data-server-mode='LOCAL")
     else
