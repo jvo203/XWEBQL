@@ -609,14 +609,23 @@ function streamXEvents(http::HTTP.Streams.Stream)
     )
 
     # Bzip2 decoder
-    write(http, "<script src=\"bzip2.js\"></script>\n")
+    if LOCAL_VERSION
+        write(http, "<script src=\"bzip2.js\"></script>\n")
+    else
+        write(http, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/bzip2.min.js\"></script>\n")
+    end
 
     # scrollIntoView with ZenScroll (the original one does not work in Safari)
     write(http, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/zenscroll-min.js\" defer></script>\n")
     # write(http, "<script type=\"module\" src=\"zenscroll5.js\"></script>\n")
 
     # WebAssembly
-    write(http, "<script src=\"client.", WASM_VERSION, ".js\"></script>\n")
+    if LOCAL_VERSION
+        write(http, "<script src=\"client.$WASM_VERSION.js\"></script>\n")
+    else
+        write(http, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/client.$WASM_VERSION.min.js\"></script>\n")
+    end
+
     write(
         http,
         "<script>\n",
