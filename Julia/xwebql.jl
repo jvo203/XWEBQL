@@ -735,8 +735,13 @@ function streamXEvents(http::HTTP.Streams.Stream)
     write(http, "</script>\n")
 
     # XWebQL main JavaScript + CSS
-    write(http, "<script src=\"xwebql.js\"></script>\n")
-    write(http, "<link rel=\"stylesheet\" href=\"xwebql.css\"/>\n")
+    if LOCAL_VERSION
+        write(http, "<script src=\"xwebql.js\"></script>\n")
+        write(http, "<link rel=\"stylesheet\" href=\"xwebql.css\"/>\n")
+    else
+        write(http, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/xwebql.min.js\"></script>\n")
+        write(http, "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/xwebql.min.css\"/>\n")
+    end
 
     # HTML content    
     write(http, "<title>XWEBQL</title></head><body>\n")
