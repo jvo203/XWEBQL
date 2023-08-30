@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-08-30.0";
+    return "JS2023-08-30.1";
 }
 
 function uuidv4() {
@@ -6655,12 +6655,25 @@ function process_hdr_viewport(img_width, img_height, pixels, alpha) {
     var texture = new Float32Array(2 * len);
     let offset = 0 | 0;
 
-    for (let i = 0 | 0; i < len; i = (i + 1) | 0) {
-        texture[offset] = pixels[i];
-        offset = (offset + 1) | 0;
+    // get the max_count from the imageContainer
+    let max_count = imageContainer.pixel_range.max_pixel;
 
-        texture[offset] = (alpha[i] > 0) ? 1.0 : 0.0;
-        offset = (offset + 1) | 0;
+    if (max_count > 1) {
+        for (let i = 0 | 0; i < len; i = (i + 1) | 0) {
+            texture[offset] = pixels[i];
+            offset = (offset + 1) | 0;
+
+            texture[offset] = (alpha[i] > 0) ? 1.0 : 0.0;
+            offset = (offset + 1) | 0;
+        }
+    } else {
+        for (let i = 0 | 0; i < len; i = (i + 1) | 0) {
+            texture[offset] = (alpha[i] > 0) ? 1.0 : 0.0;
+            offset = (offset + 1) | 0;
+
+            texture[offset] = (alpha[i] > 0) ? 1.0 : 0.0;
+            offset = (offset + 1) | 0;
+        }
     }
 
     //next project the viewport    
