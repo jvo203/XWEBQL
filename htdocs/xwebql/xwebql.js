@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-08-29.0";
+    return "JS2023-08-30.0";
 }
 
 function uuidv4() {
@@ -3886,12 +3886,22 @@ function process_hdr_image(img_width, img_height, pixels, alpha, min_count, max_
     var texture = new Float32Array(2 * len);
     let offset = 0 | 0;
 
-    for (let i = 0 | 0; i < len; i = (i + 1) | 0) {
-        texture[offset] = pixels[i];
-        offset = (offset + 1) | 0;
+    if (max_count > 1) {
+        for (let i = 0 | 0; i < len; i = (i + 1) | 0) {
+            texture[offset] = pixels[i];
+            offset = (offset + 1) | 0;
 
-        texture[offset] = (alpha[i] > 0) ? 1.0 : 0.0;
-        offset = (offset + 1) | 0;
+            texture[offset] = (alpha[i] > 0) ? 1.0 : 0.0;
+            offset = (offset + 1) | 0;
+        }
+    } else {
+        for (let i = 0 | 0; i < len; i = (i + 1) | 0) {
+            texture[offset] = (alpha[i] > 0) ? 1.0 : 0.0;
+            offset = (offset + 1) | 0;
+
+            texture[offset] = (alpha[i] > 0) ? 1.0 : 0.0;
+            offset = (offset + 1) | 0;
+        }
     }
 
     if (imageContainer != null) {
