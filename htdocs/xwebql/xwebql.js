@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-08-30.1";
+    return "JS2023-08-31.0";
 }
 
 function uuidv4() {
@@ -1020,30 +1020,32 @@ async function mainRenderer() {
             })
             .attr('style', 'position: fixed; left: 10px; top: 10px; z-index: 57; cursor: default');
 
-        // JVO logo
-        /*d3.select("#BackSVG").append("svg:image")
-            .attr("id", "jvoLogo")
-            .attr("x", (width - 1 - 199))
-            .attr("y", (height - 1 - 109))
-            .attr("xlink:href", "https://jvo.nao.ac.jp/images/JVO_logo_199x109.png")
-            .attr("width", 199)
-            .attr("height", 109)
-            .attr("opacity", 0.5);*/
+        if (!isLocal) {
+            // JVO logo
+            d3.select("#BackSVG").append("svg:image")
+                .attr("id", "jvoLogo")
+                .attr("x", (width - 1 - 199))
+                .attr("y", (height - 1 - 109))
+                .attr("xlink:href", "https://jvo.nao.ac.jp/images/JVO_logo_199x109.png")
+                .attr("width", 199)
+                .attr("height", 109)
+                .attr("opacity", 0.5);
+        } else {
+            // JAXA logo
+            d3.select("#BackSVG").append("svg:image")
+                .attr("id", "jaxaLogo")
+                .attr("x", (width - 1 - 265))
+                .attr("y", (height - 1 - 162))
+                /*.attr("xlink:href", "https://www.jaxa.jp/images/logo.gif")*/
+                .attr("xlink:href", "logo-unscreen.gif")
+                .attr("id", "jaxaLogo")
+                .attr("width", 265)
+                .attr("height", 162)
+                .attr("opacity", 0.5);
 
-        // JAXA logo
-        d3.select("#BackSVG").append("svg:image")
-            .attr("id", "jaxaLogo")
-            .attr("x", (width - 1 - 265))
-            .attr("y", (height - 1 - 162))
-            /*.attr("xlink:href", "https://www.jaxa.jp/images/logo.gif")*/
-            .attr("xlink:href", "logo-unscreen.gif")
-            .attr("id", "jaxaLogo")
-            .attr("width", 265)
-            .attr("height", 162)
-            .attr("opacity", 0.5);
-
-        if (theme == 'dark') {
-            d3.select("#jaxaLogo").attr("class", "invert");
+            if (theme == 'dark') {
+                d3.select("#jaxaLogo").attr("class", "invert");
+            }
         }
 
         d3.select("body").append("div")
