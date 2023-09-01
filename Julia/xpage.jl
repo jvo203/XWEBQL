@@ -118,7 +118,7 @@ for entry in files
 
     # plot the spectrum as PNG
     println(spectrum)
-    plot_ref = Plots.plot(spectrum, legend=false, border=true, grid=false, axis=([], true), color=:black)
+    plot_ref = Plots.plot(spectrum, legend=false, border=true, grid=false, axis=([], false), color=:black, linewidth=4)
     Plots.savefig(plot_ref, dir * "DEMO/images/" * entry * "_spectrum.png")
 
     # parse the JSON to a dictionary
