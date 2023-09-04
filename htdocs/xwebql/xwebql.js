@@ -997,7 +997,7 @@ async function mainRenderer() {
         var blend = '';
 
         if (theme == 'bright')
-            blend = 'mix-blend-mode: darken; '; // difference, staturation
+            blend = 'mix-blend-mode: darken; '; // difference, staturation, darken
 
         d3.select("#mainDiv").append("canvas")
             .attr("id", "SpectrumCanvas")
