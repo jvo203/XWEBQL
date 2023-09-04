@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-08-31.0";
+    return "JS2023-09-04.0";
 }
 
 function uuidv4() {
@@ -987,7 +987,6 @@ async function mainRenderer() {
             .attr("height", height)
             .attr('style', 'position: fixed; left: 10px; top: 10px; z-index: 54');
 
-
         d3.select("#mainDiv").append("svg")
             .attr("id", "BackSVG")
             .attr("width", width)
@@ -998,7 +997,7 @@ async function mainRenderer() {
         var blend = '';
 
         if (theme == 'bright')
-            blend = 'mix-blend-mode: difference; ';
+            blend = 'mix-blend-mode: darken; '; // difference, staturation
 
         d3.select("#mainDiv").append("canvas")
             .attr("id", "SpectrumCanvas")
@@ -3773,12 +3772,18 @@ function getStrokeStyle() {
     //style = "rgba(153, 102, 153, 0.9)" ;//violet
 
     if (theme == 'bright') {
-        //style = "rgba(0,0,0,1.0)";//black
-        style = "rgba(127,127,127,1.0)";// grey
+        style = "rgba(0,0,0,1.0)";//black
+        // style = "rgba(127,127,127,1.0)";// grey
+
+        if (colourmap == "rainbow") {
+            // style = "rgba(0,191,255,1.0)";//deepskyblue
+            // style = "rgba(0,0,0,1.0)";
+            // style = "rgba(204,204,204,1.0)";//grey
+        }
 
         if (colourmap == "greyscale")
-            style = "rgba(255,204,0,1.0)";//yellowish ALMAWebQL v2	    
-    }
+            style = "rgba(255,204,0,1.0)";//yellowish ALMAWebQL v2
+    };
 
 
     if (theme == 'dark') {
@@ -3786,8 +3791,8 @@ function getStrokeStyle() {
             //style = "rgba(255,127,80,0.9)";//orange
             //style = "rgba(238,130,238,0.9)" ;
             //style = "rgba(204,204,204,0.9)";//grey
-            style = "rgba(255,204,0,1.0)";//yellowish ALMAWebQL v2	    
-        //style = "rgba(204,204,204,1.0)";//grey		
+            style = "rgba(255,204,0,1.0)";//yellowish ALMAWebQL v2
+        //style = "rgba(204,204,204,1.0)";//grey
 
         if (colourmap == "red")
             style = "rgba(0,191,255,1.0)";//deepskyblue
@@ -3800,7 +3805,7 @@ function getStrokeStyle() {
 
         //if(document.getElementById('colourmap').value == "rainbow")// || document.getElementById('colourmap').value == "parula" || document.getElementById('colourmap').value == "viridis")
         //	style = "rgba(204,204,204,0.9)" ;
-    }
+    };
 
     return style;
 }
@@ -5434,7 +5439,7 @@ function init_webgl_legend_buffers() {
         imageContainer.legend_gl = ctx;
         // console.log("init_webgl is using the WebGL2 context.");
 
-        // enable floating-point textures filtering			
+        // enable floating-point textures filtering
         ctx.getExtension('OES_texture_float_linear');
 
         // needed by gl.checkFramebufferStatus
@@ -5538,7 +5543,7 @@ function webgl_legend_renderer(gl, width, height) {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
     // no need for an animation loop, just handle the lost context
-    //WebGL how to convert from clip space to pixels	
+    //WebGL how to convert from clip space to pixels
     gl.viewport(0, 0, width, height);
 
     // Clear the canvas
