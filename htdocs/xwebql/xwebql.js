@@ -4618,21 +4618,7 @@ function display_legend() {
         .attr("id", "legend")
         .attr("opacity", 1.0);
 
-    // append a WebGL legend div
-    group.append("foreignObject")
-        .attr("id", "legendObject")
-        .attr("x", x)
-        .attr("y", 0.1 * height)
-        .attr("width", rectWidth)
-        .attr("height", legendHeight)
-        .append("xhtml:div")
-        .attr("id", "legendDiv")
-        .append("canvas")
-        .attr("id", "legendCanvas")
-        .attr("width", rectWidth)
-        .attr("height", legendHeight);
-
-    init_webgl_legend_buffers();
+    init_webgl_legend_buffers(x, Math.round(0.1 * height), Math.round(rectWidth), Math.round(legendHeight));
     clear_webgl_legend_buffers();
 
     let min_count = imageContainer.pixel_range.min_pixel;
@@ -5420,23 +5406,21 @@ function setup_image_selection() {
     zoom.scaleTo(rect, zoom_scale);
 }
 
-function init_webgl_legend_buffers() {
+function init_webgl_legend_buffers(x, y, width, height) {
     //place the image onto the main canvas
-    var canvas = document.getElementById('legendCanvas');
-    canvas.style.display = "block";// a hack needed by Apple Safari
-    var width = canvas.width;
-    var height = canvas.height;
+    var canvas = document.getElementById('LegendCanvas');
+    canvas.style.display = "block";// a hack needed by Apple Safari    
 
     if (webgl1 || webgl2) {
         canvas.addEventListener("webglcontextlost", function (event) {
             event.preventDefault();
-            console.error("legendCanvas: webglcontextlost");
+            console.error("LegendCanvas: webglcontextlost");
         }, false);
 
         canvas.addEventListener(
             "webglcontextrestored", function () {
-                console.log("legendCanvas: webglcontextrestored");
-                init_webgl_legend_buffers();
+                console.log("LegendCanvas: webglcontextrestored");
+                init_webgl_legend_buffers(x, y, width, height);
             }, false);
     }
 
@@ -5452,7 +5436,7 @@ function init_webgl_legend_buffers() {
         ctx.getExtension('EXT_color_buffer_float');
 
         // call the common WebGL renderer
-        webgl_legend_renderer(ctx, width, height);
+        webgl_legend_renderer(ctx, x, y, width, height);
     } else if (webgl1) {
         var ctx = canvas.getContext("webgl");
         imageContainer.legend_gl = ctx;
@@ -5463,7 +5447,7 @@ function init_webgl_legend_buffers() {
         ctx.getExtension('OES_texture_float_linear');
 
         // call the common WebGL renderer
-        webgl_legend_renderer(ctx, width, height);
+        webgl_legend_renderer(ctx, x, y, width, height);
     } else {
         console.log("WebGL not supported by your browser, falling back onto HTML 2D Canvas (not implemented yet).");
         return;
@@ -5488,7 +5472,7 @@ function clear_webgl_legend_buffers() {
     //image.legend_gl = null;
 }
 
-function webgl_legend_renderer(gl, width, height) {
+function webgl_legend_renderer(gl, x, y, width, height) {
     var image = imageContainer;
 
     // setup GLSL program
@@ -5550,7 +5534,7 @@ function webgl_legend_renderer(gl, width, height) {
 
     // no need for an animation loop, just handle the lost context
     //WebGL how to convert from clip space to pixels
-    gl.viewport(0, 0, width, height);
+    gl.viewport(x, y, width, height);
 
     // Clear the canvas
     gl.clearColor(0, 0, 0, 0);
