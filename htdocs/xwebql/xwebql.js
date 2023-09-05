@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-09-04.0";
+    return "JS2023-09-05.0";
 }
 
 function uuidv4() {
@@ -956,6 +956,12 @@ async function mainRenderer() {
             .attr("width", width)
             .attr("height", height)
             .attr('style', 'position: fixed; left: 10px; top: 10px; z-index: 0');
+
+        d3.select("#mainDiv").append("canvas")
+            .attr("id", "LegendCanvas")
+            .attr("width", width)
+            .attr("height", height)
+            .attr('style', 'position: fixed; left: 10px; top: 10px; z-index: 1');
 
         d3.select("#mainDiv").append("canvas")
             .attr("id", "VideoCanvas")
