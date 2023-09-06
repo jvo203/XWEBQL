@@ -3162,7 +3162,7 @@ function setup_axes() {
 
     // Add the X Axis
     svg.append("g")
-        .attr("class", "axis")
+        .attr("class", "axis xaxis")
         .attr("id", "xaxis")
         .style("fill", axisColour)
         .style("stroke", axisColour)

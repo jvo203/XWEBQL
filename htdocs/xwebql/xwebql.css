@@ -351,6 +351,16 @@ svg {
     font-weight: bold;
 }
 
+
+.xaxis text {
+    font: 1.5em Inconsolata;
+    /*was 1.75*/
+    stroke: none;
+    fill: red;
+    /*#996699;*/
+    font-weight: bold;
+}
+
 .gridlines path,
 .gridlines line {
     fill: none;
