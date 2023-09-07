@@ -49,6 +49,28 @@ function init() {
         .attr("opacity", 0.5)//0.25        
         .text("☰");
 
+    // add a big "CLICK ME" circle in the middle of the screen
+    svg.append("circle")
+        .attr("id", "click_me_circle")
+        .attr("cx", width / 2)
+        .attr("cy", height / 2)
+        .attr("r", 0.25 * Math.min(width, height))
+        .attr("fill", "red")
+        .attr("stroke", "transparent")
+        .attr("stroke-width", 0.5 * Math.min(width, height))
+        .attr("opacity", 0.1)
+        .on("mouseenter", function () {
+            d3.select(this).attr("opacity", 0.5);
+        })
+        .on("mouseleave", function () {
+            d3.select(this).attr("opacity", 0.1);
+        })
+        .on("click", function () {
+            console.log("click_me_circle::click");
+            d3.select(this).attr("opacity", 0.1);
+            document.getElementById('menu').style.display = "block";
+        });
+
     let strokeColour = 'white';
 
     if (theme == 'bright')
