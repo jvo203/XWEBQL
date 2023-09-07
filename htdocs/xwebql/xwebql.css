@@ -351,6 +351,12 @@ svg {
     font-weight: bold;
 }
 
+.xaxis line {
+    fill: red;
+    stroke: red;
+    /*#996699;*/
+    shape-rendering: crispEdges;
+}
 
 .xaxis text {
     font: 1.5em Inconsolata;
