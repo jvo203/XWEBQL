@@ -22,8 +22,8 @@
         video_fps_control = "auto";
         coordsFmt = localStorage_read_string("coordsFmt", "HMS");//DMS or HMS
         image_quality = "medium";
-        colourmap = localStorage.getItem("xcolourmap");
-        theme = localStorage.getItem("ui_theme");
+        theme = localStorage_read_string("ui_theme", "dark");
+        colourmap = localStorage_read_string("xcolourmap", "green");
         init();
     </script>
 </body>
