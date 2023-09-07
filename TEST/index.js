@@ -3,6 +3,9 @@ function init() {
         .attr("id", "mainDiv")
         .attr("class", "main");
 
+    theme = localStorage_read_string("ui_theme", "dark");
+    colourmap = localStorage_read_string("xcolourmap", "green");
+
     var rect = document.getElementById('mainDiv').getBoundingClientRect();
     var width = Math.round(rect.width);
     var height = Math.round(rect.height);
@@ -306,6 +309,13 @@ function change_ui_theme() {
     else
         colourmap = "green";
 
+    localStorage.setItem("xcolourmap", colourmap);
+
+    location.reload();
+}
+
+function change_colourmap() {
+    colourmap = document.getElementById('colourmap').value;
     localStorage.setItem("xcolourmap", colourmap);
 
     location.reload();
