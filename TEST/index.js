@@ -54,7 +54,7 @@ function init() {
         .attr("id", "click_me_circle")
         .attr("cx", width / 2)
         .attr("cy", height / 2)
-        .attr("r", 0.25 * Math.min(width, height))
+        .attr("r", 0.40 * Math.min(width, height))
         .attr("fill", "red")
         .attr("stroke", "transparent")
         .attr("stroke-width", 0.5 * Math.min(width, height))
