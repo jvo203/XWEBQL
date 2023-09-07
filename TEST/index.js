@@ -19,7 +19,7 @@ function init() {
         .attr("pointer-events", "auto")
         .on("mouseenter", function () {
             console.log("FrontSVG::mouseenter");
-            /*hide_navigation_bar();*/
+            hide_navigation_bar();
         })
         .on("mouseleave", function () {
             console.log("FrontSVG::mouseleave");
