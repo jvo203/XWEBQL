@@ -93,9 +93,20 @@ function init() {
         });
 }
 
+function show_navigation_bar() {
+    console.log("show_navigation_bar()");
+    try {
+        document.getElementById('menu').style.display = "block";
+        d3.select("#menu_activation_area").attr("opacity", 0.0);
+    } catch (e) { }
+}
 
 function hide_navigation_bar() {
     console.log("hide_navigation_bar()");
+
+    // d3 select all elements with class "dropdown-menu" and set their display to "none"
+    d3.selectAll(".dropdown-menu").style("display", "none");
+
     try {
         document.getElementById('menu').style.display = "none";
         d3.select("#menu_activation_area").attr("opacity", 0.1);//was 0.7
@@ -160,6 +171,13 @@ function display_menu() {
         .attr("class", "dropdown-toggle")
         .attr("data-toggle", "dropdown")
         .style('cursor', 'pointer')
+        .on("mouseenter", function () {
+            console.log("prefMenu::mouseenter");
+            d3.select('#prefDropdown').style("display", "block");
+        })
+        .on("mouseleave", function () {
+            console.log("prefMenu::mouseleave");
+        })
         .html('Preferences <span class="caret"></span>');
 
     var prefDropdown = prefMenu.append("ul")

@@ -5,7 +5,6 @@ body {
     font-size: 12px;
 }
 
-
 .main {
     position: fixed;
     /* Stay in place */
@@ -18,7 +17,6 @@ body {
     overflow: auto;
     /* Enable scroll if needed */
 }
-
 
 .menu {
     position: fixed;
@@ -36,8 +34,7 @@ body {
     font-size: 100%;
 }
 
-.dropdown:hover .dropdown-menu {
+/*.dropdown:hover .dropdown-menu {
     display: block;
-    margin-top: 0;
-    /* remove the gap so it doesn't close*/
-}
+    margin-top: 0;    
+}*/
