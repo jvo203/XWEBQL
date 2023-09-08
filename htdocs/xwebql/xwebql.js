@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-09-08.3";
+    return "JS2023-09-08.4";
 }
 
 function uuidv4() {
@@ -1963,10 +1963,14 @@ function display_menu() {
 
             var elem = d3.select("#legend");
 
-            if (displayLegend)
+            if (displayLegend) {
                 elem.attr("opacity", 1);
-            else
+                document.getElementById('LegendCanvas').style.display = "block";
+            }
+            else {
                 elem.attr("opacity", 0);
+                document.getElementById('LegendCanvas').style.display = "none";
+            }
         })
         .html(htmlStr);
 
