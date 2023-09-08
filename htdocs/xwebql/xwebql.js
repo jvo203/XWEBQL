@@ -936,8 +936,8 @@ async function mainRenderer() {
         console.log("datasetId:", datasetId);
 
         document.body.addEventListener('mousemove', function (event) {
-            var pointX = event.clientX
-                , pointY = event.clientY
+            let pointX = event.clientX;
+            let pointY = event.clientY;
 
             // console.log("document::mousemove", pointX, pointY);
 
