@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-09-08.0";
+    return "JS2023-09-08.2";
 }
 
 function uuidv4() {
@@ -417,6 +417,10 @@ function addStylesheetRules(rules) {
 
 function hide_navigation_bar() {
     console.log("hide_navigation_bar()");
+
+    // d3 select all elements with class "dropdown-menu" and set their display to "none"
+    d3.selectAll(".dropdown-menu").style("display", "none");
+
     try {
         document.getElementById('menu').style.display = "none";
         d3.select("#menu_activation_area").attr("opacity", 0.1);//was 0.7
@@ -931,7 +935,9 @@ async function mainRenderer() {
         datasetId = htmlData.getAttribute('data-datasetId');//make it a global variable
         console.log("datasetId:", datasetId);
 
-        d3.select("body").append("div")
+        d3.select("body")
+            /*.on("mouseleave", hide_navigation_bar)*/
+            .append("div")
             .attr("id", "mainDiv")
             .attr("class", "main");
 
@@ -1017,11 +1023,7 @@ async function mainRenderer() {
             .attr("height", height)
             .attr("pointer-events", "auto")
             .on("mouseenter", function () {
-                console.log("FrontSVG::mouseenter");
                 hide_navigation_bar();
-            })
-            .on("mouseleave", function () {
-                console.log("FrontSVG::mouseleave");
             })
             .attr('style', 'position: fixed; left: 10px; top: 10px; z-index: 57; cursor: default');
 
@@ -1537,6 +1539,8 @@ function frame_reference_unit() {
 }
 
 function show_fits_header() {
+    hide_navigation_bar();
+
     $("#fitsHeader").modal("show");
 
     var modal = document.getElementById('fitsHeader');
@@ -1555,6 +1559,8 @@ function show_fits_header() {
 }
 
 function show_help() {
+    hide_navigation_bar();
+
     $("#help").modal("show");
 
     var modal = document.getElementById('help');
@@ -1575,22 +1581,7 @@ function show_help() {
 function display_menu() {
     var div = d3.select("body").append("div")
         .attr("id", "menu")
-        .attr("class", "menu")
-        .on("mouseenter", function () {
-            console.log("menu::mouseenter");
-
-            // move focus
-            //document.getElementById("naoj").focus();
-            //d3.select("#navbar").style("display", "block");
-            //d3.select("#navbar").moveToFront();
-
-            //d3.select("FrontSVG").attr("pointer-events", "none");
-        })
-        .on("mouseleave", function () {
-            console.log("menu::mouseleave");
-            //d3.select("FrontSVG").attr("pointer-events", "auto");
-            /*hide_navigation_bar();*/
-        });
+        .attr("class", "menu");
 
     var nav = div.append("nav").attr("class", "navbar navbar-inverse navbar-fixed-top fixed-top navbar-expand-sm navbar-dark")
         .attr("id", "navbar");
@@ -1599,6 +1590,10 @@ function display_menu() {
         .attr("class", "container-fluid");
 
     var header = main.append("div")
+        .on("mouseenter", function () {
+            // d3 select all elements with class "dropdown-menu" and set their display to "none"
+            d3.selectAll(".dropdown-menu").style("display", "none");
+        })
         .attr("class", "navbar-header");
 
     header.append("a")
@@ -1622,9 +1617,15 @@ function display_menu() {
         .attr("class", "dropdown-toggle")
         .attr("data-toggle", "dropdown")
         .style('cursor', 'pointer')
+        .on("mouseenter", function () {
+            // d3 select all elements with class "dropdown-menu" and set their display to "none"
+            d3.selectAll(".dropdown-menu").style("display", "none");
+            d3.select('#fitsDropdown').style("display", "block");
+        })
         .html('FITS <span class="fas fa-folder-open"></span> <span class="caret"></span>');
 
     var fitsDropdown = fitsMenu.append("ul")
+        .attr("id", "fitsDropdown")
         .attr("class", "dropdown-menu");
 
     fitsDropdown.append("li")
@@ -1704,6 +1705,11 @@ function display_menu() {
         .attr("class", "dropdown-toggle")
         .attr("data-toggle", "dropdown")
         .style('cursor', 'pointer')
+        .on("mouseenter", function () {
+            // d3 select all elements with class "dropdown-menu" and set their display to "none"
+            d3.selectAll(".dropdown-menu").style("display", "none");
+            d3.select('#prefDropdown').style("display", "block");
+        })
         .html('Preferences <span class="caret"></span>');
 
     var prefDropdown = prefMenu.append("ul")
@@ -1720,9 +1726,15 @@ function display_menu() {
             .attr("class", "dropdown-toggle")
             .attr("data-toggle", "dropdown")
             .style('cursor', 'pointer')
+            .on("mouseenter", function () {
+                // d3 select all elements with class "dropdown-menu" and set their display to "none"
+                d3.selectAll(".dropdown-menu").style("display", "none");
+                d3.select('#atomdbDropdown').style("display", "block");
+            })
             .html('AtomDB <span class="caret"></span>');
 
         var atomdbDropdown = atomdbMenu.append("ul")
+            .attr("id", "atomdbDropdown")
             .attr("class", "dropdown-menu");
 
         atomdbDropdown.append("li")
@@ -1834,9 +1846,15 @@ function display_menu() {
         .attr("class", "dropdown-toggle")
         .attr("data-toggle", "dropdown")
         .style('cursor', 'pointer')
+        .on("mouseenter", function () {
+            // d3 select all elements with class "dropdown-menu" and set their display to "none"
+            d3.selectAll(".dropdown-menu").style("display", "none");
+            d3.select('#viewDropdown').style("display", "block");
+        })
         .html('View <span class="caret"></span>');
 
     var viewDropdown = viewMenu.append("ul")
+        .attr("id", "viewDropdown")
         .attr("class", "dropdown-menu");
 
     if (has_webgl) {
@@ -1845,8 +1863,8 @@ function display_menu() {
             .append("a")
             .style('cursor', 'pointer')
             .on("click", function () {
+                hide_navigation_bar();
                 init_surface();
-
             })
             .html(htmlStr);
     }
@@ -1965,9 +1983,15 @@ function display_menu() {
         .attr("class", "dropdown-toggle")
         .attr("data-toggle", "dropdown")
         .style('cursor', 'pointer')
+        .on("mouseenter", function () {
+            // d3 select all elements with class "dropdown-menu" and set their display to "none"
+            d3.selectAll(".dropdown-menu").style("display", "none");
+            d3.select('#helpDropdown').style("display", "block");
+        })
         .html('<span class="fas fa-question-circle"></span> Help <span class="caret"></span>');
 
     var helpDropdown = helpMenu.append("ul")
+        .attr("id", "helpDropdown")
         .attr("class", "dropdown-menu");
 
     helpDropdown.append("li")
@@ -3004,7 +3028,7 @@ function setup_help() {
         .text("browser support:");
 
     bodyDiv.append("p")
-        .text("Chrome ◯, Firefox △, Safari ◯, MS Edge ◯, IE11 ×");
+        .text("Chrome ◯, Firefox ◯, Safari ◯, MS Edge ◯, IE11 ×"); // Firefox △
 
     var footer = contentDiv.append("div")
         .attr("class", "modal-footer");
@@ -3344,7 +3368,6 @@ function setup_axes() {
             if (windowLeft)
                 return;
 
-            console.log("scaling::mouseenter");
             hide_navigation_bar();
 
             d3.select(this)
@@ -4880,7 +4903,6 @@ function setup_image_selection() {
         )*/
         .call(zoom)
         .on("mouseenter", (event) => {
-            console.log("image_rectangle::mouseenter");
             hide_navigation_bar();
 
             // cancel the image animation loop            
@@ -8015,6 +8037,17 @@ function enable_autoscale() {
     user_data_min = null;
     user_data_max = null;
 };
+
+function change_video_fps_control() {
+    video_fps_control = document.getElementById('video_fps_control').value;
+
+    if (video_fps_control == 'auto')
+        vidFPS = 5;//10
+    else
+        vidFPS = parseInt(video_fps_control);
+
+    localStorage.setItem("video_fps_control", video_fps_control);
+}
 
 function update_contours() {
     display_hourglass();
