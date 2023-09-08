@@ -935,11 +935,6 @@ async function mainRenderer() {
         datasetId = htmlData.getAttribute('data-datasetId');//make it a global variable
         console.log("datasetId:", datasetId);
 
-        /*$(document).on('mouseleave', '', function () {
-            console.log("document::mouseleave");
-            hide_navigation_bar();
-        });*/
-
         document.body.addEventListener('mousemove', function (event) {
             var pointX = event.clientX
                 , pointY = event.clientY
