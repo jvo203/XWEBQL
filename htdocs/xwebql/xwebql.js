@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-09-07.0";
+    return "JS2023-09-08.0";
 }
 
 function uuidv4() {
@@ -1025,7 +1025,10 @@ async function mainRenderer() {
             })
             .attr('style', 'position: fixed; left: 10px; top: 10px; z-index: 57; cursor: default');
 
-        if (!isLocal) {
+        let loc = window.location;
+
+        // a JVO override
+        if (!isLocal && (loc.hostname.indexOf("jvo.") != -1 || loc.hostname.indexOf("jvo-dev.") != -1)) {
             // JVO logo
             d3.select("#BackSVG").append("svg:image")
                 .attr("id", "jvoLogo")
@@ -1042,7 +1045,7 @@ async function mainRenderer() {
                 .attr("x", (width - 1 - 265))
                 .attr("y", (height - 1 - 162))
                 /*.attr("xlink:href", "https://www.jaxa.jp/images/logo.gif")*/
-                .attr("xlink:href", "logo-unscreen.gif")
+                .attr("xlink:href", 'https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@' + htmlData.getAttribute('data-version-major') + '.' + htmlData.getAttribute('data-version-minor') + '.' + htmlData.getAttribute('data-version-sub') + '/htdocs/xwebql/logo-unscreen.gif')
                 .attr("id", "jaxaLogo")
                 .attr("width", 265)
                 .attr("height", 162)
