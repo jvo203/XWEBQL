@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-09-08.4";
+    return "JS2023-09-08.5";
 }
 
 function uuidv4() {
@@ -1577,6 +1577,15 @@ function show_fits_header() {
             $("#fitsHeader").modal("hide");
         }
     }
+}
+
+function change_image_quality() {
+    image_quality = document.getElementById('image_quality').value;
+    localStorage.setItem("image_quality", image_quality);
+
+    display_hourglass();
+
+    fetch_image_spectrum(datasetId, false, false);
 }
 
 function show_help() {
