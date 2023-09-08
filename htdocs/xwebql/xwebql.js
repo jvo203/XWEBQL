@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-09-08.2";
+    return "JS2023-09-08.3";
 }
 
 function uuidv4() {
@@ -416,7 +416,7 @@ function addStylesheetRules(rules) {
 }
 
 function hide_navigation_bar() {
-    console.log("hide_navigation_bar()");
+    // console.log("hide_navigation_bar()");
 
     // d3 select all elements with class "dropdown-menu" and set their display to "none"
     d3.selectAll(".dropdown-menu").style("display", "none");
@@ -935,8 +935,29 @@ async function mainRenderer() {
         datasetId = htmlData.getAttribute('data-datasetId');//make it a global variable
         console.log("datasetId:", datasetId);
 
+        /*$(document).on('mouseleave', '', function () {
+            console.log("document::mouseleave");
+            hide_navigation_bar();
+        });*/
+
+        document.body.addEventListener('mousemove', function (event) {
+            var pointX = event.clientX
+                , pointY = event.clientY
+
+            // console.log("document::mousemove", pointX, pointY);
+
+            if (pointX < 10 || pointY < 10) {
+                // console.log("document::out");
+                hide_navigation_bar();
+            }
+
+            if (pointX > window.innerWidth - 10 || pointY > window.innerHeight - 10) {
+                // console.log("document::out");
+                hide_navigation_bar();
+            }
+        }, false);
+
         d3.select("body")
-            /*.on("mouseleave", hide_navigation_bar)*/
             .append("div")
             .attr("id", "mainDiv")
             .attr("class", "main");
@@ -2721,12 +2742,6 @@ function display_preferences() {
             //.attr("class", "form-control")            
             .attr("id", "ui_theme")
             .attr("onchange", "javascript:change_ui_theme();")
-            .attr("onmousedown", "javascript:console.log('mousedown');")
-            .attr("onfocus", "javascript:console.log('focus');")
-            .attr("onfocusin", "javascript:console.log('focusin');")
-            .attr("onfocusout", "javascript:console.log('focusout');")
-            .attr("onmouseup", "javascript:console.log('mouseup');")
-            .attr("onclick", "javascript:console.log('click');")
             .html("<option>dark</option><option>bright</option>");
 
         document.getElementById('ui_theme').value = theme;
