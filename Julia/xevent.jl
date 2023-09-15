@@ -32,8 +32,6 @@ mutable struct XDataSet
     x::Any
     y::Any
     energy::Any
-    pixels::Any
-    mask::Any
 
     # house-keeping
     has_events::Threads.Atomic{Bool}
@@ -41,11 +39,11 @@ mutable struct XDataSet
     last_accessed::Threads.Atomic{Float64}
 
     function XDataSet()
-        new("", "", 0, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(0.0))
+        new("", "", 0, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(0.0))
     end
 
     function XDataSet(id::String, uri::String)
-        new(id, uri, 0, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(datetime2unix(now())))
+        new(id, uri, 0, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(datetime2unix(now())))
     end
 end
 
