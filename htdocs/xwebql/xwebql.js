@@ -4456,7 +4456,7 @@ function display_gridlines() {
 
     var y = d3.scaleLinear()
         .range([y_offset + height - 1, y_offset])
-        .domain([1, 0]);
+        .domain([0, 1]);
 
     var svg = d3.select("#BackgroundSVG");
 
