@@ -6216,8 +6216,8 @@ function imageTimeout() {
     var y = (image_bounding_dims.y1 + image_bounding_dims.height - 1) - ay * (mouse_position.y - rect_elem.attr("y"));
 
     var clipSize = Math.min(image_bounding_dims.width, image_bounding_dims.height) / zoom_scale;
-    var sel_width = clipSize * scale;
-    var sel_height = clipSize * scale;
+    var sel_width = Math.floor(clipSize * scale);
+    var sel_height = Math.floor(clipSize * scale);
 
     var fitsX = Math.round(x * (fitsData.width - 1) / (imageContainer.width - 1));
     var fitsY = Math.round(y * (fitsData.height - 1) / (imageContainer.height - 1));
