@@ -5184,14 +5184,15 @@ function setup_image_selection() {
 
             let rect = event.currentTarget;
 
-            var ax = (image_bounding_dims.width - 0) / (rect.getAttribute("width") - 0);
+            var ax = (image_bounding_dims.width - 1) / (rect.getAttribute("width") - 0);
             var x = image_bounding_dims.x1 + ax * (mouse_position.x - rect.getAttribute("x"));
 
-            var ay = (image_bounding_dims.height - 0) / (rect.getAttribute("height") - 0);
-            var y = (image_bounding_dims.y1 + image_bounding_dims.height - 0) - ay * (mouse_position.y - rect.getAttribute("y"));
+            var ay = (image_bounding_dims.height - 1) / (rect.getAttribute("height") - 0);
+            var y = (image_bounding_dims.y1 + image_bounding_dims.height - 1) - ay * (mouse_position.y - rect.getAttribute("y"));
 
-            var orig_x = x * (fitsData.width - 0) / (imageContainer.width - 0);
-            var orig_y = y * (fitsData.height - 0) / (imageContainer.height - 0);
+            var orig_x = x * (fitsData.width - 1) / (imageContainer.width - 1);
+            var orig_y = y * (fitsData.height - 1) / (imageContainer.height - 1);
+            console.log("scale:", scale, "ax:", ax, "ay:", ay, "orig_x:", orig_x, "orig_y:", orig_y);
 
             try {
                 let raText = 'RA N/A';
@@ -5392,15 +5393,15 @@ function setup_image_selection() {
 
                 let rect = event.currentTarget;
 
-                var ax = (image_bounding_dims.width - 0) / (rect.getAttribute("width") - 0);
+                var ax = (image_bounding_dims.width - 1) / (rect.getAttribute("width") - 0);
                 var pred_x = image_bounding_dims.x1 + ax * (pred_mouse_x - rect.getAttribute("x"));
 
-                var ay = (image_bounding_dims.height - 0) / (rect.getAttribute("height") - 0);
-                var pred_y = (image_bounding_dims.y1 + image_bounding_dims.height - 0) - ay * (pred_mouse_y - rect.getAttribute("y"));
+                var ay = (image_bounding_dims.height - 1) / (rect.getAttribute("height") - 0);
+                var pred_y = (image_bounding_dims.y1 + image_bounding_dims.height - 1) - ay * (pred_mouse_y - rect.getAttribute("y"));
 
-                var fitsX = Math.round(pred_x * (fitsData.width - 0) / (imageContainer.width - 0));//x or pred_x
-                var fitsY = Math.round(pred_y * (fitsData.height - 0) / (imageContainer.height - 0));//y or pred_y
-                var fitsSize = clipSize * (fitsData.width - 0) / (imageContainer.width - 0);
+                var fitsX = Math.round(pred_x * (fitsData.width - 1) / (imageContainer.width - 1));//x or pred_x
+                var fitsY = Math.round(pred_y * (fitsData.height - 1) / (imageContainer.height - 1));//y or pred_y
+                var fitsSize = clipSize * (fitsData.width - 1) / (imageContainer.width - 1);
 
                 //console.log('active', 'x = ', x, 'y = ', y, 'clipSize = ', clipSize, 'fitsX = ', fitsX, 'fitsY = ', fitsY, 'fitsSize = ', fitsSize) ;
                 //let strLog = 'active x = ' + x + ' y = '+ y + ' clipSize = ' + clipSize + ' fitsX = ' + fitsX + ' fitsY = ' + fitsY + ' fitsSize = ' + fitsSize + ' pred_x = ' + pred_x + ' pred_y = ' + pred_y + ' pred_mouse_x = ' + pred_mouse_x + ' pred_mouse_y = ' + pred_mouse_y ;
@@ -6208,19 +6209,19 @@ function imageTimeout() {
 
     var rect_elem = d3.select("#image_rectangle");
 
-    var ax = (image_bounding_dims.width - 0) / (rect_elem.attr("width") - 0);
+    var ax = (image_bounding_dims.width - 1) / (rect_elem.attr("width") - 0);
     var x = image_bounding_dims.x1 + ax * (mouse_position.x - rect_elem.attr("x"));
 
-    var ay = (image_bounding_dims.height - 0) / (rect_elem.attr("height") - 0);
-    var y = (image_bounding_dims.y1 + image_bounding_dims.height - 0) - ay * (mouse_position.y - rect_elem.attr("y"));
+    var ay = (image_bounding_dims.height - 1) / (rect_elem.attr("height") - 0);
+    var y = (image_bounding_dims.y1 + image_bounding_dims.height - 1) - ay * (mouse_position.y - rect_elem.attr("y"));
 
     var clipSize = Math.min(image_bounding_dims.width, image_bounding_dims.height) / zoom_scale;
     var sel_width = clipSize * scale;
     var sel_height = clipSize * scale;
 
-    var fitsX = Math.round(x * (fitsData.width - 0) / (imageContainer.width - 0));
-    var fitsY = Math.round(y * (fitsData.height - 0) / (imageContainer.height - 0));
-    var fitsSize = clipSize * (fitsData.width - 0) / (imageContainer.width - 0);
+    var fitsX = Math.round(x * (fitsData.width - 1) / (imageContainer.width - 1));
+    var fitsY = Math.round(y * (fitsData.height - 1) / (imageContainer.height - 1));
+    var fitsSize = clipSize * (fitsData.width - 1) / (imageContainer.width - 1);
 
     var image_update = true;
 
