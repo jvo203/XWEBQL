@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-10-11.0";
+    return "JS2023-11-01.0";
 }
 
 function uuidv4() {
@@ -4236,8 +4236,8 @@ function webgl_image_renderer(gl, width, height) {
     var image = imageContainer;
 
     var scale = get_image_scale(width, height, image.image_bounding_dims.width, image.image_bounding_dims.height);
-    var img_width = scale * image.image_bounding_dims.width;
-    var img_height = scale * image.image_bounding_dims.height;
+    var img_width = Math.floor(scale * image.image_bounding_dims.width);
+    var img_height = Math.floor(scale * image.image_bounding_dims.height);
     console.log("scaling by", scale, "new width:", img_width, "new height:", img_height, "orig. width:", image.image_bounding_dims.width, "orig. height:", image.image_bounding_dims.height);
 
     // setup GLSL program
@@ -4344,7 +4344,7 @@ function webgl_image_renderer(gl, width, height) {
             image.refresh = false;
 
         //WebGL how to convert from clip space to pixels	
-        gl.viewport((width - img_width) / 2, (height - img_height) / 2, img_width, img_height);
+        gl.viewport(Math.round((width - img_width) / 2), Math.round((height - img_height) / 2), Math.round(img_width), Math.round(img_height));
         // console.log("gl.viewport:", (width - img_width) / 2, (height - img_height) / 2, img_width, img_height);
         // console.log("gl.viewport:", gl.getParameter(gl.VIEWPORT));
         // set the global variable
@@ -4451,11 +4451,11 @@ function display_gridlines() {
     var y_offset = parseFloat(elem.attr("y"));
 
     var x = d3.scaleLinear()
-        .range([x_offset, x_offset + width - 1])
+        .range([x_offset, x_offset + width])
         .domain([0, 1]);
 
     var y = d3.scaleLinear()
-        .range([y_offset + height - 1, y_offset])
+        .range([y_offset + height, y_offset])
         .domain([0, 1]);
 
     var svg = d3.select("#BackgroundSVG");
@@ -4763,8 +4763,8 @@ function setup_image_selection() {
 
     var image_bounding_dims = imageContainer.image_bounding_dims;
     var scale = get_image_scale(width, height, image_bounding_dims.width, image_bounding_dims.height);
-    var img_width = scale * image_bounding_dims.width;
-    var img_height = scale * image_bounding_dims.height;
+    var img_width = Math.floor(scale * image_bounding_dims.width);
+    var img_height = Math.floor(scale * image_bounding_dims.height);
 
     let fillColour = 'white';
 
@@ -4904,14 +4904,14 @@ function setup_image_selection() {
     //svg image rectangle for zooming-in
     var rect = svg.append("rect")
         .attr("id", "image_rectangle")
-        /*.attr("x", Math.floor((width - img_width) / 2))
-        .attr("y", Math.floor((height - img_height) / 2))
-        .attr("width", Math.floor(img_width))
-        .attr("height", Math.floor(img_height))*/
-        .attr("x", (width - img_width) / 2)
+        .attr("x", Math.round((width - img_width) / 2))
+        .attr("y", Math.round((height - img_height) / 2))
+        .attr("width", Math.round(img_width))
+        .attr("height", Math.round(img_height))
+        /*.attr("x", (width - img_width) / 2)
         .attr("y", (height - img_height) / 2)
         .attr("width", img_width)
-        .attr("height", img_height)
+        .attr("height", img_height)*/
         .style('cursor', 'none')//'crosshair')//'none' to mask Chrome latency
         /*.style('cursor', 'crosshair')//'crosshair')*/
         /*.style("fill", "transparent")
@@ -5165,8 +5165,8 @@ function setup_image_selection() {
             var scale = get_image_scale(width, height, image_bounding_dims.width, image_bounding_dims.height);
 
             var clipSize = Math.min(image_bounding_dims.width, image_bounding_dims.height) / zoom_scale;
-            var sel_width = clipSize * scale;
-            var sel_height = clipSize * scale;
+            var sel_width = Math.floor(clipSize * scale);
+            var sel_height = Math.floor(clipSize * scale);
 
             if (!mousedown) {
                 let mx = mouse_position.x;
@@ -5582,7 +5582,7 @@ function webgl_legend_renderer(gl, x, y, width, height) {
 
     // no need for an animation loop, just handle the lost context
     //WebGL how to convert from clip space to pixels
-    gl.viewport(x, y, width, height);
+    gl.viewport(Math.round(x), Math.round(y), Math.round(width), Math.round(height));
 
     // Clear the canvas
     gl.clearColor(0, 0, 0, 0);
@@ -6142,7 +6142,7 @@ function webgl_zoom_renderer(gl, height) {
         let py = viewport_zoom_settings.py;
         let viewport_size = viewport_zoom_settings.zoomed_size;
         py = height - py - viewport_size;
-        gl.viewport(px, py, viewport_size, viewport_size);
+        gl.viewport(Math.round(px), Math.round(py), Math.round(viewport_size), Math.round(viewport_size));
 
         // Clear the canvas
         gl.clearColor(0, 0, 0, 0);
@@ -6203,8 +6203,8 @@ function imageTimeout() {
 
     var image_bounding_dims = imageContainer.image_bounding_dims;
     var scale = get_image_scale(width, height, image_bounding_dims.width, image_bounding_dims.height);
-    var img_width = scale * image_bounding_dims.width;
-    var img_height = scale * image_bounding_dims.height;
+    var img_width = Math.floor(scale * image_bounding_dims.width);
+    var img_height = Math.floor(scale * image_bounding_dims.height);
 
     var rect_elem = d3.select("#image_rectangle");
 
@@ -6885,7 +6885,7 @@ function webgl_viewport_renderer(gl, container, height) {
     let py = viewport_zoom_settings.py;
     let viewport_size = viewport_zoom_settings.zoomed_size;
     py = height - py - viewport_size;
-    gl.viewport(px, py, viewport_size, viewport_size);
+    gl.viewport(Math.round(px), Math.round(py), Math.round(viewport_size), Math.round(viewport_size));
 
     // Clear the canvas
     gl.clearColor(0, 0, 0, 0);
@@ -7497,9 +7497,8 @@ function process_video() {
     ctx.imageSmoothingEnabled = false;
 
     var scale = get_image_scale(width, height, image_bounding_dims.width, image_bounding_dims.height);
-
-    var img_width = scale * image_bounding_dims.width;
-    var img_height = scale * image_bounding_dims.height;
+    var img_width = Math.floor(scale * image_bounding_dims.width);
+    var img_height = Math.floor(scale * image_bounding_dims.height);
 
     ctx.drawImage(imageCanvas, image_bounding_dims.x1, image_bounding_dims.y1, image_bounding_dims.width, image_bounding_dims.height, (width - img_width) / 2, (height - img_height) / 2, img_width, img_height);
 
@@ -8166,11 +8165,11 @@ function contour_surface_webworker() {
             var height = parseFloat(elem.attr("height"));
 
             var x = d3.scaleLinear()
-                .range([0, width - 1])
+                .range([0, width])
                 .domain([0, data[0].length - 1]);
 
             var y = d3.scaleLinear()
-                .range([height - 1, 0])
+                .range([height, 0])
                 .domain([0, data.length - 1]);
 
             d3.select("#ContourSVG").append("svg")
