@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-11-01.0";
+    return "JS2023-11-02.0";
 }
 
 function uuidv4() {
@@ -5190,6 +5190,9 @@ function setup_image_selection() {
             var ay = (image_bounding_dims.height - 1) / (rect.getAttribute("height") - 0);
             var y = (image_bounding_dims.y1 + image_bounding_dims.height - 1) - ay * (mouse_position.y - rect.getAttribute("y"));
 
+            x = clamp(x, image_bounding_dims.x1, image_bounding_dims.x1 + image_bounding_dims.width - 1);
+            y = clamp(y, image_bounding_dims.y1, image_bounding_dims.y1 + image_bounding_dims.height - 1);
+
             var orig_x = x * (fitsData.width - 1) / (imageContainer.width - 1);
             var orig_y = y * (fitsData.height - 1) / (imageContainer.height - 1);
             console.log("scale:", scale, "ax:", ax, "ay:", ay, "orig_x:", orig_x, "orig_y:", orig_y);
@@ -5398,6 +5401,9 @@ function setup_image_selection() {
 
                 var ay = (image_bounding_dims.height - 1) / (rect.getAttribute("height") - 0);
                 var pred_y = (image_bounding_dims.y1 + image_bounding_dims.height - 1) - ay * (pred_mouse_y - rect.getAttribute("y"));
+
+                pred_x = clamp(pred_x, image_bounding_dims.x1, image_bounding_dims.x1 + image_bounding_dims.width - 1);
+                pred_y = clamp(pred_y, image_bounding_dims.y1, image_bounding_dims.y1 + image_bounding_dims.height - 1);
 
                 var fitsX = Math.round(pred_x * (fitsData.width - 1) / (imageContainer.width - 1));//x or pred_x
                 var fitsY = Math.round(pred_y * (fitsData.height - 1) / (imageContainer.height - 1));//y or pred_y
@@ -6214,6 +6220,9 @@ function imageTimeout() {
 
     var ay = (image_bounding_dims.height - 1) / (rect_elem.attr("height") - 0);
     var y = (image_bounding_dims.y1 + image_bounding_dims.height - 1) - ay * (mouse_position.y - rect_elem.attr("y"));
+
+    x = clamp(x, image_bounding_dims.x1, image_bounding_dims.x1 + image_bounding_dims.width - 1);
+    y = clamp(y, image_bounding_dims.y1, image_bounding_dims.y1 + image_bounding_dims.height - 1);
 
     var clipSize = Math.min(image_bounding_dims.width, image_bounding_dims.height) / zoom_scale;
     var sel_width = Math.floor(clipSize * scale);
