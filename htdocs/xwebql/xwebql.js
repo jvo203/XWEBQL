@@ -5356,9 +5356,9 @@ function setup_image_selection() {
                     py = height - 1 - emStrokeWidth - zoomed_size;
                 }
 
-                zoomed_size = Math.round(zoomed_size);
+                /*zoomed_size = Math.round(zoomed_size);
                 px = Math.round(px);
-                py = Math.round(py);
+                py = Math.round(py);*/
 
                 //image_stack.push({ x: x, y: y, clipSize: clipSize, px: px, py: py, zoomed_size: zoomed_size });
                 viewport_zoom_settings = { x: x, y: y, clipSize: clipSize, px: px, py: py, zoomed_size: zoomed_size };
