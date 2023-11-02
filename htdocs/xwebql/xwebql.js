@@ -5356,9 +5356,9 @@ function setup_image_selection() {
                     py = height - 1 - emStrokeWidth - zoomed_size;
                 }
 
-                /*zoomed_size = Math.round(zoomed_size);
+                zoomed_size = Math.round(zoomed_size);
                 px = Math.round(px);
-                py = Math.round(py);*/
+                py = Math.round(py);
 
                 //image_stack.push({ x: x, y: y, clipSize: clipSize, px: px, py: py, zoomed_size: zoomed_size });
                 viewport_zoom_settings = { x: x, y: y, clipSize: clipSize, px: px, py: py, zoomed_size: zoomed_size };
@@ -6165,10 +6165,10 @@ function webgl_zoom_renderer(gl, height) {
         // Tell WebGL to use our shader program pair
         gl.useProgram(program);
 
-        let xmin = (viewport_zoom_settings.x - viewport_zoom_settings.clipSize) / (image.width - 0); // was - 1
-        let ymin = (viewport_zoom_settings.y - viewport_zoom_settings.clipSize) / (image.height - 0); // was - 1
-        let _width = (2 * viewport_zoom_settings.clipSize + 1) / image.width; // was + 1
-        let _height = (2 * viewport_zoom_settings.clipSize + 1) / image.height; // was + 1
+        let xmin = (viewport_zoom_settings.x - viewport_zoom_settings.clipSize) / (image.width - 1);
+        let ymin = (viewport_zoom_settings.y - viewport_zoom_settings.clipSize) / (image.height - 1);
+        let _width = (2 * viewport_zoom_settings.clipSize) / (image.width - 1);
+        let _height = (2 * viewport_zoom_settings.clipSize) / (image.height - 1);
 
         //console.log("xmin:", xmin, "ymin:", ymin, "_width:", _width, "_height:", _height);		
         gl.uniform4fv(locationOfBox, [xmin, ymin, _width, _height]);
