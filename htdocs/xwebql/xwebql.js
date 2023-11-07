@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-11-02.0";
+    return "JS2023-11-07.0";
 }
 
 function uuidv4() {
@@ -6165,10 +6165,19 @@ function webgl_zoom_renderer(gl, height) {
         // Tell WebGL to use our shader program pair
         gl.useProgram(program);
 
-        let xmin = (viewport_zoom_settings.x - viewport_zoom_settings.clipSize) / (image.width - 1);
+        /*let xmin = (viewport_zoom_settings.x - viewport_zoom_settings.clipSize) / (image.width - 1);
         let ymin = (viewport_zoom_settings.y - viewport_zoom_settings.clipSize) / (image.height - 1);
         let _width = (2 * viewport_zoom_settings.clipSize) / (image.width - 1);
-        let _height = (2 * viewport_zoom_settings.clipSize) / (image.height - 1);
+        let _height = (2 * viewport_zoom_settings.clipSize) / (image.height - 1);*/
+
+        let xmin = (viewport_zoom_settings.x - viewport_zoom_settings.clipSize - 1) / (image.width - 1);
+        let ymin = (viewport_zoom_settings.y - viewport_zoom_settings.clipSize - 1) / (image.height - 1);
+
+        let xmax = (viewport_zoom_settings.x + viewport_zoom_settings.clipSize + 1) / (image.width - 1);
+        let ymax = (viewport_zoom_settings.y + viewport_zoom_settings.clipSize + 1) / (image.height - 1);
+
+        let _width = xmax - xmin;
+        let _height = ymax - ymin;
 
         //console.log("xmin:", xmin, "ymin:", ymin, "_width:", _width, "_height:", _height);		
         gl.uniform4fv(locationOfBox, [xmin, ymin, _width, _height]);
