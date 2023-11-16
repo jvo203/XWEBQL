@@ -205,7 +205,8 @@ fn read_sxs_threaded(data: []const u8, x: []i16, y: []i16, upi: []f32, size: usi
     var i: usize = 0;
 
     while (i < size) {
-        x[i] = std.mem.readIntSliceBig(i16, data[offset + x_offset ..]);
+        // x[i] = std.mem.readIntSliceBig(i16, data[offset + x_offset ..]);
+        x[i] = std.mem.readInt(i16, data[offset + x_offset ..], .big);
         y[i] = std.mem.readIntSliceBig(i16, data[offset + y_offset ..]);
         upi[i] = @as(f32, @bitCast(std.mem.readIntSliceBig(i32, data[offset + upi_offset ..])));
 
