@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2023-11-07.0";
+    return "JS2023-11-17.0";
 }
 
 function uuidv4() {
@@ -5164,7 +5164,7 @@ function setup_image_selection() {
             var image_bounding_dims = imageContainer.image_bounding_dims;
             var scale = get_image_scale(width, height, image_bounding_dims.width, image_bounding_dims.height);
 
-            var clipSize = Math.min(image_bounding_dims.width, image_bounding_dims.height) / zoom_scale;
+            var clipSize = Math.min(image_bounding_dims.width - 1, image_bounding_dims.height - 1) / zoom_scale;
             var sel_width = Math.floor(clipSize * scale);
             var sel_height = Math.floor(clipSize * scale);
 
@@ -6233,7 +6233,7 @@ function imageTimeout() {
     x = clamp(x, image_bounding_dims.x1, image_bounding_dims.x1 + image_bounding_dims.width - 1);
     y = clamp(y, image_bounding_dims.y1, image_bounding_dims.y1 + image_bounding_dims.height - 1);
 
-    var clipSize = Math.min(image_bounding_dims.width, image_bounding_dims.height) / zoom_scale;
+    var clipSize = Math.min(image_bounding_dims.width - 1, image_bounding_dims.height - 1) / zoom_scale;
     var sel_width = Math.floor(clipSize * scale);
     var sel_height = Math.floor(clipSize * scale);
 
@@ -6243,7 +6243,7 @@ function imageTimeout() {
 
     var image_update = true;
 
-    if (fitsSize > clipSize)
+    if (Math.round(fitsSize) > Math.round(clipSize))
         image_update = true;
     else
         image_update = false;
