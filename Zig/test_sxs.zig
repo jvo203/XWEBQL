@@ -218,7 +218,6 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
 
     // open the file, get a file descriptor
     const fd = try std.os.open(filename, .{ .ACCMODE = .RDONLY }, 0);
-    //, std.os.O.RDONLY, 0);
     defer std.os.close(fd);
 
     // get the file size via fstat
