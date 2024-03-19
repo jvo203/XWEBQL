@@ -1193,6 +1193,10 @@ function ws_coroutine(ws, ids)
 
     @info "Started a websocket coroutine for $datasetid" ws
 
+    # speed-up the underlying TCP socket
+    Sockets.nagle(ws.socket, false)
+    Sockets.quickack(ws.socket, true)
+
     # an outgoing queue for messages to be sent
     outgoing = RemoteChannel(() -> Channel{Any}(32))
     sent_task = @async while true
