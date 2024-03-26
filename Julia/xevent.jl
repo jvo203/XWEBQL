@@ -376,7 +376,10 @@ function getSquareSpectrum2(xobject::XDataSet, E_min::Float32, E_max::Float32, x
     y = xobject.y
 
     # make xy a vector of tuples (x,y)
-    xy = [(x[i], y[i]) for i in 1:length(x)]
+    # xy = [(x[i], y[i]) for i in 1:length(x)]
+
+    # re-do xy using zip
+    xy = zip(x, y)
 
     println("size(xy) = ", size(xy))
 
@@ -396,8 +399,8 @@ function getViewport(x, y, energy, xmin::Integer, xmax::Integer, ymin::Integer, 
     # find E indices between emin and emax    
     # e_indices = findall(x -> x1 <= energy <= x2, energy)    
 
-    # make a mask
-    mask = [xmin <= x[i] <= xmax && ymin <= y[i] <= ymax && emin <= energy[i] <= emax for i in 1:length(x)]
+    # make a mask    
+    mask = [(xmin <= x <= xmax && ymin <= y <= ymax && emin <= e <= emax) for (x, y, e) in zip(x, y, energy)]
 
     h = Hist2D((x[mask], y[mask]); binedges=(xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5), overflow=false)
     pixels = bincounts(h)
@@ -422,7 +425,7 @@ function getSquareSpectrum(x, y, energy, E_min::Float32, E_max::Float32, x1::Int
     println("ΔE = ", ΔE)
 
     # find points within a square    
-    mask = [x1 <= x[i] <= x2 && y1 <= y[i] <= y2 for i in 1:length(x)]
+    mask = [(x1 <= x <= x2 && y1 <= y <= y2) for (x, y) in zip(x, y)]
 
     h = Hist1D(energy[mask]; binedges=E_min:ΔE:E_max, overflow=false)
     spectrum = Float32.(bincounts(h))
@@ -438,7 +441,7 @@ function getCircleSpectrum(x, y, energy, E_min::Float32, E_max::Float32, cx::Int
     println("ΔE = ", ΔE)
 
     # find points within a circle    
-    mask = [(x[i] - cx)^2 + (y[i] - cy)^2 <= r2 for i in 1:length(x)]
+    mask = [(x - cx)^2 + (y - cy)^2 <= r2 for (x, y) in zip(x, y)]
 
     h = Hist1D(energy[mask]; binedges=E_min:ΔE:E_max, overflow=false)
     spectrum = Float32.(bincounts(h))
