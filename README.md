@@ -1,7 +1,6 @@
 # XWEBQL
 
-## status
-_*ALPHA*_ quality, leaning towards _*BETA*_
+## status: _*ALPHA*_, leaning towards _*BETA*_
 
 ## try it online at the Japanese Virtual Observatory (JVO): [HITOMI Demo](http://jvo.nao.ac.jp/portal/xwebql.do)
 
