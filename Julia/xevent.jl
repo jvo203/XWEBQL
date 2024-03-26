@@ -289,7 +289,7 @@ function getImage(xobject::XDataSet)
     # make a mask
     mask = [energy[i] <= MAXIMUM_ENERGY for i in 1:length(x)]
 
-    @time h = Hist2D((x[mask], y[mask]), (xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5))
+    @time h = Hist2D((x[mask], y[mask]); binedges=(xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5))
     pixels = bincounts(h)
 
     # make a mask for the pixels
@@ -320,7 +320,7 @@ function getSpectrum(xobject::XDataSet, dx::Integer)
 
     ΔE = (E_max - E_min) / dx
 
-    @time h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
+    @time h = Hist1D(energy; binedges=E_min:ΔE:E_max, overflow=false)
     spectrum = bincounts(h)
 
     # get the bin centers
@@ -358,7 +358,7 @@ function getSquareSpectrum1(xobject::XDataSet, E_min::Float32, E_max::Float32, x
     # get the log-energy values
     energy = xobject.energy[indices]
 
-    h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
+    h = Hist1D(energy; binedges=E_min:ΔE:E_max, overflow=false)
     spectrum = Float32.(bincounts(h))
 
     return spectrum
@@ -386,7 +386,7 @@ function getSquareSpectrum2(xobject::XDataSet, E_min::Float32, E_max::Float32, x
     # get the log-energy values
     energy = xobject.energy[indices]
 
-    h = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
+    h = Hist1D(energy; binedges=E_min:ΔE:E_max, overflow=false)
     spectrum = Float32.(bincounts(h))
 
     return spectrum
@@ -399,7 +399,7 @@ function getViewport(x, y, energy, xmin::Integer, xmax::Integer, ymin::Integer, 
     # make a mask
     mask = [xmin <= x[i] <= xmax && ymin <= y[i] <= ymax && emin <= energy[i] <= emax for i in 1:length(x)]
 
-    h = Hist2D((x[mask], y[mask]), (xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5), overflow=false)
+    h = Hist2D((x[mask], y[mask]); binedges=(xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5), overflow=false)
     pixels = bincounts(h)
 
     # make a mask for the pixels
@@ -424,7 +424,7 @@ function getSquareSpectrum(x, y, energy, E_min::Float32, E_max::Float32, x1::Int
     # find points within a square    
     mask = [x1 <= x[i] <= x2 && y1 <= y[i] <= y2 for i in 1:length(x)]
 
-    h = Hist1D(energy[mask], E_min:ΔE:E_max, overflow=false)
+    h = Hist1D(energy[mask]; binedges=E_min:ΔE:E_max, overflow=false)
     spectrum = Float32.(bincounts(h))
 
     return spectrum
@@ -440,7 +440,7 @@ function getCircleSpectrum(x, y, energy, E_min::Float32, E_max::Float32, cx::Int
     # find points within a circle    
     mask = [(x[i] - cx)^2 + (y[i] - cy)^2 <= r2 for i in 1:length(x)]
 
-    h = Hist1D(energy[mask], E_min:ΔE:E_max, overflow=false)
+    h = Hist1D(energy[mask]; binedges=E_min:ΔE:E_max, overflow=false)
     spectrum = Float32.(bincounts(h))
 
     return spectrum
