@@ -93,7 +93,7 @@ const SERVER_STRING =
     "." *
     string(VERSION_SUB)
 
-const WASM_VERSION = "23.10.11.0"
+const WASM_VERSION = "24.03.26.0"
 const VERSION_STRING = "J/SV2024-03-26.0-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
