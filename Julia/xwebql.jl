@@ -94,7 +94,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "24.03.26.0"
-const VERSION_STRING = "J/SV2024-03-26.0-ALPHA"
+const VERSION_STRING = "J/SV2024-04-09.0-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -605,7 +605,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
     # Font Awesome
     write(
         http,
-        "<script src=\"https://kit.fontawesome.com/8433b7dde2.js\" crossorigin=\"anonymous\"></script>\n",
+        "<script src=\"https://kit.fontawesome.com/8433b7dde2.js?ver=5.15.4\" crossorigin=\"anonymous\"></script>\n",
     )
 
     # Bzip2 decoder
@@ -617,14 +617,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
 
     # scrollIntoView with ZenScroll (the original one does not work in Safari)
     write(http, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/zenscroll-min.js\" defer></script>\n")
-    # write(http, "<script type=\"module\" src=\"zenscroll5.js\"></script>\n")
-
-    # WebAssembly
-    if LOCAL_VERSION
-        write(http, "<script src=\"client.$WASM_VERSION.js\"></script>\n")
-    else
-        write(http, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/client.$WASM_VERSION.min.js\"></script>\n")
-    end
+    # write(http, "<script type=\"module\" src=\"zenscroll5.js\"></script>\n")    
 
     write(
         http,
@@ -750,6 +743,13 @@ function streamXEvents(http::HTTP.Streams.Stream)
     else
         write(http, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/xwebql.min.js\"></script>\n")
         write(http, "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/xwebql.min.css\"/>\n")
+    end
+
+    # Asynchronous WebAssembly
+    if LOCAL_VERSION
+        write(http, "<script async type=\"text/javascript\" src=\"client.$WASM_VERSION.js\"></script>\n")
+    else
+        write(http, "<script async type=\"text/javascript\" src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/client.$WASM_VERSION.min.js\"></script>\n")
     end
 
     # HTML content    
