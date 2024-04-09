@@ -617,16 +617,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
 
     # scrollIntoView with ZenScroll (the original one does not work in Safari)
     write(http, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/zenscroll-min.js\" defer></script>\n")
-    # write(http, "<script type=\"module\" src=\"zenscroll5.js\"></script>\n")    
-
-    write(
-        http,
-        "<script>\n",
-        "Module.ready\n",
-        "\t.then(status => console.log(status))\n",
-        "\t.catch(e => console.error(e));\n",
-        "</script>\n",
-    )
+    # write(http, "<script type=\"module\" src=\"zenscroll5.js\"></script>\n")
 
     # Bootstrap viewport
     write(
