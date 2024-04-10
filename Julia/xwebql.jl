@@ -94,7 +94,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "24.03.26.0"
-const VERSION_STRING = "J/SV2024-04-09.0-ALPHA"
+const VERSION_STRING = "J/SV2024-04-10.0-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -463,6 +463,13 @@ function streamXEvents(http::HTTP.Streams.Stream)
     global XOBJECTS, XLOCK
 
     request::HTTP.Request = http.message
+
+    @show HTTP.header(http, "Accept-Encoding")
+
+    # extract Accept-Encoding header
+    accept_encoding = HTTP.get(http, "Accept-Encoding")
+    println("Accept-Encoding: $accept_encoding")
+
     request.body = read(http)
     closeread(http)
 
@@ -556,230 +563,229 @@ function streamXEvents(http::HTTP.Streams.Stream)
         update_timestamp(xdataset)
     end
 
-    HTTP.setstatus(http, 200)
-    startwrite(http)
+    html = IOBuffer()
 
-    write(http, "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n")
+    write(html, "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n")
     write(
-        http,
+        html,
         "<link href=\"https://fonts.googleapis.com/css?family=Inconsolata\" rel=\"stylesheet\"/>\n",
     )
     write(
-        http,
+        html,
         "<link href=\"https://fonts.googleapis.com/css?family=Material+Icons\" rel=\"stylesheet\"/>\n",
     )
-    write(http, "<script src=\"https://cdn.jsdelivr.net/npm/d3@7\"></script>\n")
+    write(html, "<script src=\"https://cdn.jsdelivr.net/npm/d3@7\"></script>\n")
     write(
-        http,
+        html,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/reconnecting-websocket.min.js\"></script>\n",
     )
     write(
-        http,
+        html,
         "<script src=\"//cdnjs.cloudflare.com/ajax/libs/numeral.js/2.0.6/numeral.min.js\"></script>\n",
     )
     write(
-        http,
+        html,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/ra_dec_conversion.min.js\"></script>\n",
     )
     write(
-        http,
+        html,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/sylvester.min.js\"></script>\n",
     )
     write(
-        http,
+        html,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/shortcut.min.js\"></script>\n",
     )
     write(
-        http,
+        html,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/lz4.min.js\"></script>\n",
     )
     write(
-        http,
+        html,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/marchingsquares-isocontours.min.js\" defer></script>\n",
     )
     write(
-        http,
+        html,
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/marchingsquares-isobands.min.js\" defer></script>\n",
     )
 
     # Font Awesome
     write(
-        http,
+        html,
         "<script src=\"https://kit.fontawesome.com/8433b7dde2.js?ver=5.15.4\" crossorigin=\"anonymous\"></script>\n",
     )
 
     # Bzip2 decoder
     if LOCAL_VERSION
-        write(http, "<script src=\"bzip2.js\"></script>\n")
+        write(html, "<script src=\"bzip2.js\"></script>\n")
     else
-        write(http, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/bzip2.min.js\"></script>\n")
+        write(html, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/bzip2.min.js\"></script>\n")
     end
 
     # scrollIntoView with ZenScroll (the original one does not work in Safari)
-    write(http, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/zenscroll-min.js\" defer></script>\n")
-    # write(http, "<script type=\"module\" src=\"zenscroll5.js\"></script>\n")
+    write(html, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/zenscroll-min.js\" defer></script>\n")
+    # write(html, "<script type=\"module\" src=\"zenscroll5.js\"></script>\n")
 
     # Bootstrap viewport
     write(
-        http,
+        html,
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, user-scalable=no, minimum-scale=1, maximum-scale=1\">\n",
     )
 
     # Bootstrap v3.4.1
     write(
-        http,
+        html,
         "<link rel=\"stylesheet\" href=\"https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css\" integrity=\"sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu\" crossorigin=\"anonymous\">",
     )
     write(
-        http,
+        html,
         "<script src=\"https://code.jquery.com/jquery-1.12.4.min.js\" integrity=\"sha384-nvAa0+6Qg9clwYCGGPpDQLVpLNn0fRaROjHqs13t4Ggj3Ez50XnGQqc/r8MhnRDZ\" crossorigin=\"anonymous\"></script>",
     )
     write(
-        http,
+        html,
         "<script src=\"https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js\" integrity=\"sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd\" crossorigin=\"anonymous\"></script>",
     )
 
     # GLSL vertex shader
-    write(http, "<script id=\"vertex-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/vertex-shader.vert"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"vertex-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/vertex-shader.vert"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"legend-vertex-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/legend-vertex-shader.vert"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"legend-vertex-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/legend-vertex-shader.vert"))
+    write(html, "</script>\n")
 
     # GLSL fragment shaders
-    write(http, "<script id=\"common-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/common-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"common-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/common-shader.frag"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"legend-common-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/legend-common-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"legend-common-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/legend-common-shader.frag"))
+    write(html, "</script>\n")
 
     # tone mapping (only one for the time being)
-    write(http, "<script id=\"log-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/log-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"log-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/log-shader.frag"))
+    write(html, "</script>\n")
 
     # colourmaps
-    write(http, "<script id=\"greyscale-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/greyscale-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"greyscale-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/greyscale-shader.frag"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"negative-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/negative-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"negative-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/negative-shader.frag"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"amber-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/amber-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"amber-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/amber-shader.frag"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"red-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/red-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"red-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/red-shader.frag"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"green-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/green-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"green-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/green-shader.frag"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"blue-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/blue-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"blue-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/blue-shader.frag"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"hot-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/hot-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"hot-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/hot-shader.frag"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"rainbow-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/rainbow-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"rainbow-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/rainbow-shader.frag"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"parula-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/parula-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"parula-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/parula-shader.frag"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"inferno-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/inferno-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"inferno-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/inferno-shader.frag"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"magma-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/magma-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"magma-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/magma-shader.frag"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"plasma-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/plasma-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"plasma-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/plasma-shader.frag"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"viridis-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/viridis-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"viridis-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/viridis-shader.frag"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"cubehelix-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/cubehelix-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"cubehelix-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/cubehelix-shader.frag"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"jet-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/jet-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"jet-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/jet-shader.frag"))
+    write(html, "</script>\n")
 
-    write(http, "<script id=\"haxby-shader\" type=\"x-shader/x-vertex\">\n")
-    write(http, read(HT_DOCS * "/xwebql/haxby-shader.frag"))
-    write(http, "</script>\n")
+    write(html, "<script id=\"haxby-shader\" type=\"x-shader/x-vertex\">\n")
+    write(html, read(HT_DOCS * "/xwebql/haxby-shader.frag"))
+    write(html, "</script>\n")
 
     # XWebQL main JavaScript + CSS
     if LOCAL_VERSION
-        write(http, "<script src=\"xwebql.js\"></script>\n")
-        write(http, "<link rel=\"stylesheet\" href=\"xwebql.css\"/>\n")
+        write(html, "<script src=\"xwebql.js\"></script>\n")
+        write(html, "<link rel=\"stylesheet\" href=\"xwebql.css\"/>\n")
     else
-        write(http, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/xwebql.min.js\"></script>\n")
-        write(http, "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/xwebql.min.css\"/>\n")
+        write(html, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/xwebql.min.js\"></script>\n")
+        write(html, "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/xwebql.min.css\"/>\n")
     end
 
     # Asynchronous WebAssembly
     if LOCAL_VERSION
-        write(http, "<script async type=\"text/javascript\" src=\"client.$WASM_VERSION.js\"></script>\n")
+        write(html, "<script async type=\"text/javascript\" src=\"client.$WASM_VERSION.js\"></script>\n")
     else
-        write(http, "<script async type=\"text/javascript\" src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/client.$WASM_VERSION.min.js\"></script>\n")
+        write(html, "<script async type=\"text/javascript\" src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/client.$WASM_VERSION.min.js\"></script>\n")
     end
 
     # HTML content    
-    write(http, "<title>XWEBQL</title></head><body>\n")
-    write(http, "<div id='htmlData' style='width: 0; height: 0;' ")
-    write(http, "data-datasetId='$dataset' ")
-    write(http, "data-root-path='/$root_path/' ")
+    write(html, "<title>XWEBQL</title></head><body>\n")
+    write(html, "<div id='htmlData' style='width: 0; height: 0;' ")
+    write(html, "data-datasetId='$dataset' ")
+    write(html, "data-root-path='/$root_path/' ")
 
     if !LOCAL_VERSION
-        write(http, "data-root-path='/$root_path/' ")
+        write(html, "data-root-path='/$root_path/' ")
     else
-        write(http, "data-root-path='/' ")
+        write(html, "data-root-path='/' ")
     end
 
     write(
-        http,
+        html,
         " data-server-version='",
         VERSION_STRING,
         "' data-server-string='",
         SERVER_STRING,
     )
 
-    write(http, "' data-version-major='$VERSION_MAJOR")
-    write(http, "' data-version-minor='$VERSION_MINOR")
-    write(http, "' data-version-sub='$VERSION_SUB")
+    write(html, "' data-version-major='$VERSION_MAJOR")
+    write(html, "' data-version-minor='$VERSION_MINOR")
+    write(html, "' data-version-sub='$VERSION_SUB")
 
     if LOCAL_VERSION
-        write(http, "' data-server-mode='LOCAL")
+        write(html, "' data-server-mode='LOCAL")
     else
-        write(http, "' data-server-mode='SERVER")
+        write(html, "' data-server-mode='SERVER")
     end
 
-    write(http, "'></div>\n")
+    write(html, "'></div>\n")
 
-    write(http, "<script>var WS_PORT = $WS_PORT;</script>\n")
+    write(html, "<script>var WS_PORT = $WS_PORT;</script>\n")
 
     # the page entry point
     write(
-        http,
+        html,
         "<script>",
         "const golden_ratio = 1.6180339887;",
         "var XWS = null ;",
@@ -796,7 +802,14 @@ function streamXEvents(http::HTTP.Streams.Stream)
         "mainRenderer(); </script>\n",
     )
 
-    write(http, "</body></html>")
+    write(html, "</body></html>")
+
+    HTTP.setstatus(http, 200)
+    startwrite(http)
+
+    # write the HTML content
+    write(http, take!(html))
+
     return nothing
 end
 
