@@ -2,6 +2,8 @@ import Base.Iterators: flatten
 using ArgParse
 using CodecBzip2
 using CodecLz4
+using CodecZlib
+using CodecZstd
 using ConfParser
 using HTTP
 using JSON
@@ -464,11 +466,8 @@ function streamXEvents(http::HTTP.Streams.Stream)
 
     request::HTTP.Request = http.message
 
-    @show HTTP.header(http, "Accept-Encoding")
-
     # extract Accept-Encoding header
-    accept_encoding = HTTP.get(http, "Accept-Encoding")
-    println("Accept-Encoding: $accept_encoding")
+    accept_encoding = HTTP.header(http, "Accept-Encoding")
 
     request.body = read(http)
     closeread(http)
@@ -805,10 +804,28 @@ function streamXEvents(http::HTTP.Streams.Stream)
     write(html, "</body></html>")
 
     HTTP.setstatus(http, 200)
-    startwrite(http)
 
-    # write the HTML content
-    write(http, take!(html))
+    # compression support
+    if occursin("zstd", accept_encoding)
+        # check if accept_encoding contains zstd
+        HTTP.setheader(http, "Content-Encoding" => "zstd")
+        startwrite(http)
+        write(http, transcode(ZstdCompressor, (IOBuffer(take!(html)))))
+    elseif occursin("gzip", accept_encoding)
+        # check if accept_encoding contains gzip
+        HTTP.setheader(http, "Content-Encoding" => "gzip")
+        startwrite(http)
+        write(http, transcode(GzipCompressor, (IOBuffer(take!(html)))))
+    elseif occursin("deflate", accept_encoding)
+        # check if accept_encoding contains deflate
+        HTTP.setheader(http, "Content-Encoding" => "deflate")
+        startwrite(http)
+        write(http, transcode(DeflateCompressor, (IOBuffer(take!(html)))))
+    else
+        # no compression
+        startwrite(http)
+        write(http, take!(html))
+    end
 
     return nothing
 end
