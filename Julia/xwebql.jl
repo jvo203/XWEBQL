@@ -96,7 +96,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "24.03.26.0"
-const VERSION_STRING = "J/SV2024-04-10.0-ALPHA"
+const VERSION_STRING = "J/SV2024-04-10.1-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -1915,7 +1915,7 @@ const ws_server = WebSockets.ServerWS(ws_handle, ws_gatekeeper)
 Threads.@spawn :interactive WebSockets.serve(ws_server, host, WS_PORT)
 
 # a garbage collection loop (dataset timeout)
-# global gc_task = @async garbage_collector(XOBJECTS, XLOCK, TIMEOUT)
+global gc_task = @async garbage_collector(XOBJECTS, XLOCK, TIMEOUT)
 
 try
     HTTP.serve(XROUTER, host, UInt16(HTTP_PORT), stream=true)

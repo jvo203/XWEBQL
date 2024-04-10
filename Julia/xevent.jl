@@ -11,7 +11,7 @@ using ThreadsX
 @enum Quality low medium high
 @enum Beam CIRCLE SQUARE # "square" is a reserved Julia function
 
-finale(x) = @async println("Finalizing $(x.id).$(x.uri)")
+finale(x) = @async println("Finalized $(x.id) :: $(x.uri)")
 
 # the number of energy channels
 const NUM_CHANNELS = 128
@@ -57,6 +57,10 @@ end
 
 function has_error(xobject::XDataSet)::Bool
     return xobject.has_error[]
+end
+
+function get_elapsed(xobject::XDataSet)::Float64
+    return datetime2unix(now()) - xobject.last_accessed[]
 end
 
 function dataset_exists(datasetid::String, xobjects, xlock)::Bool
@@ -112,13 +116,13 @@ function garbage_collector(xobjects, xlock, timeout::Int64)
 
     try
         while running
-            println("sleeping ...")
             sleep(10)
-            println("done sleeping.")
+
+            purged = false
 
             # purge datasets
             for (datasetid, xobject) in xobjects
-                elapsed = datetime2unix(now()) - xobject.last_accessed[]
+                elapsed = get_elapsed(xobject)
 
                 if elapsed > timeout
                     println("Purging a dataset '$datasetid' ...")
@@ -135,12 +139,16 @@ function garbage_collector(xobjects, xlock, timeout::Int64)
                         unlock(xlock)
                     end
 
-                    # do not wait, trigger garbage collection *NOW*
-                    GC.gc()
-
-                    # yet another run to trigger finalizers ...
-                    GC.gc()
+                    purged = true
                 end
+            end
+
+            if purged
+                # do not wait, trigger garbage collection *NOW*
+                GC.gc()
+
+                # yet another run to trigger finalizers ...
+                GC.gc()
             end
         end
     catch e
