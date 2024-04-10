@@ -810,17 +810,17 @@ function streamXEvents(http::HTTP.Streams.Stream)
         # check if accept_encoding contains zstd
         HTTP.setheader(http, "Content-Encoding" => "zstd")
         startwrite(http)
-        write(http, transcode(ZstdCompressor, (IOBuffer(take!(html)))))
+        write(http, transcode(ZstdCompressor, take!(html)))
     elseif occursin("gzip", accept_encoding)
         # check if accept_encoding contains gzip
         HTTP.setheader(http, "Content-Encoding" => "gzip")
         startwrite(http)
-        write(http, transcode(GzipCompressor, (IOBuffer(take!(html)))))
+        write(http, transcode(GzipCompressor, take!(html)))
     elseif occursin("deflate", accept_encoding)
         # check if accept_encoding contains deflate
         HTTP.setheader(http, "Content-Encoding" => "deflate")
         startwrite(http)
-        write(http, transcode(DeflateCompressor, (IOBuffer(take!(html)))))
+        write(http, transcode(DeflateCompressor, take!(html)))
     else
         # no compression
         startwrite(http)
