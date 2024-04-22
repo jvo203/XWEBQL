@@ -217,24 +217,24 @@ fn read_sxs_threaded(data: []const u8, x: []i16, y: []i16, upi: []f32, size: usi
 fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
 
     // open the file, get a file descriptor
-    const fd = try std.os.open(filename, .{ .ACCMODE = .RDONLY }, 0);
-    defer std.os.close(fd);
+    const fd = try std.posix.open(filename, .{ .ACCMODE = .RDONLY }, 0);
+    defer std.posix.close(fd);
 
     // get the file size via fstat
-    const stats = try std.os.fstat(fd);
+    const stats = try std.posix.fstat(fd);
 
     // mmap the event file
-    const sxs = try std.os.mmap(
+    const sxs = try std.posix.mmap(
         null,
         @as(usize, @intCast(stats.size)),
-        std.os.PROT.READ,
-        std.os.MAP.PRIVATE,
+        std.posix.PROT.READ,
+        .{ .TYPE = .PRIVATE },
         fd,
         0,
     );
 
     // finally unmap the event file
-    defer std.os.munmap(sxs);
+    defer std.posix.munmap(sxs);
 
     var sxs_offset: usize = 0;
     var has_table: bool = false;
