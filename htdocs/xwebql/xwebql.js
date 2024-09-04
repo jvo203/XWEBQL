@@ -6719,6 +6719,8 @@ async function open_websocket_connection(_datasetId, index) {
                                         } else {
                                             console.log("WebCodecs::HEVC is not supported");
                                         }
+                                    }).catch((e) => {
+                                        console.log(e.message);
                                     });
 
                                     console.log("videoFrame: ", videoFrame);
