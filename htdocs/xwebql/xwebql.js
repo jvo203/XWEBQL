@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2024-09-04.0";
+    return "JS2024-09-04.1";
 }
 
 function uuidv4() {
@@ -6691,6 +6691,37 @@ async function open_websocket_connection(_datasetId, index) {
                                         //image_bounding_dims: imageFrame.image_bounding_dims,
                                         //image_bounding_dims: {x1: 0, y1: 0, width: width, height: height},
                                     }
+
+                                    const config = {
+                                        codec: "hevc",
+                                        codedWidth: data.width,
+                                        codedHeight: data.height,
+                                    };
+
+                                    VideoDecoder.isConfigSupported(config).then((supported) => {
+                                        if (supported) {
+                                            console.log("WebCodecs::HEVC is supported");
+
+                                            const init = {
+                                                output: (frame) => {
+                                                    console.log("decoded video frame: ", frame);
+                                                    //videoFrame.img = frame;
+                                                    //videoFrame.img = new ImageData(frame, videoFrame.width, videoFrame.height);
+                                                },
+                                                error: (e) => {
+                                                    console.log(e.message);
+                                                },
+                                            };
+
+                                            const decoder = new VideoDecoder(init);
+                                            decoder.configure(config);
+                                            videoFrame.decoder = decoder;
+                                        } else {
+                                            console.log("WebCodecs::HEVC is not supported");
+                                        }
+                                    });
+
+                                    console.log("videoFrame: ", videoFrame);
                                 }
                             }
 
@@ -7144,6 +7175,13 @@ function x_axis_mouseleave() {
 
     if (videoFrame != null) {
         videoFrame.img = null;
+
+        try {
+            videoFrame.decoder.close();
+        } catch (e) {
+            console.log(e);
+        };
+
         videoFrame = null;
 
         if (wsConn != null && wsConn.readyState == 1)
