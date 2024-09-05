@@ -6581,6 +6581,19 @@ async function open_websocket_connection(_datasetId, index) {
                                     //HEVC                                   
                                     var res = Module.hevc_decode_frame(videoFrame.width, videoFrame.height, frame, 0, colourmap, fill, contours);
                                     data = new Uint8ClampedArray(Module.HEAPU8.subarray(res[0], res[0] + res[1])); // it's OK to use .subarray() instead of .slice() as a copy is made in "new Uint8ClampedArray()"
+
+                                    var request = {
+                                        type: "video",
+                                        width: videoFrame.width,
+                                        height: videoFrame.height,
+                                        frame: frame,
+                                        colourmap: colourmap,
+                                        fill: fill,
+                                        contours: contours,
+                                    };
+
+                                    if (video_worker != null)
+                                        video_worker.postMessage(request);
                                 } catch (e) {
                                     // console.log(e);
                                 };
