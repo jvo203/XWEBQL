@@ -38,6 +38,7 @@ self.addEventListener('message', function (e) {
                             console.log("decoded video frame: ", frame);
                             //videoFrame.img = frame;
                             //videoFrame.img = new ImageData(frame, videoFrame.width, videoFrame.height);
+                            frame.close();
                         },
                         error: (e) => {
                             console.log(e.message);
