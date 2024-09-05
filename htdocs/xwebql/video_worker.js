@@ -1,4 +1,22 @@
+// #define IS_NAL_UNIT_START(buffer_ptr) (!buffer_ptr[0] && !buffer_ptr[1] && !buffer_ptr[2] && (buffer_ptr[3] == 1))
+function is_nal_unit_start(buffer_ptr) {
+    return (!buffer_ptr[0] && !buffer_ptr[1] && !buffer_ptr[2] && (buffer_ptr[3] == 1));
+}
+
+// #define IS_NAL_UNIT_START1(buffer_ptr) (!buffer_ptr[0] && !buffer_ptr[1] && (buffer_ptr[2] == 1))
+function is_nal_unit_start1(buffer_ptr) {
+    return (!buffer_ptr[0] && !buffer_ptr[1] && (buffer_ptr[2] == 1));
+}
+
+// #define GET_H265_NAL_UNIT_TYPE(buffer_ptr) ((buffer_ptr[0] & 0x7E) >> 1)
+function get_h265_nal_unit_type(byte) {
+    return ((byte & 0x7E) >> 1);
+    // (Byte >> 1) & 0x3f
+    //return ((byte >> 1) & 0x3f);
+}
+
 console.log('WebCodecs API Video Worker initiated');
+
 self.addEventListener('message', function (e) {
     try {
         let data = e.data;
@@ -56,8 +74,17 @@ self.addEventListener('message', function (e) {
             const timestamp = performance.now() * 1000;
             const duration = 1000 / 30;
 
-            // if the frame length is greater than 100 bytes then it is a key frame, else it is a delta frame
-            const type = data.frame.byteLength > 100 ? "key" : "delta";
+            let nal_start = 0;
+
+            if (is_nal_unit_start1(data.frame))
+                nal_start = 3;
+            else if (is_nal_unit_start(data.frame))
+                nal_start = 4;
+
+            let nal_type = get_h265_nal_unit_type(data.frame[nal_start]);
+            console.log("HEVC NAL unit type:", nal_type);
+
+            const type = (nal_type == 19 || nal_type == 20) ? "key" : "delta";
 
             const chunk = new EncodedVideoChunk({ data: data.frame, timestamp: timestamp, type: type, duration: duration });
             this.decoder.decode(chunk);
