@@ -6689,7 +6689,8 @@ async function open_websocket_connection(_datasetId, index) {
                         var data = JSON.parse(received_msg);
 
                         if (data.type == "init_video") {
-                            video_worker.postMessage(data);
+                            if (video_worker != null)
+                                video_worker.postMessage(data);
 
                             var width = data.width;
                             var height = data.height;
@@ -7164,7 +7165,8 @@ function x_axis_mouseleave() {
         type: "end_video"
     };
 
-    video_worker.postMessage(request);
+    if (video_worker != null)
+        video_worker.postMessage(request);
 
     if (videoFrame != null) {
         videoFrame.img = null;
