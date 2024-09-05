@@ -27,6 +27,7 @@ self.addEventListener('message', function (e) {
                 codec: "hev1.1.60.L153.B0.0.0.0.0.0",
                 codedWidth: data.width,
                 codedHeight: data.height,
+                optimizeForLatency: true,
             };
 
             VideoDecoder.isConfigSupported(config).then((supported) => {
