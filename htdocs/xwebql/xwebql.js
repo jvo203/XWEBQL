@@ -876,7 +876,25 @@ async function mainRenderer() {
 
         vidInterval = 1000 / vidFPS;
 
-        video_worker = new Worker("video_worker.js" + '?' + encodeURIComponent(get_js_version()));
+        const result = await VideoDecoder.isConfigSupported({
+            codec: "hev1.1.60.L153.B0.0.0.0.0.0",
+        });
+        isHevcSupported = result.supported === true;
+        console.log(isHevcSupported ? "WebCodecs::HEVC is supported" : "WebCodecs::HEVC is not supported");
+
+        if (isHevcSupported) {
+            video_worker = new Worker("video_worker.js" + '?' + encodeURIComponent(get_js_version()));
+
+            video_worker.onmessage = function (e) {
+                if (e.data.type === 'video') {
+                    videoFrame = e.data.frame;
+                    videoFrameId = e.data.frameId;
+                    videoFrameTime = e.data.frameTime;
+                }
+            };
+        } else {
+            video_worker = null;
+        }
 
         //track the bitrate with a Kalman Filter
         target_bitrate = 1000; // was 1000
