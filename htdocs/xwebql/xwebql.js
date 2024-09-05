@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2024-09-04.1";
+    return "JS2024-09-05.6";
 }
 
 function uuidv4() {
@@ -875,6 +875,8 @@ async function mainRenderer() {
             vidFPS = parseInt(video_fps_control);
 
         vidInterval = 1000 / vidFPS;
+
+        video_worker = new Worker("video_worker.js" + '?' + encodeURIComponent(get_js_version()));
 
         //track the bitrate with a Kalman Filter
         target_bitrate = 1000; // was 1000
@@ -6669,6 +6671,8 @@ async function open_websocket_connection(_datasetId, index) {
                         var data = JSON.parse(received_msg);
 
                         if (data.type == "init_video") {
+                            video_worker.postMessage(data);
+
                             var width = data.width;
                             var height = data.height;
 
@@ -6691,39 +6695,6 @@ async function open_websocket_connection(_datasetId, index) {
                                         //image_bounding_dims: imageFrame.image_bounding_dims,
                                         //image_bounding_dims: {x1: 0, y1: 0, width: width, height: height},
                                     }
-
-                                    const config = {
-                                        codec: "hevc",
-                                        codedWidth: data.width,
-                                        codedHeight: data.height,
-                                    };
-
-                                    VideoDecoder.isConfigSupported(config).then((supported) => {
-                                        if (supported) {
-                                            console.log("WebCodecs::HEVC is supported");
-
-                                            const init = {
-                                                output: (frame) => {
-                                                    console.log("decoded video frame: ", frame);
-                                                    //videoFrame.img = frame;
-                                                    //videoFrame.img = new ImageData(frame, videoFrame.width, videoFrame.height);
-                                                },
-                                                error: (e) => {
-                                                    console.log(e.message);
-                                                },
-                                            };
-
-                                            const decoder = new VideoDecoder(init);
-                                            decoder.configure(config);
-                                            videoFrame.decoder = decoder;
-                                        } else {
-                                            console.log("WebCodecs::HEVC is not supported");
-                                        }
-                                    }).catch((e) => {
-                                        console.log(e.message);
-                                    });
-
-                                    console.log("videoFrame: ", videoFrame);
                                 }
                             }
 
@@ -7175,15 +7146,10 @@ function x_axis_mouseleave() {
         type: "end_video"
     };
 
+    video_worker.postMessage(request);
+
     if (videoFrame != null) {
         videoFrame.img = null;
-
-        try {
-            videoFrame.decoder.close();
-        } catch (e) {
-            console.log(e);
-        };
-
         videoFrame = null;
 
         if (wsConn != null && wsConn.readyState == 1)
