@@ -17,6 +17,10 @@ function get_h265_nal_unit_type(byte) {
 
 console.log('WebCodecs API Video Worker initiated');
 
+// timestamp, duration in microseconds                     
+const duration = 1000 / 60 * 1000;
+var timestamp = 0;
+
 self.addEventListener('message', function (e) {
     try {
         let data = e.data;
@@ -27,7 +31,7 @@ self.addEventListener('message', function (e) {
                 codec: "hev1.1.60.L153.B0.0.0.0.0.0",
                 codedWidth: data.width,
                 codedHeight: data.height,
-                optimizeForLatency: true,
+                /*optimizeForLatency: true,*/
             };
 
             VideoDecoder.isConfigSupported(config).then((supported) => {
@@ -36,9 +40,7 @@ self.addEventListener('message', function (e) {
 
                     const init = {
                         output: (frame) => {
-                            console.log("decoded video frame: ", frame);
-                            //videoFrame.img = frame;
-                            //videoFrame.img = new ImageData(frame, videoFrame.width, videoFrame.height);
+                            console.log("WebCodecs::HEVC output video frame: ", frame);
                             frame.close();
                         },
                         error: (e) => {
@@ -72,10 +74,6 @@ self.addEventListener('message', function (e) {
         }
 
         if (data.type == "video") {
-            // make a current timestamp in microseconds
-            const timestamp = performance.now() * 1000;
-            const duration = 1000 / 30;
-
             let nal_start = 0;
 
             if (is_nal_unit_start1(data.frame))
@@ -90,13 +88,11 @@ self.addEventListener('message', function (e) {
 
             const chunk = new EncodedVideoChunk({ data: data.frame, timestamp: timestamp, type: type, duration: duration });
             this.decoder.decode(chunk);
-            console.log("WebCodecs::HEVC video chunk decoded:", chunk);
+            console.log("WebCodecs::HEVC decoded video chunk:", chunk);
+            timestamp += duration;
         }
     } catch (e) {
         console.log('WebCodecs API Video Worker', e);
     }
-
-    //self.postMessage(band);
-    //self.close();
 }, false);
 
