@@ -51,6 +51,7 @@ self.addEventListener('message', function (e) {
                     const decoder = new VideoDecoder(init);
                     decoder.configure(config);
                     this.decoder = decoder;
+
                     console.log("WebCodecs::HEVC decoder created:", this.decoder);
                 } else {
                     console.log("WebCodecs::HEVC is not supported");
