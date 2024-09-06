@@ -17,9 +17,7 @@ function get_h265_nal_unit_type(byte) {
 
 console.log('WebCodecs API Video Worker initiated');
 
-// timestamp, duration in microseconds                     
-const duration = 1000 / 60 * 1000;
-var timestamp = 0;
+var timestamp = 0; // [microseconds]
 
 self.addEventListener('message', function (e) {
     try {
@@ -27,6 +25,8 @@ self.addEventListener('message', function (e) {
         console.log('WebCodecs API Video Worker message received:', data);
 
         if (data.type == "init_video") {
+            timestamp = 0;
+
             const config = {
                 codec: "hev1.1.60.L153.B0.0.0.0.0.0",
                 codedWidth: data.width,
@@ -86,10 +86,10 @@ self.addEventListener('message', function (e) {
 
             const type = (nal_type == 19 || nal_type == 20) ? "key" : "delta";
 
-            const chunk = new EncodedVideoChunk({ data: data.frame, timestamp: timestamp, type: type, duration: duration });
+            const chunk = new EncodedVideoChunk({ data: data.frame, timestamp: timestamp, type: type });
             this.decoder.decode(chunk);
             console.log("WebCodecs::HEVC decoded video chunk:", chunk);
-            timestamp += duration;
+            timestamp += 1;
         }
     } catch (e) {
         console.log('WebCodecs API Video Worker', e);
