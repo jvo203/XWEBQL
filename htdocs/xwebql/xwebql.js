@@ -6593,7 +6593,7 @@ async function open_websocket_connection(_datasetId, index) {
                                     };
 
                                     if (video_worker != null)
-                                        video_worker.postMessage(request);
+                                        video_worker.postMessage(request, [request.frame.buffer]);
                                 } catch (e) {
                                     // console.log(e);
                                 };
