@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2024-09-06.11";
+    return "JS2024-09-07.4";
 }
 
 function uuidv4() {
@@ -877,7 +877,8 @@ async function mainRenderer() {
         vidInterval = 1000 / vidFPS;
 
         const result = await VideoDecoder.isConfigSupported({
-            codec: "hev1.1.60.L153.B0.0.0.0.0.0",
+            /*codec: "hev1.1.60.L153.B0.0.0.0.0.0",*/
+            codec: "hvc1.1.6.L120.00",
         });
         isHevcSupported = result.supported === true;
         console.log(isHevcSupported ? "WebCodecs::HEVC is supported" : "WebCodecs::HEVC is not supported");

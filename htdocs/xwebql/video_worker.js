@@ -28,10 +28,11 @@ self.addEventListener('message', function (e) {
             timestamp = 0;
 
             const config = {
-                codec: "hev1.1.60.L153.B0.0.0.0.0.0",
+                /*codec: "hev1.1.60.L153.B0.0.0.0.0.0",*/
+                codec: "hvc1.1.6.L120.00",
                 codedWidth: data.width,
                 codedHeight: data.height,
-                /*optimizeForLatency: true,*/
+                optimizeForLatency: true,
             };
 
             VideoDecoder.isConfigSupported(config).then((supported) => {
