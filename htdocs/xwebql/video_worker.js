@@ -87,7 +87,6 @@ self.addEventListener('message', function (e) {
             console.log("HEVC NAL unit type:", nal_type);
 
             const type = (nal_type == 19 || nal_type == 20) ? "key" : "delta";
-
             const chunk = new EncodedVideoChunk({ data: data.frame, timestamp: timestamp, type: type });
             timestamp += 1;
 
