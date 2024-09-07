@@ -12,6 +12,7 @@ using Sockets
 using WebSockets
 using x265_jll
 using ZfpCompression
+using UUIDs
 
 # needed by the x265 encoder
 mutable struct x265_picture
@@ -1647,7 +1648,8 @@ function ws_coroutine(ws, ids)
                 put!(outgoing, resp)
 
                 # open a binary file for the Annex-B format, the filename containing image_width and image_height
-                fname = "/tmp/video-$image_width-$image_height.h265"
+                uuid = UUIDs.uuid4()
+                fname = "/tmp/video-$uuid-$image_width-$image_height.h265"
                 annexb = open(fname, "w")
 
                 begin
