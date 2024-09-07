@@ -1185,6 +1185,8 @@ function ws_coroutine(ws, ids)
     local last_video_seq::Integer, last_frame::Float64
     local image_width::Integer, image_height::Integer, bDownsize::Bool
 
+    local annexb
+
     # user session    
     x = nothing
     y = nothing
@@ -1503,6 +1505,9 @@ function ws_coroutine(ws, ids)
                                     write(resp, payload)
 
                                     put!(outgoing, resp)
+
+                                    # append the NAL unit to the Annex-B file
+                                    write(annexb, payload)
                                 end
                             end
                         end
@@ -1640,6 +1645,10 @@ function ws_coroutine(ws, ids)
                 resp = JSON.json(dict)
 
                 put!(outgoing, resp)
+
+                # open a binary file for the Annex-B format, the filename containing image_width and image_height
+                fname = "/tmp/video-$image_width-$image_height.h265"
+                annexb = open(fname, "w")
 
                 begin
                     try
@@ -1819,6 +1828,8 @@ function ws_coroutine(ws, ids)
 
                         @info "cleaned up x265 parameters"
                     end
+
+                    close(annexb)
                 catch e
                     println(e)
                 finally
