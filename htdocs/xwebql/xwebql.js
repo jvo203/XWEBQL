@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2024-09-07.4";
+    return "JS2024-09-08.0";
 }
 
 function uuidv4() {
@@ -6716,12 +6716,18 @@ async function open_websocket_connection(_datasetId, index) {
                                     let tmp = imageFrame.image_bounding_dims;
                                     let dims = { x1: tmp.x1, y1: height - tmp.y1 - tmp.height, width: tmp.width, height: tmp.height };
 
+                                    let imageCanvas = document.createElement('canvas');
+                                    imageCanvas.style.visibility = "hidden";
+                                    imageCanvas.width = width;
+                                    imageCanvas.height = height;
+
                                     videoFrame = {
                                         width: width,
                                         height: height,
                                         padded_width: data.padded_width,
                                         padded_height: data.padded_height,
                                         img: null,
+                                        canvas: imageCanvas,
                                         scaleX: imageFrame.width / width,
                                         scaleY: imageFrame.height / height,
                                         image_bounding_dims: dims,
@@ -7547,17 +7553,11 @@ function process_video() {
     //let image_bounding_dims = imageContainer[index - 1].image_bounding_dims;
     //{x1: 0, y1: 0, width: w, height: h};
 
-    let imageCanvas = document.createElement('canvas');
-    imageCanvas.style.visibility = "hidden";
-    var context = imageCanvas.getContext('2d');
-
     let imageData = videoFrame.img;
     let image_bounding_dims = videoFrame.image_bounding_dims;
 
-    imageCanvas.width = imageData.width;
-    imageCanvas.height = imageData.height;
-    //console.log(imageCanvas.width, imageCanvas.height);
-
+    let imageCanvas = videoFrame.canvas;
+    var context = imageCanvas.getContext('2d');
     context.putImageData(imageData, 0, 0);
 
     //next display the video frame
