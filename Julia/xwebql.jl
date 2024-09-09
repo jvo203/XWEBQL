@@ -12,7 +12,7 @@ using Sockets
 using WebSockets
 using x265_jll
 using ZfpCompression
-using UUIDs
+#using UUIDs
 
 # needed by the x265 encoder
 mutable struct x265_picture
