@@ -2,12 +2,13 @@
 #include <emscripten/bind.h>
 #include <emscripten/val.h>
 
+#ifdef HEVC
 extern "C"
 {
 // HEVC video decoder
 #include "hevc_decoder.h"
 }
-
+#else
 extern "C"
 {
 // ZFP decoder
@@ -19,6 +20,7 @@ extern "C"
 // LZ4 decoder
 #include "lz4.h"
 }
+#endif
 
 static float *pixelBuffer = NULL;
 static size_t pixelLength = 0;
@@ -48,6 +50,7 @@ struct buffer
     unsigned int size;
 };
 
+#ifndef HEVC
 /*val*/ buffer decompressZFPimage(int img_width, int img_height, std::string const &bytes)
 {
     buffer wasmBuffer = {0, 0};
@@ -280,7 +283,9 @@ std::vector<unsigned char> decompressLZ4(int img_width, int img_height, std::str
 
     // return val(typed_memory_view(alphaLength, alphaBuffer));
 }
+#endif
 
+#ifdef HEVC
 void hevc_init_frame(int va_count, int width, int height)
 {
     size_t len = width * height * 4;
@@ -347,6 +352,7 @@ void hevc_destroy_frame(int va_count)
 
     // return val(typed_memory_view(canvasLength, canvasBuffer));
 }
+#endif
 
 EMSCRIPTEN_BINDINGS(Wrapper)
 {
