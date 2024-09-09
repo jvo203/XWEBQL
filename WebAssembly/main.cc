@@ -355,11 +355,14 @@ EMSCRIPTEN_BINDINGS(Wrapper)
     value_array<buffer>("buffer")
         .element(&buffer::ptr)
         .element(&buffer::size);
+#ifndef HEVC
     function("decompressZFPimage", &decompressZFPimage);
     function("decompressZFPspectrum", &decompressZFPspectrum);
     function("decompressLZ4", &decompressLZ4);
     function("decompressLZ4mask", &decompressLZ4mask);
+#else
     function("hevc_init_frame", &hevc_init_frame);
     function("hevc_destroy_frame", &hevc_destroy_frame);
     function("hevc_decode_frame", &hevc_decode_frame);
+#endif
 }

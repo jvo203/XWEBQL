@@ -1,3 +1,49 @@
+// WebAssembly
+// Polyfill instantiateStreaming for browsers missing it
+if (!WebAssembly.instantiateStreaming) {
+    console.log('WebAssembly.instantiateStreaming polyfill initiated');
+    WebAssembly.instantiateStreaming = async (resp, importObject) => {
+        const source = await (await resp).arrayBuffer();
+        return await WebAssembly.instantiate(source, importObject);
+    };
+}
+
+// Create promise to handle Worker calls whilst
+// module is still initialising
+/*let wasmResolve;
+let wasmReady = new Promise((resolve) => {
+    wasmResolve = resolve;
+})
+
+WebAssembly.instantiateStreaming(fetch('hevc.wasm'), {})
+    .then(instantiatedModule => {
+        const wasmExports = instantiatedModule.instance.exports;
+
+        // Resolve our exports for when the messages
+        // to execute functions come through
+        wasmResolve(wasmExports);
+
+        console.log('WebAssembly HEVC module initiated');
+    });*/
+
+
+// async function to wait until Module.ready is defined
+async function waitForModuleReady() {
+    while (typeof Module === 'undefined' || typeof Module.ready === 'undefined') {
+        console.log('waiting for Module.ready...');
+        await sleep(100);
+    }
+}
+
+importScripts('hevc.js');
+
+waitForModuleReady().then(() => {
+    console.log('WebAssembly HEVC module initiated');
+}
+);
+
+// HEVC
+
 // #define IS_NAL_UNIT_START(buffer_ptr) (!buffer_ptr[0] && !buffer_ptr[1] && !buffer_ptr[2] && (buffer_ptr[3] == 1))
 function is_nal_unit_start(buffer_ptr) {
     return (!buffer_ptr[0] && !buffer_ptr[1] && !buffer_ptr[2] && (buffer_ptr[3] == 1));
@@ -29,6 +75,13 @@ self.addEventListener('message', function (e) {
             timestamp = 0;
             first = true;
             this.ctx = data.canvas.getContext('2d');
+
+            try {
+                //init the HEVC decoder		
+                Module.hevc_init_frame(1, data.width, data.height);
+            } catch (e) {
+                console.log(e);
+            };
 
             const config = {
                 /*codec: "hev1.1.60.L153.B0.0.0.0.0.0",*/
@@ -71,6 +124,12 @@ self.addEventListener('message', function (e) {
 
         if (data.type == "end_video") {
             try {
+                Module.hevc_destroy_frame(1);
+            } catch (e) {
+                console.log(e);
+            };
+
+            try {
                 this.decoder.close();
                 console.log("WebCodecs::HEVC decoder closed");
             } catch (e) {
@@ -81,7 +140,7 @@ self.addEventListener('message', function (e) {
         }
 
         if (data.type == "video") {
-            let nal_start = 0;
+            /*let nal_start = 0;
 
             if (is_nal_unit_start1(data.frame))
                 nal_start = 3;
@@ -102,7 +161,15 @@ self.addEventListener('message', function (e) {
 
             this.decoder.decode(chunk);
             first = false;
-            console.log("WebCodecs::HEVC decoded video chunk:", chunk);
+            console.log("WebCodecs::HEVC decoded video chunk:", chunk);*/
+
+            // use the WASM HEVC decoder
+            var res = Module.hevc_decode_frame(data.width, data.height, data.frame, 0, data.colourmap, data.fill, data.contours);
+            var decoded = new Uint8ClampedArray(Module.HEAPU8.subarray(res[0], res[0] + res[1])); // it's OK to use .subarray() instead of .slice() as a copy is made in "new Uint8ClampedArray()"
+            var img = new ImageData(decoded, data.width, data.height);
+            this.ctx.putImageData(img, 0, 0);
+            self.postMessage({ type: "frame", timestamp: timestamp });
+            timestamp += 1;
         }
     } catch (e) {
         console.log('WebCodecs API Video Worker', e);

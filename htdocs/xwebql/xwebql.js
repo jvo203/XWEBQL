@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2024-09-09.5";
+    return "JS2024-09-09.15";
 }
 
 function uuidv4() {
@@ -9,13 +9,57 @@ function uuidv4() {
 
 function get_worker_script() {
     return `self.addEventListener('message', function (e) {        
-        importScripts('https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/marchingsquares-isobands.min.js');        
-        importScripts('https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/marchingsquares-isocontours.min.js');        
+        importScripts('https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/marchingsquares-isobands.min.js');
+        importScripts('https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/marchingsquares-isocontours.min.js');
         var band = MarchingSquaresJS.isoBands(e.data.data, e.data.lowerBand, e.data.upperBand - e.data.lowerBand);
         self.postMessage(band);
         self.close();
     }, false);`
 }
+
+function get_video_worker_script() {
+    return `importScripts('https://cdn.jsdelivr.net/gh/jvo203/XWEBQL/htdocs/xwebql/hevc.min.js');
+        self.addEventListener('message', function (e) {
+        try {
+            let data = e.data;
+            console.log('WASM Video Worker message received:', data);
+            if (data.type == "init_video") {            
+                this.ctx = data.canvas.getContext('2d');
+
+                try {
+                    //init the HEVC decoder		
+                    Module.hevc_init_frame(1, data.width, data.height);
+                } catch (e) {
+                    console.log(e);
+                };
+
+                return;
+            }
+
+            if (data.type == "end_video") {
+                try {
+                    Module.hevc_destroy_frame(1);
+                } catch (e) {
+                    console.log(e);
+                };        
+
+                return;
+            }
+
+            if (data.type == "video") {            
+                var res = Module.hevc_decode_frame(data.width, data.height, data.frame, 0, data.colourmap, data.fill, data.contours);
+                var decoded = new Uint8ClampedArray(Module.HEAPU8.subarray(res[0], res[0] + res[1])); // it's OK to use .subarray() instead of .slice() as a copy is made in "new Uint8ClampedArray()"
+                var img = new ImageData(decoded, data.width, data.height);
+                this.ctx.putImageData(img, 0, 0);
+                self.postMessage({ type: "frame"});            
+            }
+        } catch (e) {
+            console.log('WASM Video Worker', e);
+        }
+    }, false);
+    console.log('WASM Video Worker initiated');`
+}
+
 
 const wasm_supported = (() => {
     try {
@@ -876,8 +920,15 @@ async function mainRenderer() {
 
         vidInterval = 1000 / vidFPS;
 
-        const result = await VideoDecoder.isConfigSupported({
-            /*codec: "hev1.1.60.L153.B0.0.0.0.0.0",*/
+        video_worker = new Worker('data:text/html;base64,' + window.btoa(get_video_worker_script()));
+        video_worker.onmessage = function (e) {
+            if (e.data.type === 'frame') {
+                requestAnimationFrame(process_video);
+            }
+        }
+
+        /*const result = await VideoDecoder.isConfigSupported({
+            //codec: "hev1.1.60.L153.B0.0.0.0.0.0",
             codec: "hvc1.1.6.L120.00",
         });
         isHevcSupported = result.supported === true;
@@ -888,15 +939,12 @@ async function mainRenderer() {
 
             video_worker.onmessage = function (e) {
                 if (e.data.type === 'frame') {
-                    let timestamp = e.data.timestamp;
-                    console.log("video_worker::frame", timestamp);
-
+                    //let timestamp = e.data.timestamp;
+                    //console.log("video_worker::frame", timestamp);
                     requestAnimationFrame(process_video);
                 }
             };
-        } else {
-            video_worker = null;
-        }
+        }*/
 
         //track the bitrate with a Kalman Filter
         target_bitrate = 1000; // was 1000
@@ -6581,8 +6629,8 @@ async function open_websocket_connection(_datasetId, index) {
                                         contours = parseInt(document.getElementById('contour_lines').value) + 1;
 
                                     //HEVC                                   
-                                    var res = Module.hevc_decode_frame(videoFrame.width, videoFrame.height, frame, 0, colourmap, fill, contours);
-                                    data = new Uint8ClampedArray(Module.HEAPU8.subarray(res[0], res[0] + res[1])); // it's OK to use .subarray() instead of .slice() as a copy is made in "new Uint8ClampedArray()"
+                                    //var res = Module.hevc_decode_frame(videoFrame.width, videoFrame.height, frame, 0, colourmap, fill, contours);
+                                    //data = new Uint8ClampedArray(Module.HEAPU8.subarray(res[0], res[0] + res[1])); // it's OK to use .subarray() instead of .slice() as a copy is made in "new Uint8ClampedArray()"
 
                                     var request = {
                                         type: "video",
@@ -6594,14 +6642,16 @@ async function open_websocket_connection(_datasetId, index) {
                                         contours: contours,
                                     };
 
-                                    if (video_worker != null)
+                                    if (video_worker != null) {
+                                        console.log("posting a video frame to the worker", request);
                                         video_worker.postMessage(request, [request.frame.buffer]);
+                                    }
                                 } catch (e) {
                                     // console.log(e);
                                 };
 
-                                var img = new ImageData(data, videoFrame.width, videoFrame.height);
-                                videoFrame.img = img;
+                                //var img = new ImageData(data, videoFrame.width, videoFrame.height);
+                                //videoFrame.img = img;
 
                                 //requestAnimationFrame(process_video);
                             }
@@ -7548,13 +7598,13 @@ function x_axis_right() {
 };
 
 function process_video() {
-    if (!streaming || videoFrame == null || videoFrame.img == null)
+    if (!streaming || videoFrame == null /*|| videoFrame.img == null*/)
         return;
 
     //let image_bounding_dims = imageContainer[index - 1].image_bounding_dims;
     //{x1: 0, y1: 0, width: w, height: h};
 
-    let imageData = videoFrame.img;
+    //let imageData = videoFrame.img;
     let image_bounding_dims = videoFrame.image_bounding_dims;
 
     let imageCanvas = videoFrame.canvas;

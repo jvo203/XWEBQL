@@ -57,10 +57,15 @@ DEP = $(OBJ:%.o=%.d)
 wasm: $(FFMPEG_OBJ) $(OBJ)
 	em++ -Oz $(EMFLAGS) $(DEFS) main.cc $(FFMPEG_OBJ) $(OBJ) -o ../htdocs/xwebql/client.$(VERSION).js --post-js module-post.js $(INCLUDE) -L$(LIBRARY) $(CXXFLAGS) $(LDFLAGS)
 
+hevc: $(FFMPEG_OBJ) $(OBJ)
+	em++ -Oz $(EMFLAGS) $(DEFS) -DHEVC -s ENVIRONMENT=worker main.cc $(FFMPEG_OBJ) $(OBJ) -o ../htdocs/xwebql/hevc.js --post-js module-post.js $(INCLUDE) -L$(LIBRARY) $(CXXFLAGS) $(LDFLAGS)
+
+
 # -s "EXPORTED_FUNCTIONS=['_hevc_init','_hevc_destroy','_hevc_decode_nal_unit']"
 
 clean:
 	rm -f ../htdocs/xwebql/client.*.js ../htdocs/xwebql/client.*.js.mem ../htdocs/xwebql/client.*.wasm
+	rm -f ../htdocs/xwebql/hevc.js ../htdocs/xwebql/hevc.js.mem ../htdocs/xwebql/hevc.wasm
 
 clean2:
 	rm -f $(FFMPEG_OBJ) $(OBJ)
