@@ -890,10 +890,8 @@ async function mainRenderer() {
                 if (e.data.type === 'frame') {
                     let timestamp = e.data.timestamp;
                     console.log("video_worker::frame", timestamp);
-                    process_video();
-                    /*videoFrame = e.data.frame;
-                    videoFrameId = e.data.frameId;
-                    videoFrameTime = e.data.frameTime;*/
+
+                    requestAnimationFrame(process_video);
                 }
             };
         } else {
@@ -6605,9 +6603,9 @@ async function open_websocket_connection(_datasetId, index) {
                                 var img = new ImageData(data, videoFrame.width, videoFrame.height);
                                 videoFrame.img = img;
 
-                                requestAnimationFrame(function () {
+                                /*requestAnimationFrame(function () {
                                     process_video();
-                                });
+                                });*/
                             }
                             else {
                                 try {
