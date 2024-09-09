@@ -18,6 +18,7 @@ function get_h265_nal_unit_type(byte) {
 console.log('WebCodecs API Video Worker initiated');
 
 var timestamp = 0; // [microseconds]
+var first = true;
 
 self.addEventListener('message', function (e) {
     try {
@@ -26,6 +27,7 @@ self.addEventListener('message', function (e) {
 
         if (data.type == "init_video") {
             timestamp = 0;
+            first = true;
             this.ctx = data.canvas.getContext('2d');
 
             const config = {
@@ -93,7 +95,13 @@ self.addEventListener('message', function (e) {
             const chunk = new EncodedVideoChunk({ data: data.frame, timestamp: timestamp, type: type });
             timestamp += 1;
 
+            if (first && type != "key") {
+                console.log('WebCodecs::HEVC not a keyframe:', nal_type);
+                return;
+            }
+
             this.decoder.decode(chunk);
+            first = false;
             console.log("WebCodecs::HEVC decoded video chunk:", chunk);
         }
     } catch (e) {

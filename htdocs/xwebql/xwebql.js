@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2024-09-09.2";
+    return "JS2024-09-09.5";
 }
 
 function uuidv4() {
@@ -6603,9 +6603,7 @@ async function open_websocket_connection(_datasetId, index) {
                                 var img = new ImageData(data, videoFrame.width, videoFrame.height);
                                 videoFrame.img = img;
 
-                                /*requestAnimationFrame(function () {
-                                    process_video();
-                                });*/
+                                //requestAnimationFrame(process_video);
                             }
                             else {
                                 try {
@@ -7560,8 +7558,8 @@ function process_video() {
     let image_bounding_dims = videoFrame.image_bounding_dims;
 
     let imageCanvas = videoFrame.canvas;
-    //var context = imageCanvas.getContext('2d');
-    //context.putImageData(imageData, 0, 0);
+    /*var context = imageCanvas.getContext('2d');
+    context.putImageData(imageData, 0, 0);*/
 
     //next display the video frame
     //place the image onto the main canvas
