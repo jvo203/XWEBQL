@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2024-09-08.0";
+    return "JS2024-09-09.2";
 }
 
 function uuidv4() {
@@ -887,10 +887,13 @@ async function mainRenderer() {
             video_worker = new Worker("video_worker.js" + '?' + encodeURIComponent(get_js_version()));
 
             video_worker.onmessage = function (e) {
-                if (e.data.type === 'video') {
-                    videoFrame = e.data.frame;
+                if (e.data.type === 'frame') {
+                    let timestamp = e.data.timestamp;
+                    console.log("video_worker::frame", timestamp);
+                    process_video();
+                    /*videoFrame = e.data.frame;
                     videoFrameId = e.data.frameId;
-                    videoFrameTime = e.data.frameTime;
+                    videoFrameTime = e.data.frameTime;*/
                 }
             };
         } else {
@@ -6703,9 +6706,6 @@ async function open_websocket_connection(_datasetId, index) {
                         var data = JSON.parse(received_msg);
 
                         if (data.type == "init_video") {
-                            if (video_worker != null)
-                                video_worker.postMessage(data);
-
                             var width = data.width;
                             var height = data.height;
 
@@ -6733,6 +6733,11 @@ async function open_websocket_connection(_datasetId, index) {
                                         image_bounding_dims: dims,
                                         //image_bounding_dims: imageFrame.image_bounding_dims,
                                         //image_bounding_dims: {x1: 0, y1: 0, width: width, height: height},
+                                    }
+
+                                    if (video_worker != null) {
+                                        data.canvas = imageCanvas.transferControlToOffscreen();
+                                        video_worker.postMessage(data, [data.canvas]);
                                     }
                                 }
                             }
@@ -7557,8 +7562,8 @@ function process_video() {
     let image_bounding_dims = videoFrame.image_bounding_dims;
 
     let imageCanvas = videoFrame.canvas;
-    var context = imageCanvas.getContext('2d');
-    context.putImageData(imageData, 0, 0);
+    //var context = imageCanvas.getContext('2d');
+    //context.putImageData(imageData, 0, 0);
 
     //next display the video frame
     //place the image onto the main canvas

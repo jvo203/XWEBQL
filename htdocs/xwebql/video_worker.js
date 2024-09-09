@@ -26,6 +26,7 @@ self.addEventListener('message', function (e) {
 
         if (data.type == "init_video") {
             timestamp = 0;
+            this.ctx = data.canvas.getContext('2d');
 
             const config = {
                 /*codec: "hev1.1.60.L153.B0.0.0.0.0.0",*/
@@ -42,6 +43,8 @@ self.addEventListener('message', function (e) {
                     const init = {
                         output: (frame) => {
                             console.log("WebCodecs::HEVC output video frame: ", frame);
+                            this.ctx.drawImage(frame, 0, 0, frame.displayWidth, frame.displayHeight);
+                            self.postMessage({ type: "frame", timestamp: frame.timestamp });
                             frame.close();
                         },
                         error: (e) => {
