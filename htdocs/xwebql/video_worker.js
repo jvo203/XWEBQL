@@ -10,13 +10,14 @@ if (!WebAssembly.instantiateStreaming) {
 
 // Create promise to handle Worker calls whilst
 // module is still initialising
-/*let wasmResolve;
+let wasmResolve;
 let wasmReady = new Promise((resolve) => {
     wasmResolve = resolve;
 })
 
-WebAssembly.instantiateStreaming(fetch('hevc.wasm'), {})
+WebAssembly.instantiateStreaming(fetch('https://cdn.jsdelivr.net/gh/jvo203/XWEBQL/htdocs/xwebql/hevc.wasm'), {})
     .then(instantiatedModule => {
+        console.log('instantiatedModule:', instantiatedModule);
         const wasmExports = instantiatedModule.instance.exports;
 
         // Resolve our exports for when the messages
@@ -24,23 +25,24 @@ WebAssembly.instantiateStreaming(fetch('hevc.wasm'), {})
         wasmResolve(wasmExports);
 
         console.log('WebAssembly HEVC module initiated');
-    });*/
+    });
 
 
 // async function to wait until Module.ready is defined
-async function waitForModuleReady() {
+/*async function waitForModuleReady() {
     while (typeof Module === 'undefined' || typeof Module.ready === 'undefined') {
         console.log('waiting for Module.ready...');
         await sleep(100);
     }
 }
 
-importScripts('hevc.js');
+//importScripts('hevc.js');
+importScripts('https://cdn.jsdelivr.net/gh/jvo203/XWEBQL/htdocs/xwebql/hevc.min.js');
 
 waitForModuleReady().then(() => {
     console.log('WebAssembly HEVC module initiated');
 }
-);
+);*/
 
 // HEVC
 

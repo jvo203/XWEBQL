@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2024-09-09.15";
+    return "JS2024-09-09.20";
 }
 
 function uuidv4() {
@@ -16,50 +16,6 @@ function get_worker_script() {
         self.close();
     }, false);`
 }
-
-function get_video_worker_script() {
-    return `importScripts('https://cdn.jsdelivr.net/gh/jvo203/XWEBQL/htdocs/xwebql/hevc.min.js');
-        self.addEventListener('message', function (e) {
-        try {
-            let data = e.data;
-            console.log('WASM Video Worker message received:', data);
-            if (data.type == "init_video") {            
-                this.ctx = data.canvas.getContext('2d');
-
-                try {
-                    //init the HEVC decoder		
-                    Module.hevc_init_frame(1, data.width, data.height);
-                } catch (e) {
-                    console.log(e);
-                };
-
-                return;
-            }
-
-            if (data.type == "end_video") {
-                try {
-                    Module.hevc_destroy_frame(1);
-                } catch (e) {
-                    console.log(e);
-                };        
-
-                return;
-            }
-
-            if (data.type == "video") {            
-                var res = Module.hevc_decode_frame(data.width, data.height, data.frame, 0, data.colourmap, data.fill, data.contours);
-                var decoded = new Uint8ClampedArray(Module.HEAPU8.subarray(res[0], res[0] + res[1])); // it's OK to use .subarray() instead of .slice() as a copy is made in "new Uint8ClampedArray()"
-                var img = new ImageData(decoded, data.width, data.height);
-                this.ctx.putImageData(img, 0, 0);
-                self.postMessage({ type: "frame"});            
-            }
-        } catch (e) {
-            console.log('WASM Video Worker', e);
-        }
-    }, false);
-    console.log('WASM Video Worker initiated');`
-}
-
 
 const wasm_supported = (() => {
     try {
@@ -920,7 +876,7 @@ async function mainRenderer() {
 
         vidInterval = 1000 / vidFPS;
 
-        video_worker = new Worker('data:text/html;base64,' + window.btoa(get_video_worker_script()));
+        video_worker = new Worker('https://cdn.jsdelivr.net/gh/jvo203/XWEBQL/htdocs/xwebql/wasm_worker.js');
         video_worker.onmessage = function (e) {
             if (e.data.type === 'frame') {
                 requestAnimationFrame(process_video);
