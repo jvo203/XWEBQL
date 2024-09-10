@@ -1,51 +1,3 @@
-// WebAssembly
-// Polyfill instantiateStreaming for browsers missing it
-if (!WebAssembly.instantiateStreaming) {
-    console.log('WebAssembly.instantiateStreaming polyfill initiated');
-    WebAssembly.instantiateStreaming = async (resp, importObject) => {
-        const source = await (await resp).arrayBuffer();
-        return await WebAssembly.instantiate(source, importObject);
-    };
-}
-
-// Create promise to handle Worker calls whilst
-// module is still initialising
-let wasmResolve;
-let wasmReady = new Promise((resolve) => {
-    wasmResolve = resolve;
-})
-
-WebAssembly.instantiateStreaming(fetch('https://cdn.jsdelivr.net/gh/jvo203/XWEBQL/htdocs/xwebql/hevc.wasm'), {})
-    .then(instantiatedModule => {
-        console.log('instantiatedModule:', instantiatedModule);
-        const wasmExports = instantiatedModule.instance.exports;
-
-        // Resolve our exports for when the messages
-        // to execute functions come through
-        wasmResolve(wasmExports);
-
-        console.log('WebAssembly HEVC module initiated');
-    });
-
-
-// async function to wait until Module.ready is defined
-/*async function waitForModuleReady() {
-    while (typeof Module === 'undefined' || typeof Module.ready === 'undefined') {
-        console.log('waiting for Module.ready...');
-        await sleep(100);
-    }
-}
-
-//importScripts('hevc.js');
-importScripts('https://cdn.jsdelivr.net/gh/jvo203/XWEBQL/htdocs/xwebql/hevc.min.js');
-
-waitForModuleReady().then(() => {
-    console.log('WebAssembly HEVC module initiated');
-}
-);*/
-
-// HEVC
-
 // #define IS_NAL_UNIT_START(buffer_ptr) (!buffer_ptr[0] && !buffer_ptr[1] && !buffer_ptr[2] && (buffer_ptr[3] == 1))
 function is_nal_unit_start(buffer_ptr) {
     return (!buffer_ptr[0] && !buffer_ptr[1] && !buffer_ptr[2] && (buffer_ptr[3] == 1));
@@ -59,14 +11,35 @@ function is_nal_unit_start1(buffer_ptr) {
 // #define GET_H265_NAL_UNIT_TYPE(buffer_ptr) ((buffer_ptr[0] & 0x7E) >> 1)
 function get_h265_nal_unit_type(byte) {
     return ((byte & 0x7E) >> 1);
-    // (Byte >> 1) & 0x3f
-    //return ((byte >> 1) & 0x3f);
+}
+
+function demux(buffer) {
+    let result = [];
+    //let view = new DataView(buffer);
+    let view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+    let offset = 0;
+
+    let next_offset = 100;
+    while (offset < buffer.byteLength) {
+        while (next_offset < buffer.byteLength) {
+            if (next_offset > (buffer.byteLength - 4) || view.getUint32(next_offset, false) == 0x1) {
+                break;
+            }
+            next_offset++;
+        }
+        result.push(buffer.slice(offset, next_offset));
+        //console.log(`Offset: ${offset}`);
+        offset = next_offset;
+        next_offset = offset + 4;
+    }
+    return result;//.slice(0, 100);        
 }
 
 console.log('WebCodecs API Video Worker initiated');
 
 var timestamp = 0; // [microseconds]
 var first = true;
+var frame_buffer = [];
 
 self.addEventListener('message', function (e) {
     try {
@@ -78,16 +51,9 @@ self.addEventListener('message', function (e) {
             first = true;
             this.ctx = data.canvas.getContext('2d');
 
-            try {
-                //init the HEVC decoder		
-                Module.hevc_init_frame(1, data.width, data.height);
-            } catch (e) {
-                console.log(e);
-            };
-
             const config = {
-                /*codec: "hev1.1.60.L153.B0.0.0.0.0.0",*/
-                codec: "hvc1.1.6.L120.00",
+                codec: "hev1.1.60.L153.B0.0.0.0.0.0",
+                //codec: "hvc1.1.6.L120.00",
                 codedWidth: data.width,
                 codedHeight: data.height,
                 optimizeForLatency: true,
@@ -126,12 +92,6 @@ self.addEventListener('message', function (e) {
 
         if (data.type == "end_video") {
             try {
-                Module.hevc_destroy_frame(1);
-            } catch (e) {
-                console.log(e);
-            };
-
-            try {
                 this.decoder.close();
                 console.log("WebCodecs::HEVC decoder closed");
             } catch (e) {
@@ -142,7 +102,7 @@ self.addEventListener('message', function (e) {
         }
 
         if (data.type == "video") {
-            /*let nal_start = 0;
+            let nal_start = 0;
 
             if (is_nal_unit_start1(data.frame))
                 nal_start = 3;
@@ -153,25 +113,40 @@ self.addEventListener('message', function (e) {
             console.log("HEVC NAL unit type:", nal_type);
 
             const type = (nal_type == 19 || nal_type == 20) ? "key" : "delta";
-            const chunk = new EncodedVideoChunk({ data: data.frame, timestamp: timestamp, type: type });
-            timestamp += 1;
 
-            if (first && type != "key") {
-                console.log('WebCodecs::HEVC not a keyframe:', nal_type);
-                return;
+            if (first) {
+                // append the frame to the frame buffer
+                frame_buffer.push(data.frame);
+
+                if (type == "key") {
+                    first = false;
+                    console.log("WebCodecs::HEVC first keyframe received");
+
+                    // merge entries from the frame_buffer into a single byte array
+                    let frame_buffer_size = frame_buffer.reduce((acc, cur) => acc + cur.length, 0);
+                    let merged_buffer = new Uint8Array(frame_buffer_size);
+                    let offset = 0;
+                    for (let i = 0; i < frame_buffer.length; i++) {
+                        merged_buffer.set(frame_buffer[i], offset);
+                        offset += frame_buffer[i].length;
+                    }
+
+                    // clear the frame buffer
+                    frame_buffer = [];
+
+                    const chunk = new EncodedVideoChunk({ data: merged_buffer, timestamp: timestamp, type: "key" }); // force keyframes
+                    timestamp += 1;//30000; // 30ms
+
+                    this.decoder.decode(chunk);
+                    console.log("WebCodecs::HEVC decoded video chunk:", chunk);
+                }
+            } else {
+                const chunk = new EncodedVideoChunk({ data: data.frame, timestamp: timestamp, type: type }); // force keyframes
+                timestamp += 1;//30000; // 30ms
+
+                this.decoder.decode(chunk);
+                console.log("WebCodecs::HEVC decoded video chunk:", chunk);
             }
-
-            this.decoder.decode(chunk);
-            first = false;
-            console.log("WebCodecs::HEVC decoded video chunk:", chunk);*/
-
-            // use the WASM HEVC decoder
-            var res = Module.hevc_decode_frame(data.width, data.height, data.frame, 0, data.colourmap, data.fill, data.contours);
-            var decoded = new Uint8ClampedArray(Module.HEAPU8.subarray(res[0], res[0] + res[1])); // it's OK to use .subarray() instead of .slice() as a copy is made in "new Uint8ClampedArray()"
-            var img = new ImageData(decoded, data.width, data.height);
-            this.ctx.putImageData(img, 0, 0);
-            self.postMessage({ type: "frame", timestamp: timestamp });
-            timestamp += 1;
         }
     } catch (e) {
         console.log('WebCodecs API Video Worker', e);
