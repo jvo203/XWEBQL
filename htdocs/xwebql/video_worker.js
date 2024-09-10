@@ -135,14 +135,14 @@ self.addEventListener('message', function (e) {
                     frame_buffer = [];
 
                     const chunk = new EncodedVideoChunk({ data: merged_buffer, timestamp: timestamp, type: "key" }); // force keyframes
-                    timestamp += 1;//30000; // 30ms
+                    timestamp += 1;
 
                     this.decoder.decode(chunk);
                     console.log("WebCodecs::HEVC decoded video chunk:", chunk);
                 }
             } else {
                 const chunk = new EncodedVideoChunk({ data: data.frame, timestamp: timestamp, type: type }); // force keyframes
-                timestamp += 1;//30000; // 30ms
+                timestamp += 1;
 
                 this.decoder.decode(chunk);
                 console.log("WebCodecs::HEVC decoded video chunk:", chunk);
