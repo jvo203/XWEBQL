@@ -87,7 +87,7 @@ XCACHE = ".cache"
 
 const VERSION_MAJOR = 1
 const VERSION_MINOR = 0
-const VERSION_SUB = 16
+const VERSION_SUB = 17
 const SERVER_STRING =
     "XWEBQL v" *
     string(VERSION_MAJOR) *
@@ -97,7 +97,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "24.09.10.0"
-const VERSION_STRING = "J/SV2024-09-08.0-ALPHA"
+const VERSION_STRING = "J/SV2024-09-10.0-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
