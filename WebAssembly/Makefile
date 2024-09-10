@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := wasm
-VERSION = 24.09.09.0
+VERSION = 24.09.10.0
 
 ZFP = zfp-1.0.0
 ZFP_SRC := $(wildcard $(ZFP)/src/*.c)
@@ -55,10 +55,10 @@ DEP = $(OBJ:%.o=%.d)
 	em++ -Oz $(EMFLAGS) $(DEFS) $(INCLUDE) $(CXXFLAGS) -MMD -o $@ -c $<
 
 wasm: $(FFMPEG_OBJ) $(OBJ)
-	em++ -Oz $(EMFLAGS) $(DEFS) main.cc $(OBJ) -o ../htdocs/xwebql/client.$(VERSION).js --post-js module-post.js $(INCLUDE) -L$(LIBRARY) $(CXXFLAGS) $(LDFLAGS)
+	em++ -Oz $(EMFLAGS) $(DEFS) main.cc $(OBJ) $(FFMPEG_OBJ) -o ../htdocs/xwebql/client.$(VERSION).js --post-js module-post.js $(INCLUDE) -L$(LIBRARY) $(CXXFLAGS) $(LDFLAGS)
 
 hevc: $(FFMPEG_OBJ) $(OBJ)
-	em++ -Oz $(EMFLAGS) $(DEFS) -DHEVC -s ENVIRONMENT=worker main.cc $(FFMPEG_OBJ) -o ../htdocs/xwebql/hevc.js --post-js module-post.js $(INCLUDE) -L$(LIBRARY) $(CXXFLAGS) $(LDFLAGS)
+	em++ -Oz $(EMFLAGS) $(DEFS) -DHEVC -s ENVIRONMENT=worker main.cc $(OBJ) $(FFMPEG_OBJ) -o ../htdocs/xwebql/hevc.js --post-js module-post.js $(INCLUDE) -L$(LIBRARY) $(CXXFLAGS) $(LDFLAGS)
 
 
 # -s "EXPORTED_FUNCTIONS=['_hevc_init','_hevc_destroy','_hevc_decode_nal_unit']"
