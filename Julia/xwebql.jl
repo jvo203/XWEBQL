@@ -97,7 +97,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "24.09.10.0"
-const VERSION_STRING = "J/SV2024-09-10.0-ALPHA"
+const VERSION_STRING = "J/SV2024-10-08.0-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -281,7 +281,7 @@ function streamDirectory(http::HTTP.Streams.Stream)
                 if isfile(path)
 
                     # filter the filenames
-                    if (endswith(filename, "_cl.evt") || endswith(filename, "_cl.evt.gz")) && contains(filename, "sxs")
+                    if (endswith(filename, "_cl.evt") || endswith(filename, "_cl.evt.gz")) # && contains(filename, "sxs") # XRISM does not contain "sxs" in the filename
 
                         dict = Dict(
                             "type" => "file",
