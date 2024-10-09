@@ -1456,8 +1456,8 @@ function ws_coroutine(ws, ids)
                                 # an array of pointers
                                 # local pNals_jll::Ptr{Ptr{Cvoid}} = pNals[]                        
 
-                                # int x265_encoder_encode(x265_encoder *encoder, x265_nal **pp_nal, uint32_t *pi_nal, x265_picture *pic_in, x265_picture **pic_out); pic_out is now  x265_picture**
-                                # int ret = x265_encoder_encode(encoder, &pNals, &iNal, picture, NULL); // as of x265 v4 the last parameter cannot be NULL anymore                                                            
+                                # int x265_encoder_encode(x265_encoder *encoder, x265_nal **pp_nal, uint32_t *pi_nal, x265_picture *pic_in, x265_picture **pic_out);
+                                # int ret = x265_encoder_encode(encoder, &pNals, &iNal, picture, !NULL);
 
                                 encoding = @elapsed stat = ccall(
                                     (:x265_encoder_encode, libx265),
