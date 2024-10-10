@@ -7515,7 +7515,6 @@ function process_video() {
     let image_bounding_dims = videoFrame.image_bounding_dims;
 
     let imageCanvas = videoFrame.canvas;
-
     var context = imageCanvas.getContext('2d');
     context.putImageData(imageData, 0, 0);
     // console.log("image_data:", imageData.width, imageData.height, imageData.data);
