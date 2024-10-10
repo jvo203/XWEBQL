@@ -17,50 +17,6 @@ function get_worker_script() {
     }, false);`
 }
 
-function get_video_worker_script() {
-    return `self.addEventListener('message', function (e) {
-    try {
-        let data = e.data;
-        console.log('WASM Video Worker message received:', data);
-        if (data.type == "init_video") {        
-            this.ctx = data.canvas.getContext('2d');
-            this.Module = data.Module;
-
-            try {
-                //init the HEVC decoder		
-                this.Module.hevc_init_frame(1, data.width, data.height);
-            } catch (e) {
-                console.log(e);
-            };
-
-            return;
-        }
-
-        if (data.type == "end_video") {
-            try {
-                this.Module.hevc_destroy_frame(1);
-            } catch (e) {
-                console.log(e);
-            };
-
-            self.close(); // self-terminate
-        }
-
-        if (data.type == "video") {
-            let Module = this.Module;
-            var res = Module.hevc_decode_frame(data.width, data.height, data.frame, 0, data.colourmap, data.fill, data.contours);
-            var decoded = new Uint8ClampedArray(Module.HEAPU8.subarray(res[0], res[0] + res[1])); // it's OK to use .subarray() instead of .slice() as a copy is made in "new Uint8ClampedArray()"
-            var img = new ImageData(decoded, data.width, data.height);
-            this.ctx.putImageData(img, 0, 0);
-            self.postMessage({ type: "frame" });
-        }
-    } catch (e) {
-        console.log('WASM Video Worker', e);
-    }
-}, false);
-console.log('WASM Video Worker initiated');`
-}
-
 const wasm_supported = (() => {
     try {
         console.log("checking for WebAssembly support");
@@ -919,34 +875,6 @@ async function mainRenderer() {
             vidFPS = parseInt(video_fps_control);
 
         vidInterval = 1000 / vidFPS;
-
-        //video_worker = new Worker('https://cdn.jsdelivr.net/gh/jvo203/XWEBQL/htdocs/xwebql/wasm_worker.js');
-        video_worker = null;
-        /*video_worker = new Worker('data:text/html;base64,' + window.btoa(get_video_worker_script()));
-        video_worker.onmessage = function (e) {
-            if (e.data.type === 'frame') {
-                requestAnimationFrame(process_video);
-            }
-        }*/
-
-        const result = await VideoDecoder.isConfigSupported({
-            codec: "hev1.1.60.L153.B0.0.0.0.0.0",
-            //codec: "hvc1.1.6.L120.00",
-        });
-        isHevcSupported = result.supported === true;
-        console.log(isHevcSupported ? "WebCodecs::HEVC is supported" : "WebCodecs::HEVC is not supported");
-
-        if (isHevcSupported) {
-            video_worker = new Worker("video_worker.js" + '?' + encodeURIComponent(get_js_version()));
-
-            video_worker.onmessage = function (e) {
-                if (e.data.type === 'frame') {
-                    //let timestamp = e.data.timestamp;
-                    //console.log("video_worker::frame", timestamp);
-                    requestAnimationFrame(process_video);
-                }
-            };
-        }
 
         //track the bitrate with a Kalman Filter
         target_bitrate = 1000; // was 1000
@@ -6631,31 +6559,16 @@ async function open_websocket_connection(_datasetId, index) {
                                         contours = parseInt(document.getElementById('contour_lines').value) + 1;
 
                                     //HEVC                                   
-                                    //var res = Module.hevc_decode_frame(videoFrame.width, videoFrame.height, frame, 0, colourmap, fill, contours);
-                                    //data = new Uint8ClampedArray(Module.HEAPU8.subarray(res[0], res[0] + res[1])); // it's OK to use .subarray() instead of .slice() as a copy is made in "new Uint8ClampedArray()"
-
-                                    var request = {
-                                        type: "video",
-                                        width: videoFrame.width,
-                                        height: videoFrame.height,
-                                        frame: frame,
-                                        colourmap: colourmap,
-                                        fill: fill,
-                                        contours: contours,
-                                    };
-
-                                    if (video_worker != null) {
-                                        console.log("posting a video frame to the worker", request);
-                                        video_worker.postMessage(request, [request.frame.buffer]);
-                                    }
+                                    var res = Module.hevc_decode_frame(videoFrame.width, videoFrame.height, frame, 0, colourmap, fill, contours);
+                                    data = new Uint8ClampedArray(Module.HEAPU8.subarray(res[0], res[0] + res[1])); // it's OK to use .subarray() instead of .slice() as a copy is made in "new Uint8ClampedArray()"
                                 } catch (e) {
                                     // console.log(e);
                                 };
 
-                                //var img = new ImageData(data, videoFrame.width, videoFrame.height);
-                                //videoFrame.img = img;
+                                var img = new ImageData(data, videoFrame.width, videoFrame.height);
+                                videoFrame.img = img;
 
-                                //requestAnimationFrame(process_video);
+                                requestAnimationFrame(process_video);
                             }
                             else {
                                 try {
@@ -6782,12 +6695,6 @@ async function open_websocket_connection(_datasetId, index) {
                                         //image_bounding_dims: imageFrame.image_bounding_dims,
                                         //image_bounding_dims: {x1: 0, y1: 0, width: width, height: height},
                                     }
-
-                                    if (video_worker != null) {
-                                        data.canvas = imageCanvas.transferControlToOffscreen();
-                                        video_worker.postMessage(data, [data.canvas]);
-                                    }
-
                                 }
                             }
 
@@ -7239,9 +7146,6 @@ function x_axis_mouseleave() {
         type: "end_video"
     };
 
-    if (video_worker != null)
-        video_worker.postMessage(request);
-
     if (videoFrame != null) {
         videoFrame.img = null;
         videoFrame = null;
@@ -7601,18 +7505,20 @@ function x_axis_right() {
 };
 
 function process_video() {
-    if (!streaming || videoFrame == null /*|| videoFrame.img == null*/)
+    if (!streaming || videoFrame == null || videoFrame.img == null)
         return;
 
     //let image_bounding_dims = imageContainer[index - 1].image_bounding_dims;
     //{x1: 0, y1: 0, width: w, height: h};
 
-    //let imageData = videoFrame.img;
+    let imageData = videoFrame.img;
     let image_bounding_dims = videoFrame.image_bounding_dims;
 
     let imageCanvas = videoFrame.canvas;
-    /*var context = imageCanvas.getContext('2d');
-    context.putImageData(imageData, 0, 0);*/
+
+    var context = imageCanvas.getContext('2d');
+    context.putImageData(imageData, 0, 0);
+    // console.log("image_data:", imageData.width, imageData.height, imageData.data);
 
     //next display the video frame
     //place the image onto the main canvas
