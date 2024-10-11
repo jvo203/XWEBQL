@@ -55,7 +55,10 @@ function x265_apiver()
     end
 end
 
-println("x265 API version: ", x265_apiver())
+# version v4.0.0 changed the API
+if parse(Int32, x265_apiver()) < 212
+    error("x265 API version " * x265_apiver() * " used by Julia is too old, make sure Julia x265_jll bindings are at v4.0.0 or higher.")
+end
 
 # the encoder_open function call uses the x265 API version
 const encoder_open = "x265_encoder_open_" * x265_apiver()
@@ -1449,11 +1452,10 @@ function ws_coroutine(ws, ids)
                             unsafe_store!(Ptr{x265_picture}(picture), picture_jl)
 
                             if encoder != C_NULL
-                                local encoding
-
                                 # HEVC-encode the luminance and alpha channels
                                 iNal = Ref{Cint}(0)
                                 pNals = Ref{Ptr{Cvoid}}(C_NULL)
+                                picOut = Ref{Ptr{Cvoid}}(C_NULL)
 
                                 # iNal_jll value: iNal[] 
 
@@ -1463,42 +1465,23 @@ function ws_coroutine(ws, ids)
                                 # int x265_encoder_encode(x265_encoder *encoder, x265_nal **pp_nal, uint32_t *pi_nal, x265_picture *pic_in, x265_picture **pic_out);
                                 # int ret = x265_encoder_encode(encoder, &pNals, &iNal, picture, !NULL);
 
-                                # version v4.0.0 changed the API
-                                if parse(Int32, x265_apiver()) >= 212
-                                    encoding = @elapsed stat = ccall(
-                                        (:x265_encoder_encode, libx265),
-                                        Cint,
-                                        (
-                                            Ptr{Cvoid},
-                                            Ref{Ptr{Cvoid}},
-                                            Ref{Cint},
-                                            Ptr{Cvoid},
-                                            Ref{Ptr{Cvoid}},
-                                        ),
-                                        encoder,
-                                        pNals,
-                                        iNal,
-                                        picture,
-                                        Ref{Ptr{Cvoid}}(C_NULL),
-                                    )
-                                else
-                                    encoding = @elapsed stat = ccall(
-                                        (:x265_encoder_encode, libx265),
-                                        Cint,
-                                        (
-                                            Ptr{Cvoid},
-                                            Ref{Ptr{Cvoid}},
-                                            Ref{Cint},
-                                            Ptr{Cvoid},
-                                            Ptr{Cvoid},
-                                        ),
-                                        encoder,
-                                        pNals,
-                                        iNal,
-                                        picture,
-                                        C_NULL,
-                                    )
-                                end
+                                # version v4.0.0 changed the API                                
+                                encoding = @elapsed stat = ccall(
+                                    (:x265_encoder_encode, libx265),
+                                    Cint,
+                                    (
+                                        Ptr{Cvoid},
+                                        Ref{Ptr{Cvoid}},
+                                        Ref{Cint},
+                                        Ptr{Cvoid},
+                                        Ref{Ptr{Cvoid}},
+                                    ),
+                                    encoder,
+                                    pNals,
+                                    iNal,
+                                    picture,
+                                    picOut,
+                                )
                                 encoding *= 1000.0 # [ms]
 
                                 println(
