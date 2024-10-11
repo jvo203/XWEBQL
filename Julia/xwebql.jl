@@ -22,15 +22,17 @@ mutable struct x265_picture
     planeR::Ptr{Cuchar}
     planeG::Ptr{Cuchar}
     planeB::Ptr{Cuchar}
+    planeA::Ptr{Cuchar}
     strideR::Cint
     strideG::Cint
     strideB::Cint
+    strideA::Cint
+    bitDepth::Cint
 end
 
 mutable struct x265_nal
     type::Cint
     sizeBytes::Cint
-    # payload::Ptr{Cuchar}
     payload::Ptr{UInt8}
 end
 
@@ -1195,7 +1197,7 @@ function ws_coroutine(ws, ids)
     energy = nothing
 
     # HEVC
-    local param, encoder, picture, planeB, luma, alpha
+    local param, encoder, picture, planeB, planeA, luma, alpha
     local filter::KalmanFilter, ts
 
     local video_mtx = ReentrantLock()
@@ -1804,12 +1806,16 @@ function ws_coroutine(ws, ids)
                         )
 
                         planeB = fill(UInt8(128), image_width, image_height)
+                        planeA = fill(UInt8(255), image_width, image_height)
 
                         picture_jl = x265_picture(picture)
                         picture_jl.strideR = 0
                         picture_jl.strideG = 0
                         picture_jl.planeB = pointer(planeB)
                         picture_jl.strideB = strides(planeB)[2]
+                        picture_jl.planeA = pointer(planeA)
+                        picture_jl.strideA = strides(planeA)[2]
+                        picture_jl.bitDepth = 8
 
                         # sync the Julia structure back to C
                         unsafe_store!(Ptr{x265_picture}(picture), picture_jl)
