@@ -53,6 +53,8 @@ function x265_apiver()
     end
 end
 
+println("x265 API version: ", x265_apiver())
+
 # the encoder_open function call uses the x265 API version
 const encoder_open = "x265_encoder_open_" * x265_apiver()
 # end of x265
