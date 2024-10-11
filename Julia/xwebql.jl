@@ -25,7 +25,6 @@ mutable struct x265_picture
     strideR::Cint
     strideG::Cint
     strideB::Cint
-    bitDepth::Cint
 end
 
 mutable struct x265_nal
@@ -97,7 +96,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "24.09.10.0"
-const VERSION_STRING = "J/SV2024-10-09.0-ALPHA"
+const VERSION_STRING = "J/SV2024-10-11.0-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -1449,7 +1448,7 @@ function ws_coroutine(ws, ids)
                                 # HEVC-encode the luminance and alpha channels
                                 iNal = Ref{Cint}(0)
                                 pNals = Ref{Ptr{Cvoid}}(C_NULL)
-                                picOut = Ref{Ptr{Cvoid}}(C_NULL)
+                                picOut = C_NULL #Ref{Ptr{Cvoid}}(C_NULL)
 
                                 # iNal_jll value: iNal[] 
 
@@ -1467,7 +1466,7 @@ function ws_coroutine(ws, ids)
                                         Ref{Ptr{Cvoid}},
                                         Ref{Cint},
                                         Ptr{Cvoid},
-                                        Ref{Ptr{Cvoid}},
+                                        Ptr{Cvoid},#Ref{Ptr{Cvoid}},
                                     ),
                                     encoder,
                                     pNals,
@@ -1788,7 +1787,6 @@ function ws_coroutine(ws, ids)
                         picture_jl.strideG = 0
                         picture_jl.planeB = pointer(planeB)
                         picture_jl.strideB = strides(planeB)[2]
-                        picture_jl.bitDepth = 8
 
                         # sync the Julia structure back to C
                         unsafe_store!(Ptr{x265_picture}(picture), picture_jl)
