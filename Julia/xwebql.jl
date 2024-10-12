@@ -55,13 +55,19 @@ function x265_apiver()
     end
 end
 
-# version v4.0.0 changed the API
-if parse(Int32, x265_apiver()) < 212
-    error("x265 API version " * x265_apiver() * " used by Julia is too old, make sure Julia x265_jll bindings are at v4.0.0 or higher.")
+@static if !Sys.iswindows()
+    # version v4.0.0 changed the API
+    if parse(Int32, x265_apiver()) < 212
+        error("x265 API version " * x265_apiver() * " used by Julia is too old, make sure Julia x265_jll bindings are at v4.0.0 or higher.")
+    end
 end
 
-# the encoder_open function call uses the x265 API version
-const encoder_open = "x265_encoder_open_" * x265_apiver()
+@static if !Sys.iswindows()
+    # the encoder_open function call uses the x265 API version
+    const encoder_open = "x265_encoder_open_" * x265_apiver()
+else
+    const encoder_open = "x265_encoder_open"
+end
 # end of x265
 
 include("kalman.jl")
