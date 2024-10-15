@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2024-10-10.0";
+    return "JS2024-10-15.0";
 }
 
 function uuidv4() {
@@ -7855,8 +7855,8 @@ function dragend() {
     d3.select("#eneregion").moveToBack();
     d3.select("#ene_bar").attr("opacity", 0.0);
 
-    console.log("this functionality is not supported yet... please try it again later");
-    return;
+    //console.log("this functionality is not supported yet... please try it again later");
+    //return;
 
     var ene_start = session_ene_start;
     var ene_end = session_ene_end;
@@ -7989,6 +7989,41 @@ function dragmove(event) {
     text += " (" + temperature.toPrecision(3) + " K)";
 
     d3.select("#XText").text(text);
+}
+
+function cube_refresh() {
+    try {
+        d3.selectAll('#contourPlot').remove();
+    }
+    catch (e) { };
+
+    enable_autoscale();
+
+    var elem = document.getElementById("SpectrumCanvas");
+    var range = get_axes_range(elem.width, elem.height);
+    var dx = range.xMax - range.xMin;
+
+    var rect = document.getElementById('mainDiv').getBoundingClientRect();
+    var width = Math.round(rect.width - 20);
+    var height = Math.round(rect.height - 20);
+
+    var request = {
+        type: "image",
+        dx: dx,
+        width: width,
+        height: height,
+        quality: image_quality,
+        frame_start: data_band_lo,
+        frame_end: data_band_hi,
+        timestamp: performance.now()
+    };
+
+    //send an [image] request to the server    
+    if (wsConn.readyState == 1)
+        wsConn.send(JSON.stringify(request));
+
+
+    setup_window_timeout();
 }
 
 function show_scaling_help() {
