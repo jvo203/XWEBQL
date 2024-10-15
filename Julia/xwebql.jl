@@ -109,7 +109,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "24.09.10.0"
-const VERSION_STRING = "J/SV2024-10-11.0-ALPHA"
+const VERSION_STRING = "J/SV2024-10-15.0-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -1261,7 +1261,7 @@ function ws_coroutine(ws, ids)
     realtime = @async while true
         try
             req = take!(viewport_requests)
-            #println(datasetid, "::", req)
+            #println(data   setid, "::", req)
 
             xobject = get_dataset(datasetid, XOBJECTS, XLOCK)
 
@@ -1597,6 +1597,43 @@ function ws_coroutine(ws, ids)
             if msg["type"] == "realtime_image_spectrum"
                 # replace!(viewport_requests, msg)
                 push!(viewport_requests, msg) # there is too much lag
+                continue
+            end
+
+            if msg["type"] == "image"
+                xobject = get_dataset(datasetid, XOBJECTS, XLOCK)
+
+                if xobject.id == "" || has_error(xobject)
+                    error("$datasetid not found.")
+                end
+
+                if !has_events(xobject)
+                    error("$datasetid: no events found.")
+                end
+
+                # turn a msg into a ViewportSpectrum request
+                req = msg
+                req["image"] = true
+
+                # set x1, x2, y1, y2 to the full FITS image; HINT: use "init_video" inner_width, inner_height, offsetx, offsety
+                #req["x1"] = 1
+                #req["x2"] = xobject.width
+                #req["y1"] = 1
+                #req["y2"] = xobject.height
+
+                # check if x, y, energy are nothing
+                if x === nothing || y === nothing || energy === nothing
+                    x = xobject.x
+                    y = xobject.y
+                    energy = xobject.energy
+                end
+
+                elapsed =
+                    @elapsed image, spectrum = getViewportSpectrum(x, y, energy, req)
+                elapsed *= 1000.0 # [ms]
+
+                println("[getViewportSpectrum] elapsed: $elapsed [ms]")
+
                 continue
             end
 
