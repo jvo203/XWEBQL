@@ -1640,6 +1640,24 @@ function ws_coroutine(ws, ids)
 
                 println("[getViewportSpectrum] elapsed: $elapsed [ms]")
 
+                Threads.@spawn begin
+                    if spectrum != Nothing
+                        # send a spectrum
+                        resp = IOBuffer()
+
+                        # the header
+                        write(resp, Float32(req["timestamp"]))
+                        write(resp, Int32(req["seq_id"]))
+                        write(resp, Int32(3)) # 3 - full spectrum
+                        write(resp, Float32(elapsed))
+
+                        # the body
+                        write(resp, take!(spectrum))
+
+                        put!(outgoing, resp)
+                    end
+                end
+
                 update_timestamp(xobject)
 
                 continue
