@@ -6631,9 +6631,12 @@ async function open_websocket_connection(_datasetId, index) {
                                     // console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
 
                                     if (spectrum.length > 0) {
+                                        fitsData.depth = spectrum.length;
                                         fitsData.spectrum = spectrum;
+
+                                        setup_axes();
+
                                         plot_spectrum(fitsData.spectrum);
-                                        replot_y_axis();
                                     }
 
                                 })
