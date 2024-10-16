@@ -1618,7 +1618,7 @@ function ws_coroutine(ws, ids)
                     energy = xobject.energy
                 end
 
-                # turn a msg into a square / rectangular ViewportSpectrum request
+                # turn a msg into a rectangular ViewportSpectrum request
                 req = msg
                 req["image"] = true
                 req["beam"] = "square"
