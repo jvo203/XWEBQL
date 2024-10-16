@@ -1647,8 +1647,8 @@ function ws_coroutine(ws, ids)
 
                         # the header
                         write(resp, Float32(req["timestamp"]))
-                        write(resp, Int32(req["seq_id"]))
-                        write(resp, Int32(3)) # 3 - full spectrum
+                        write(resp, Int32(0))
+                        write(resp, Int32(3)) # 3 - full spectrum refresh
                         write(resp, Float32(elapsed))
 
                         # the body

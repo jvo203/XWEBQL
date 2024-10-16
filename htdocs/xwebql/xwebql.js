@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2024-10-15.0";
+    return "JS2024-10-16.0";
 }
 
 function uuidv4() {
@@ -6604,6 +6604,43 @@ async function open_websocket_connection(_datasetId, index) {
                             if (videoFrame != null)
                                 d3.select("#fps").text('video: ' + Math.round(vidFPS) + ' fps, bitrate: ' + Math.round(bitrate) + ' kbps');//, η: ' + eta.toFixed(4) + ' var: ' + variance
                         }
+
+                        return;
+                    }
+
+                    // full spectrum refresh
+                    if (type == 3) {
+                        computed = dv.getFloat32(12, endianness);
+
+                        var offset = 16;
+                        var spectrum_len = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        var frame = new Uint8Array(received_msg, offset);
+                        // console.log("computed:", computed, "spectrum length:", spectrum_len, "frame.length:", frame.length);
+
+                        waitForModuleReady().then(() => {
+                            // ZFP decoder part				
+                            Module.ready
+                                .then(_ => {
+                                    let start = performance.now();
+                                    var res = Module.decompressZFPspectrum(spectrum_len, frame);
+                                    const spectrum = Module.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
+                                    let elapsed = Math.round(performance.now() - start);
+
+                                    // console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
+
+                                    if (spectrum.length > 0) {
+                                        fitsData.spectrum = spectrum;
+                                        plot_spectrum(fitsData.spectrum);
+                                        replot_y_axis();
+                                    }
+
+                                })
+                                .catch(e => console.error(e));
+                        }).catch(e => console.error(e));
+
+                        //console.log("[ws] computed = " + computed.toFixed(1) + " [ms]" + " length: " + length + " spectrum length:" + spectrum.length + " spectrum: " + spectrum);
 
                         return;
                     }
