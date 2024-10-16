@@ -1611,16 +1611,6 @@ function ws_coroutine(ws, ids)
                     error("$datasetid: no events found.")
                 end
 
-                # turn a msg into a ViewportSpectrum request
-                req = msg
-                req["image"] = true
-
-                # set x1, x2, y1, y2 to the full FITS image; HINT: use "init_video" inner_width, inner_height, offsetx, offsety
-                #req["x1"] = 1
-                #req["x2"] = xobject.width
-                #req["y1"] = 1
-                #req["y2"] = xobject.height
-
                 # check if x, y, energy are nothing
                 if x === nothing || y === nothing || energy === nothing
                     x = xobject.x
@@ -1628,11 +1618,29 @@ function ws_coroutine(ws, ids)
                     energy = xobject.energy
                 end
 
+                # turn a msg into a square / rectangular ViewportSpectrum request
+                req = msg
+                req["image"] = true
+                req["beam"] = "square"
+
+                inner_width = round(Integer, msg["inner_width"])
+                inner_height = round(Integer, msg["inner_height"])
+                offsetx = round(Integer, msg["offsetx"])
+                offsety = round(Integer, msg["offsety"])
+
+                # set x1, x2, y1, y2 to the full FITS image; HINT: use "init_video" inner_width, inner_height, offsetx, offsety
+                req["x1"] = offsetx
+                req["x2"] = offsetx + inner_width - 1
+                req["y1"] = offsety
+                req["y2"] = offsety + inner_height - 1
+
                 elapsed =
                     @elapsed image, spectrum = getViewportSpectrum(x, y, energy, req)
                 elapsed *= 1000.0 # [ms]
 
                 println("[getViewportSpectrum] elapsed: $elapsed [ms]")
+
+                update_timestamp(xobject)
 
                 continue
             end
