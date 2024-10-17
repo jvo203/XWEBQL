@@ -6609,7 +6609,7 @@ async function open_websocket_connection(_datasetId, index) {
                     }
 
                     // full spectrum refresh
-                    if (type == 3) {
+                    if (type == 4) {
                         computed = dv.getFloat32(12, endianness);
 
                         var offset = 16;
@@ -6637,6 +6637,8 @@ async function open_websocket_connection(_datasetId, index) {
                                         setup_axes();
 
                                         plot_spectrum(fitsData.spectrum);
+
+                                        hide_hourglass();
                                     }
 
                                 })

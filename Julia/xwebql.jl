@@ -1636,6 +1636,22 @@ function ws_coroutine(ws, ids)
                 println("[getViewportSpectrum] elapsed: $elapsed [ms]")
 
                 Threads.@spawn begin
+                    if image != Nothing
+                        # send an image 
+                        resp = IOBuffer()
+
+                        # the header
+                        write(resp, Float32(req["timestamp"]))
+                        write(resp, Int32(0))
+                        write(resp, Int32(3)) # 3 - image refresh
+                        write(resp, Float32(elapsed))
+
+                        # the body
+                        write(resp, take!(image))
+
+                        put!(outgoing, resp)
+                    end
+
                     if spectrum != Nothing
                         # send a spectrum
                         resp = IOBuffer()
@@ -1643,7 +1659,7 @@ function ws_coroutine(ws, ids)
                         # the header
                         write(resp, Float32(req["timestamp"]))
                         write(resp, Int32(0))
-                        write(resp, Int32(3)) # 3 - full spectrum refresh
+                        write(resp, Int32(4)) # 4 - full spectrum refresh
                         write(resp, Float32(elapsed))
 
                         # the body
