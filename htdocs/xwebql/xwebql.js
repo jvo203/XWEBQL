@@ -6660,7 +6660,7 @@ async function open_websocket_connection(_datasetId, index) {
 
                             console.log("image width: ", img_width, "height: ", img_height, "elapsed: ", elapsed, "[ms]");
 
-                            // process_hdr_image(img_width, img_height, pixels, alpha, min_count, max_count);
+                            process_hdr_image(img_width, img_height, pixels, alpha, min_count, max_count);
 
                             try {
                                 display_legend();
