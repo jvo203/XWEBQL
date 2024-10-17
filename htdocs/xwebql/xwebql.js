@@ -6608,6 +6608,14 @@ async function open_websocket_connection(_datasetId, index) {
                         return;
                     }
 
+                    // image refresh
+                    if (type == 3) {
+                        computed = dv.getFloat32(12, endianness);
+
+                        var offset = 16;
+
+                    }
+
                     // full spectrum refresh
                     if (type == 4) {
                         computed = dv.getFloat32(12, endianness);
