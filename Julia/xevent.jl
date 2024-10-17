@@ -416,13 +416,17 @@ function getViewport(x, y, energy, xmin::Integer, xmax::Integer, ymin::Integer, 
     # make a mask for the pixels
     mask = pixels .> 0
 
+    # get the maximum count    
+    min_count = 1
+    max_count = ThreadsX.maximum(pixels)
+
     # apply a logarithm to pixels
     pixels = Float32.(log.(pixels))
 
     # replace Infinity by 0.0
     pixels[isinf.(pixels)] .= Float32(0.0)
 
-    return (pixels, mask)
+    return (pixels, mask, min_count, max_count)
 end
 
 function getSquareSpectrum(x, y, energy, E_min::Float32, E_max::Float32, x1::Integer, x2::Integer, y1::Integer, y2::Integer, dx::Integer)
@@ -858,6 +862,7 @@ end
 
 function getViewportSpectrum(x, y, energy, req::Dict{String,Any})
     local pixels, mask, spectrum
+    local min_count, max_count
     local view_resp, spec_resp
 
     view_resp = Nothing
@@ -916,8 +921,9 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any})
 
     # get the image
     if image
-        pixels, mask = getViewport(x, y, energy, x1, x2, y1, y2, energy_start, energy_end)
-        println("pixels: ", size(pixels))
+        pixels, mask, min_count, max_count = getViewport(x, y, energy, x1, x2, y1, y2, energy_start, energy_end)
+
+        println("pixels: ", size(pixels), " mask: ", size(mask), " min_count: ", min_count, " max_count: ", max_count)
     end
 
     # get the spectrum
@@ -1001,7 +1007,7 @@ function getVideoFrame(
     y1 = offsety
     y2 = offsety + inner_height - 1
 
-    frame_pixels, frame_mask = getViewport(x, y, energy, x1, x2, y1, y2, Float32(energy_start), Float32(energy_end))
+    frame_pixels, frame_mask, _, _ = getViewport(x, y, energy, x1, x2, y1, y2, Float32(energy_start), Float32(energy_end))
     max_count = ThreadsX.maximum(frame_pixels)
 
     dims = size(frame_pixels)
