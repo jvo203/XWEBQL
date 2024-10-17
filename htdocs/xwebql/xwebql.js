@@ -6610,10 +6610,62 @@ async function open_websocket_connection(_datasetId, index) {
 
                     // image refresh
                     if (type == 3) {
-                        computed = dv.getFloat32(12, endianness);
-
                         var offset = 16;
+                        var img_width = dv.getUint32(offset, endianness);
+                        offset += 4;
 
+                        var img_height = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        var pixels_length = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        console.log('pixels length:', pixels_length);
+
+                        var frame_pixels = new Uint8Array(received_msg, offset, pixels_length);
+                        offset += pixels_length;
+
+                        var mask_length = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        console.log('mask length:', mask_length);
+
+                        var frame_mask = new Uint8Array(received_msg, offset, mask_length);
+                        offset += mask_length;
+
+                        let min_count = getUint64(dv, offset, endianness);
+                        offset += 8;
+
+                        let max_count = getUint64(dv, offset, endianness);
+                        offset += 8;
+
+                        console.log('min_count:', min_count, 'max_count:', max_count);
+
+                        // image
+                        {
+                            //console.log("processing an HDR image");
+                            let start = performance.now();
+
+                            // decompressZFP returns std::vector<float>
+                            // decompressZFPimage returns Float32Array but emscripten::typed_memory_view is buggy
+                            var res = Module.decompressZFPimage(img_width, img_height, frame_pixels);
+                            const pixels = Module.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
+
+                            var res = Module.decompressLZ4mask(img_width, img_height, frame_mask);
+                            const alpha = Module.HEAPU8.slice(res[0], res[0] + res[1]);
+
+                            let elapsed = Math.round(performance.now() - start);
+
+                            console.log("image width: ", img_width, "height: ", img_height, "elapsed: ", elapsed, "[ms]");
+
+                            process_hdr_image(img_width, img_height, pixels, alpha, min_count, max_count);
+
+                            try {
+                                display_legend();
+                            } catch (err) {
+                                console.log("display_legend:", err);
+                            }
+                        }
                     }
 
                     // full spectrum refresh
