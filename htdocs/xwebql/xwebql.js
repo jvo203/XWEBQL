@@ -3980,14 +3980,18 @@ function process_hdr_image(img_width, img_height, pixels, alpha, min_count, max_
         }
     }
 
-    if (imageContainer != null) {
-        clear_webgl_image_buffers();
+    if (!streaming) {
+        if (imageContainer != null) {
+            clear_webgl_image_buffers();
+        }
     }
 
     imageContainer = { width: img_width, height: img_height, pixels: pixels, alpha: alpha, texture: texture, image_bounding_dims: image_bounding_dims, pixel_range: pixel_range };
 
-    //next display the image    
-    init_webgl_image_buffers();
+    if (!streaming) {
+        //next display the image    
+        init_webgl_image_buffers();
+    }
 
     try {
         setup_image_selection();
@@ -6283,8 +6287,6 @@ function imageTimeout() {
     if (moving || streaming)
         return;
 
-    viewport_count = 0;
-
     sent_seq_id++;
 
     // a real-time websocket request
@@ -6658,7 +6660,7 @@ async function open_websocket_connection(_datasetId, index) {
 
                             console.log("image width: ", img_width, "height: ", img_height, "elapsed: ", elapsed, "[ms]");
 
-                            process_hdr_image(img_width, img_height, pixels, alpha, min_count, max_count);
+                            // process_hdr_image(img_width, img_height, pixels, alpha, min_count, max_count);
 
                             try {
                                 display_legend();
@@ -7996,10 +7998,6 @@ function dragend() {
     // if((frame_start >= 0) && (frame_end >= 0))
     {
         display_hourglass();
-
-        image_count = 0;
-        viewport_count = 0;
-        spectrum_count = 0;
 
         cube_refresh();
 
