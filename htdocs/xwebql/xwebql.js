@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2024-10-16.0";
+    return "JS2024-10-17.0";
 }
 
 function uuidv4() {
@@ -8056,10 +8056,6 @@ function cube_refresh() {
         width: width,
         height: height,
         quality: image_quality,
-        inner_width: fitsData.width,
-        inner_height: fitsData.height,
-        offsetx: fitsData.OFFSETX,
-        offsety: fitsData.OFFSETY,
         /*frame_start: data_band_lo,
         frame_end: data_band_hi,*/
         frame_start: Math.log(1000 * data_band_lo) - 0.5 * fitsData.CDELT3,

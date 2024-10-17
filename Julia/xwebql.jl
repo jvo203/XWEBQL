@@ -109,7 +109,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "24.09.10.0"
-const VERSION_STRING = "J/SV2024-10-16.0-ALPHA"
+const VERSION_STRING = "J/SV2024-10-17.0-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -1623,11 +1623,6 @@ function ws_coroutine(ws, ids)
                 req["image"] = true
                 req["beam"] = "square"
 
-                inner_width = round(Integer, msg["inner_width"])
-                inner_height = round(Integer, msg["inner_height"])
-                offsetx = round(Integer, msg["offsetx"])
-                offsety = round(Integer, msg["offsety"])
-
                 # set x1, x2, y1, y2 to the full FITS image; HINT: use "init_video" inner_width, inner_height, offsetx, offsety
                 req["x1"] = offsetx
                 req["x2"] = offsetx + inner_width - 1
@@ -1669,8 +1664,8 @@ function ws_coroutine(ws, ids)
                 height = round(Integer, msg["height"])
                 inner_width = round(Integer, msg["inner_width"])
                 inner_height = round(Integer, msg["inner_height"])
-                offsetx = round(Integer, msg["offsetx"])
-                offsety = round(Integer, msg["offsety"])
+                offsetx = 1 + round(Integer, msg["offsetx"])
+                offsety = 1 + round(Integer, msg["offsety"])
                 last_video_seq = msg["seq_id"]
                 last_frame = -1.0
                 bitrate = msg["bitrate"]
