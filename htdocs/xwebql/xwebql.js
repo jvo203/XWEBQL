@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2024-10-17.0";
+    return "JS2024-10-18.0";
 }
 
 function uuidv4() {
@@ -3980,18 +3980,14 @@ function process_hdr_image(img_width, img_height, pixels, alpha, min_count, max_
         }
     }
 
-    if (!streaming) {
-        if (imageContainer != null) {
-            clear_webgl_image_buffers();
-        }
+    if (imageContainer != null) {
+        clear_webgl_image_buffers();
     }
 
     imageContainer = { width: img_width, height: img_height, pixels: pixels, alpha: alpha, texture: texture, image_bounding_dims: image_bounding_dims, pixel_range: pixel_range };
 
-    if (!streaming) {
-        //next display the image    
-        init_webgl_image_buffers();
-    }
+    //next display the image    
+    init_webgl_image_buffers();
 
     try {
         setup_image_selection();
@@ -7086,6 +7082,11 @@ function webgl_viewport_renderer(gl, container, height) {
 }
 
 function x_axis_mouseenter(offset) {
+    if (streaming) {
+        console.log("streaming is active, calling 'x_axis_mouseleave()' to reset video streaming.");
+        x_axis_mouseleave();
+    }
+
     //send an init_video command via WebSockets
     streaming = true;
     video_stack = [];
@@ -7958,9 +7959,6 @@ function dragend() {
 
     d3.select("#eneregion").moveToBack();
     d3.select("#ene_bar").attr("opacity", 0.0);
-
-    //console.log("this functionality is not supported yet... please try it again later");
-    //return;
 
     var ene_start = session_ene_start;
     var ene_end = session_ene_end;
