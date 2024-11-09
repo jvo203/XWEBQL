@@ -1,0 +1,37 @@
+tacktrace:
+│   [1] uv_write(s::TCPSocket, p::Ptr{UInt8}, n::UInt64)
+│     @ Base ./stream.jl:1091
+│   [2] unsafe_write(s::TCPSocket, p::Ptr{UInt8}, n::UInt64)
+│     @ Base ./stream.jl:1145
+│   [3] unsafe_write
+│     @ ~/.julia/packages/HTTP/FSzDg/src/Connections.jl:132 [inlined]
+│   [4] unsafe_write(http::HTTP.Streams.Stream{HTTP.Messages.Request, HTTP.Connections.Connection{TCPSocket}}, p::Ptr{UInt8}, n::UInt64)
+                                                                                                                                      │     @ HTTP.Streams ~/.julia/packages/HTTP/FSzDg/src/Streams.jl:93
+│   [5] unsafe_write
+│     @ ./io.jl:803 [inlined]
+│   [6] write
+│     @ ./io.jl:837 [inlined]
+│   [7] streamFile(http::HTTP.Streams.Stream{HTTP.Messages.Request, HTTP.Connections.Connection{TCPSocket}}, path::String)
+│     @ Main ~/XWEBQL/Julia/xwebql.jl:217
+│   [8] streamDocument(http::HTTP.Streams.Stream{HTTP.Messages.Request, HTTP.Connections.Connection{TCPSocket}})
+│     @ Main ~/XWEBQL/Julia/xwebql.jl:426
+│   [9] (::HTTP.Handlers.Router{typeof(HTTP.Handlers.default404), typeof(HTTP.Handlers.default405), Nothing})(stream::HTTP.Streams.Stream{HTTP.Messages.Request, HTTP.Connections.Connection{TCPSocket}})
+│     @ HTTP.Handlers ~/.julia/packages/HTTP/FSzDg/src/Handlers.jl:422
+│  [10] #invokelatest#2
+│     @ ./essentials.jl:1055 [inlined]
+│  [11] invokelatest
+│     @ ./essentials.jl:1052 [inlined]
+│  [12] handle_connection(f::HTTP.Handlers.Router{typeof(HTTP.Handlers.default404), typeof(HTTP.Handlers.default405), Nothing}, c::HTTP.Connections.Connection{TCPSocket}, listener::HTTP.Servers.Listener{Nothing, Sockets.TCPServer}, readtimeout::Int64, access_log::Nothing, verbose::Bool)
+│     @ HTTP.Servers ~/.julia/packages/HTTP/FSzDg/src/Servers.jl:469
+│  [13] (::HTTP.Servers.var"#16#17"{HTTP.Handlers.Router{typeof(HTTP.Handlers.default404), typeof(HTTP.Handlers.default405), Nothing}, HTTP.Servers.Listener{Nothing, Sockets.TCPServer}, Set{HTTP.Connections.Connection}, Int64, Nothing, ReentrantLock, Bool, Base.Semaphore, HTTP.Connections.Connection{TCPSocket}})()
+│     @ HTTP.Servers ~/.julia/packages/HTTP/FSzDg/src/Servers.jl:401
+│   request =
+│    HTTP.Messages.Request:
+│    """
+│    GET / HTTP/1.0
+│    content-length: 0
+│
+│    """
+└ @ HTTP.Servers ~/.julia/packages/HTTP/FSzDg/src/Servers.jl:483
+request.target = "/"
+request.target = "/"
