@@ -109,7 +109,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "24.10.18.0"
-const VERSION_STRING = "J/SV2024-10-18.0-ALPHA"
+const VERSION_STRING = "J/SV2024-11-26.0-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -221,7 +221,6 @@ function streamFile(http::HTTP.Streams.Stream, path::String)
             write(http, "$path Not Found.")
         end
     catch e
-        # check if the error code is -104
         if occursin("ECONNRESET", string(e))
             println(e)
             return nothing
