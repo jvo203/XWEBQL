@@ -1,7 +1,0 @@
-request.target = "/"
-=================
-Base.IOError("write: connection reset by peer (ECONNRESET)", -104)
-=================
-┌ Error: handle_connection handler error.
-│
-│ ===========================
