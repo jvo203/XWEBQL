@@ -221,6 +221,9 @@ function streamFile(http::HTTP.Streams.Stream, path::String)
             write(http, "$path Not Found.")
         end
     catch e
+        println("=================")
+        println(e)
+        println("=================")
         HTTP.setstatus(http, 404)
         startwrite(http)
         write(http, "Error: $e")
