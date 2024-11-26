@@ -224,14 +224,6 @@ function streamFile(http::HTTP.Streams.Stream, path::String)
         if occursin("ECONNRESET", string(e))
             println(e)
             return nothing
-
-            #HTTP.setstatus(http, 404)
-            #startwrite(http)
-            #write(http, "Connection reset by peer.")
-        else
-            HTTP.setstatus(http, 404)
-            startwrite(http)
-            write(http, "Error: $e")
         end
 
         HTTP.setstatus(http, 404)
