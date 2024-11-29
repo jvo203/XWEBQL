@@ -109,7 +109,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "24.10.18.0"
-const VERSION_STRING = "J/SV2024-11-26.0-ALPHA"
+const VERSION_STRING = "J/SV2024-11-29.0-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -404,11 +404,12 @@ function gracefullyShutdown(http::HTTP.Streams.Stream)
 end
 
 function streamDocument(http::HTTP.Streams.Stream)
+    host, port = Sockets.getpeername(http)
     request::HTTP.Request = http.message
     request.body = read(http)
     closeread(http)
 
-    @show request.target
+    println("HTTP request '$(request.target)' from $host:$port")
 
     # prevent a simple directory traversal
     if occursin("../", request.target) || occursin("..\\", request.target)
