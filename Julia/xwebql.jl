@@ -1473,6 +1473,7 @@ function ws_coroutine(ws, ids)
                                 # HEVC-encode the luminance and alpha channels
                                 iNal = Ref{Cint}(0)
                                 pNals = Ref{Ptr{Cvoid}}(C_NULL)
+                                #picOut = Ref{Ptr{x265_picture}}(C_NULL)
 
                                 # iNal_jll value: iNal[] 
 
@@ -1495,12 +1496,14 @@ function ws_coroutine(ws, ids)
                                         Ref{Cint},
                                         Ptr{x265_picture},
                                         Ptr{x265_picture},
+                                        #Ref{Ptr{x265_picture}},
                                     ),
                                     encoder,
                                     pNals,
                                     iNal,
                                     picture,
                                     C_NULL,
+                                    #picOut,
                                 )
                                 encoding *= 1000.0 # [ms]
 
