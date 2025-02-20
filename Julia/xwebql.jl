@@ -108,8 +108,8 @@ const SERVER_STRING =
     "." *
     string(VERSION_SUB)
 
-# const WASM_VERSION = "25.02.20.0"
-const WASM_VERSION = "24.10.18.0"
+const WASM_VERSION = "25.02.20.0"
+# const WASM_VERSION = "24.10.18.0"
 const VERSION_STRING = "J/SV2025-02-20.0-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
