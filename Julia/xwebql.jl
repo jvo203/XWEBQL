@@ -56,9 +56,9 @@ function x265_apiver()
 end
 
 @static if !Sys.iswindows()
-    # version v4.0.0 changed the API
-    if parse(Int32, x265_apiver()) < 212
-        error("x265 API version " * x265_apiver() * " used by Julia is too old, make sure Julia x265_jll bindings are at v4.0.0 or higher.")
+    # version v4.1.0 changed the API yet again
+    if parse(Int32, x265_apiver()) < 215
+        error("x265 API version " * x265_apiver() * " used by Julia is too old, make sure Julia x265_jll bindings are at v4.1.0 or higher.")
     end
 end
 
@@ -1473,7 +1473,6 @@ function ws_coroutine(ws, ids)
                                 # HEVC-encode the luminance and alpha channels
                                 iNal = Ref{Cint}(0)
                                 pNals = Ref{Ptr{Cvoid}}(C_NULL)
-                                picOut = Ptr{x265_picture}(C_NULL)
 
                                 # iNal_jll value: iNal[] 
 
@@ -1501,7 +1500,7 @@ function ws_coroutine(ws, ids)
                                     pNals,
                                     iNal,
                                     picture,
-                                    picOut,
+                                    C_NULL,
                                 )
                                 encoding *= 1000.0 # [ms]
 
