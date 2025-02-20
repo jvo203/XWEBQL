@@ -1467,7 +1467,7 @@ function ws_coroutine(ws, ids)
                                 # HEVC-encode the luminance and alpha channels
                                 iNal = Ref{Cint}(0)
                                 pNals = Ref{Ptr{Cvoid}}(C_NULL)
-                                picOut = Ref{Ptr{Cvoid}}(C_NULL)
+                                picOut = Ptr{Cvoid}(C_NULL)
 
                                 # iNal_jll value: iNal[] 
 
@@ -1476,8 +1476,11 @@ function ws_coroutine(ws, ids)
 
                                 # int x265_encoder_encode(x265_encoder *encoder, x265_nal **pp_nal, uint32_t *pi_nal, x265_picture *pic_in, x265_picture **pic_out);
                                 # int ret = x265_encoder_encode(encoder, &pNals, &iNal, picture, !NULL);
-
-                                # version v4.0.0 changed the API                                
+                                # version v4.0.0 changed the API              
+                                
+                                # v4.1 API: back to the original
+                                # int x265_encoder_encode(x265_encoder* encoder, x265_nal** pp_nal, uint32_t* pi_nal, x265_picture* pic_in, x265_picture* pic_out);
+                                
                                 encoding = @elapsed stat = ccall(
                                     (:x265_encoder_encode, libx265),
                                     Cint,
@@ -1486,7 +1489,7 @@ function ws_coroutine(ws, ids)
                                         Ref{Ptr{Cvoid}},
                                         Ref{Cint},
                                         Ptr{Cvoid},
-                                        Ref{Ptr{Cvoid}},
+                                        Ptr{Cvoid},
                                     ),
                                     encoder,
                                     pNals,
