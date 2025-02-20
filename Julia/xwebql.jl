@@ -1369,8 +1369,8 @@ function ws_coroutine(ws, ids)
             frame_end = Float64(req["frame_end"])
 
             # an override (debugging)
-            frame_start = Float64(8.763479640732266)
-            frame_end = Float64(8.799425640732265)
+            #frame_start = Float64(8.763479640732266)
+            #frame_end = Float64(8.799425640732265)
 
             frame = (frame_start + frame_end) / 2.0
 
@@ -1396,7 +1396,7 @@ function ws_coroutine(ws, ids)
 
                 if !keyframe && (last_frame == frame)
                     println("skipping a repeat video frame")
-                    #continue
+                    continue
                 else
                     last_frame = frame
                     println("video frame: $frame; keyframe: $keyframe")
