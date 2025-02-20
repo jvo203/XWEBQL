@@ -108,7 +108,8 @@ const SERVER_STRING =
     "." *
     string(VERSION_SUB)
 
-const WASM_VERSION = "25.02.20.0"
+# const WASM_VERSION = "25.02.20.0"
+const WASM_VERSION = "24.10.18.0"
 const VERSION_STRING = "J/SV2025-02-20.0-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
@@ -1477,10 +1478,10 @@ function ws_coroutine(ws, ids)
                                 # int x265_encoder_encode(x265_encoder *encoder, x265_nal **pp_nal, uint32_t *pi_nal, x265_picture *pic_in, x265_picture **pic_out);
                                 # int ret = x265_encoder_encode(encoder, &pNals, &iNal, picture, !NULL);
                                 # version v4.0.0 changed the API              
-                                
+
                                 # v4.1 API: back to the original
                                 # int x265_encoder_encode(x265_encoder* encoder, x265_nal** pp_nal, uint32_t* pi_nal, x265_picture* pic_in, x265_picture* pic_out);
-                                
+
                                 encoding = @elapsed stat = ccall(
                                     (:x265_encoder_encode, libx265),
                                     Cint,
