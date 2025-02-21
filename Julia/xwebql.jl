@@ -110,7 +110,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "25.02.20.0"
-const VERSION_STRING = "J/SV2025-02-21.0-ALPHA"
+const VERSION_STRING = "J/SV2025-02-21.1-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -1469,9 +1469,6 @@ function ws_coroutine(ws, ids)
 
                             picture_jl.planeB = pointer(alpha)
                             picture_jl.strideB = strides(alpha)[2]
-
-                            picture_jl.planeA = pointer(alpha)
-                            picture_jl.strideA = strides(alpha)[2]
 
                             # sync the Julia structure back to C
                             unsafe_store!(Ptr{x265_picture}(picture), picture_jl)
