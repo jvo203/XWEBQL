@@ -1885,7 +1885,7 @@ function ws_coroutine(ws, ids)
                         )
 
                         planeB = fill(UInt8(128), image_width, image_height)
-                        planeA = fill(UInt8(255), image_width, image_height)
+                        planeA = fill(UInt8(0), image_width, image_height) # 255
 
                         picture_jl = x265_picture(picture)
                         picture_jl.strideR = 0
