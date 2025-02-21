@@ -58,7 +58,7 @@ end
 @static if !Sys.iswindows()
     # version v4.1.0 changed the API yet again
     if parse(Int32, x265_apiver()) < 215
-        error("x265 API version " * x265_apiver() * " used by Julia is too old, make sure Julia x265_jll bindings are at v4.1.0 or higher.")
+        error("x265 API version " * x265_apiver() * " used by Julia is too old, make sure Julia x265_jll package is v4.1.0 or higher.")
     end
 end
 
@@ -109,7 +109,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "25.02.20.0"
-const VERSION_STRING = "J/SV2025-02-20.0-ALPHA"
+const VERSION_STRING = "J/SV2025-02-21.0-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -1212,7 +1212,7 @@ function ws_coroutine(ws, ids)
     energy = nothing
 
     # HEVC
-    local param, encoder, picture, planeB, planeA, luma, alpha
+    local param, encoder, picture, luma, alpha
     local filter::KalmanFilter, ts
 
     local video_mtx = ReentrantLock()
@@ -1458,12 +1458,19 @@ function ws_coroutine(ws, ids)
                         if picture != C_NULL
                             # update the x265_picture structure                
                             picture_jl = x265_picture(picture)
+                            picture_jl.bitDepth = 8
 
                             picture_jl.planeR = pointer(luma)
                             picture_jl.strideR = strides(luma)[2]
 
                             picture_jl.planeG = pointer(alpha)
                             picture_jl.strideG = strides(alpha)[2]
+
+                            picture_jl.planeB = pointer(alpha)
+                            picture_jl.strideB = strides(alpha)[2]
+
+                            picture_jl.planeA = pointer(alpha)
+                            picture_jl.strideA = strides(alpha)[2]
 
                             # sync the Julia structure back to C
                             unsafe_store!(Ptr{x265_picture}(picture), picture_jl)
@@ -1472,18 +1479,9 @@ function ws_coroutine(ws, ids)
                                 # HEVC-encode the luminance and alpha channels
                                 iNal = Ref{Cint}(0)
                                 pNals = Ref{Ptr{Cvoid}}(C_NULL)
-                                #picOut = Ref{Ptr{x265_picture}}(C_NULL)
 
-                                # iNal_jll value: iNal[] 
-
-                                # an array of pointers
-                                # local pNals_jll::Ptr{Ptr{Cvoid}} = pNals[]                        
-
-                                # int x265_encoder_encode(x265_encoder *encoder, x265_nal **pp_nal, uint32_t *pi_nal, x265_picture *pic_in, x265_picture **pic_out);
-                                # int ret = x265_encoder_encode(encoder, &pNals, &iNal, picture, !NULL);
-                                # version v4.0.0 changed the API              
-
-                                # v4.1 API: back to the original
+                                # version v4.0.0 broke the API
+                                # version 4.1.0 restored the original API
                                 # int x265_encoder_encode(x265_encoder* encoder, x265_nal** pp_nal, uint32_t* pi_nal, x265_picture* pic_in, x265_picture* pic_out);
 
                                 encoding = @elapsed stat = ccall(
@@ -1495,14 +1493,12 @@ function ws_coroutine(ws, ids)
                                         Ref{Cint},
                                         Ptr{x265_picture},
                                         Ptr{x265_picture},
-                                        #Ref{Ptr{x265_picture}},
                                     ),
                                     encoder,
                                     pNals,
                                     iNal,
                                     picture,
                                     C_NULL,
-                                    #picOut,
                                 )
                                 encoding *= 1000.0 # [ms]
 
@@ -1883,21 +1879,6 @@ function ws_coroutine(ws, ids)
                             param,
                             picture,
                         )
-
-                        planeB = fill(UInt8(128), image_width, image_height)
-                        planeA = fill(UInt8(0), image_width, image_height) # 255
-
-                        picture_jl = x265_picture(picture)
-                        picture_jl.strideR = 0
-                        picture_jl.strideG = 0
-                        picture_jl.planeB = pointer(planeB)
-                        picture_jl.strideB = strides(planeB)[2]
-                        picture_jl.planeA = pointer(planeA)
-                        picture_jl.strideA = strides(planeA)[2]
-                        picture_jl.bitDepth = 8
-
-                        # sync the Julia structure back to C
-                        unsafe_store!(Ptr{x265_picture}(picture), picture_jl)
                     catch e
                         println(e)
                     finally
