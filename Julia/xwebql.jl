@@ -100,7 +100,7 @@ XCACHE = ".cache"
 
 const VERSION_MAJOR = 1
 const VERSION_MINOR = 0
-const VERSION_SUB = 19
+const VERSION_SUB = 20
 const SERVER_STRING =
     "XWEBQL v" *
     string(VERSION_MAJOR) *
