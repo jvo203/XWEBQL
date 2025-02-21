@@ -18,6 +18,7 @@ using ZfpCompression
 mutable struct x265_picture
     pts::Clong
     dts::Clong
+    vbvEndFlag::Cint
     userData::Ptr{Cvoid}
     planeR::Ptr{Cuchar}
     planeG::Ptr{Cuchar}
