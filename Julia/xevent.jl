@@ -462,7 +462,7 @@ function getKeyValueByComment(hdr::FITSHeader, comment::String)
     for i = 1:length(hdr)
         # match the comment exactly, trim the comment string
         if strip(hdr.comments[i]) == comment
-            println("hdr.keys[$i] = |", hdr.keys[i], "|, hdr.values[$i] = |", hdr.values[i], "|", ", hdr.comments[$i] = |", hdr.comments[i], "|")
+            #println("hdr.keys[$i] = |", hdr.keys[i], "|, hdr.values[$i] = |", hdr.values[i], "|", ", hdr.comments[$i] = |", hdr.comments[i], "|")
             return hdr.values[i]
         end
     end
@@ -487,10 +487,10 @@ function getNumChannels(header::FITSHeader)
         end
     catch _
         println("getNumChannels: 'TELESCOP' not found")
-    finally
-        # a default number of channels
-        return 256
     end
+
+    # a default number of channels
+    return 256
 end
 
 function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::Integer, y1::Integer, y2::Integer, E1::Float32, E2::Float32, NAXIS3::Integer)
