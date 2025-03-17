@@ -459,10 +459,6 @@ function getCircleSpectrum(x, y, energy, E_min::Float32, E_max::Float32, cx::Int
 end
 
 function getKeyValueByComment(hdr::FITSHeader, comment::String)
-    println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-    #println("hdr.comments: ", hdr.comments)
-    println("getKeyValueByComment: $comment")
-
     for i = 1:length(hdr)
         # match the comment exactly, trim the comment string
         if strip(hdr.comments[i]) == comment
@@ -472,8 +468,8 @@ function getKeyValueByComment(hdr::FITSHeader, comment::String)
     end
 
     # throw an exception
-    println("Comment not found: $comment in ", hdr.comments)
-    throw("Comment not found: $comment")
+    println("getKeyValueByComment: '$comment' not found in ", hdr.comments)
+    throw("getKeyValueByComment: comment not found: $comment")
 end
 
 function getNumChannels(header::FITSHeader)
@@ -489,10 +485,10 @@ function getNumChannels(header::FITSHeader)
         if TELESCOP == "XRISM"
             return 512
         end
-
-        # default: 256
-        return 256
     catch _
+        println("getNumChannels: 'TELESCOP' not found")
+    finally
+        # a default number of channels
         return 256
     end
 end
