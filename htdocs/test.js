@@ -17,8 +17,8 @@ function view_mission(satellite) {
         alert("no dataset found !");
 }
 
-function view_url() {
-    var events_url = document.getElementById("url").value.trim();
+function view_url(index) {
+    var events_url = document.getElementById("url" + index).value.trim();
 
     if (events_url != "") {
         var url = "/xwebql/events.html?" + "url=" + encodeURIComponent(events_url);
