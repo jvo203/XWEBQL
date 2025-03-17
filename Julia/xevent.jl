@@ -14,7 +14,7 @@ using ThreadsX
 finale(x) = @async println("Finalized $(x.id) :: $(x.uri)")
 
 # the number of energy channels
-const NUM_CHANNELS = 128
+const NUM_CHANNELS = 256 #128
 
 # energy cap
 const MAXIMUM_ENERGY = 30000.0 # eV
@@ -461,6 +461,24 @@ function getCircleSpectrum(x, y, energy, E_min::Float32, E_max::Float32, cx::Int
     return spectrum
 end
 
+function getKeyValueByComment(hdr::FITSHeader, comment::String)
+    println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    #println("hdr.comments: ", hdr.comments)
+    println("getKeyValueByComment: $comment")
+
+    for i = 1:length(hdr)
+        # match the comment exactly, trim the comment string
+        if strip(hdr.comments[i]) == comment
+            println("hdr.keys[$i] = |", hdr.keys[i], "|, hdr.values[$i] = |", hdr.values[i], "|", ", hdr.comments[$i] = |", hdr.comments[i], "|")
+            return hdr.values[i]
+        end
+    end
+
+    # throw an exception
+    println("Comment not found: $comment in ", hdr.comments)
+    throw("Comment not found: $comment")
+end
+
 function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::Integer, y1::Integer, y2::Integer, E1::Float32, E2::Float32, NAXIS3::Integer)
     global SERVER_STRING
 
@@ -471,34 +489,74 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     local OBJECT, RA_OBJ, DEC_OBJ, DATEOBS, TIMESYS
     local TELESCOP, INSTRUME, OBSERVER, EQUINOX, RADECSYS
 
-    # println(xobject.header)
+    #println(xobject.header)
 
+    # TELESCOP
     try
-        CRVAL1 = xobject.header["TCRVL40"]
+        TELESCOP = xobject.header["TELESCOP"]
     catch _
-        CRVAL1 = NaN
+        TELESCOP = "UNKNOWN"
     end
 
+    # INSTRUME
     try
-        CDELT1 = xobject.header["TCDLT40"]
+        INSTRUME = xobject.header["INSTRUME"]
     catch _
-        CDELT1 = NaN
+        INSTRUME = "UNKNOWN"
     end
 
+    # OBSERVER
     try
-        CRPIX1 = xobject.header["TCRPX40"]
+        OBSERVER = xobject.header["OBSERVER"]
+    catch _
+        OBSERVER = "UNKNOWN"
+    end
+
+    # EQUINOX
+    try
+        EQUINOX = xobject.header["EQUINOX"]
+    catch _
+        EQUINOX = "UNKNOWN"
+    end
+
+    # RADECSYS
+    try
+        RADECSYS = xobject.header["RADECSYS"]
+    catch _
+        RADECSYS = "UNKNOWN"
+    end
+
+    BUNIT = "counts"
+    BTYPE = "COUNTS"
+
+    println("TELESCOP = $TELESCOP, INSTRUME = $INSTRUME, OBSERVER = $OBSERVER, EQUINOX = $EQUINOX, RADECSYS = $RADECSYS")
+
+    try
+        CRPIX1 = getKeyValueByComment(xobject.header, "X image ref. pixel")
     catch _
         CRPIX1 = NaN
     end
 
     try
-        CUNIT1 = xobject.header["TCUNI40"]
+        CUNIT1 = getKeyValueByComment(xobject.header, "X units")
     catch _
         CUNIT1 = NaN
     end
 
     try
-        CTYPE1 = xobject.header["TCTYP40"]
+        CRVAL1 = getKeyValueByComment(xobject.header, "X image ref. pixel coord. ($CUNIT1)")
+    catch _
+        CRVAL1 = NaN
+    end
+
+    try
+        CDELT1 = getKeyValueByComment(xobject.header, "X image scale ($CUNIT1/pixel)")
+    catch _
+        CDELT1 = NaN
+    end
+
+    try
+        CTYPE1 = getKeyValueByComment(xobject.header, "X coordinate type")
     catch _
         CTYPE1 = NaN
     end
@@ -506,31 +564,31 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     println("CRVAL1 = $CRVAL1, CDELT1 = $CDELT1, CRPIX1 = $CRPIX1, CUNIT1 = $CUNIT1, CTYPE1 = $CTYPE1")
 
     try
-        CRVAL2 = xobject.header["TCRVL41"]
-    catch _
-        CRVAL2 = NaN
-    end
-
-    try
-        CDELT2 = xobject.header["TCDLT41"]
-    catch _
-        CDELT2 = NaN
-    end
-
-    try
-        CRPIX2 = xobject.header["TCRPX41"]
+        CRPIX2 = getKeyValueByComment(xobject.header, "Y image ref. pixel")
     catch _
         CRPIX2 = NaN
     end
 
     try
-        CUNIT2 = xobject.header["TCUNI41"]
+        CUNIT2 = getKeyValueByComment(xobject.header, "Y units")
     catch _
         CUNIT2 = NaN
     end
 
     try
-        CTYPE2 = xobject.header["TCTYP41"]
+        CRVAL2 = getKeyValueByComment(xobject.header, "Y image ref. pixel coord. ($CUNIT2)")
+    catch _
+        CRVAL2 = NaN
+    end
+
+    try
+        CDELT2 = getKeyValueByComment(xobject.header, "Y image scale ($CUNIT2/pixel)")
+    catch _
+        CDELT2 = NaN
+    end
+
+    try
+        CTYPE2 = getKeyValueByComment(xobject.header, "Y coordinate type")
     catch _
         CTYPE2 = NaN
     end
@@ -608,46 +666,6 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     end
 
     println("OBJECT = $OBJECT, RA_OBJ = $RA_OBJ, DEC_OBJ = $DEC_OBJ, DATEOBS = $DATEOBS, TIMESYS = $TIMESYS")
-
-    # TELESCOP
-    try
-        TELESCOP = xobject.header["TELESCOP"]
-    catch _
-        TELESCOP = "UNKNOWN"
-    end
-
-    # INSTRUME
-    try
-        INSTRUME = xobject.header["INSTRUME"]
-    catch _
-        INSTRUME = "UNKNOWN"
-    end
-
-    # OBSERVER
-    try
-        OBSERVER = xobject.header["OBSERVER"]
-    catch _
-        OBSERVER = "UNKNOWN"
-    end
-
-    # EQUINOX
-    try
-        EQUINOX = xobject.header["EQUINOX"]
-    catch _
-        EQUINOX = "UNKNOWN"
-    end
-
-    # RADECSYS
-    try
-        RADECSYS = xobject.header["RADECSYS"]
-    catch _
-        RADECSYS = "UNKNOWN"
-    end
-
-    BUNIT = "counts"
-    BTYPE = "COUNTS"
-
-    println("TELESCOP = $TELESCOP, INSTRUME = $INSTRUME, OBSERVER = $OBSERVER, EQUINOX = $EQUINOX, RADECSYS = $RADECSYS")
 
     # make a new header from pixels
     new_header = default_header(pixels)
