@@ -13,9 +13,6 @@ using ThreadsX
 
 finale(x) = @async println("Finalized $(x.id) :: $(x.uri)")
 
-# the number of energy channels
-const NUM_CHANNELS = 256 #128
-
 # energy cap
 const MAXIMUM_ENERGY = 30000.0 # eV
 
@@ -225,7 +222,7 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     println("min_count = $min_count, max_count = ", max_count)
 
     # the spectrum
-    (spectrum, E_min, E_max) = getSpectrum(xobject, NUM_CHANNELS)
+    (spectrum, E_min, E_max) = getSpectrum(xobject, getNumChannels(xobject.header))
     println("E_min = ", E_min)
     println("E_max = ", E_max)
     println("spectrum:", spectrum)
@@ -477,6 +474,27 @@ function getKeyValueByComment(hdr::FITSHeader, comment::String)
     # throw an exception
     println("Comment not found: $comment in ", hdr.comments)
     throw("Comment not found: $comment")
+end
+
+function getNumChannels(header::FITSHeader)
+    try
+        TELESCOP = header["TELESCOP"]
+
+        # HITOMI: 128
+        if TELESCOP == "HITOMI"
+            return 128
+        end
+
+        # XRISM: 512
+        if TELESCOP == "XRISM"
+            return 512
+        end
+
+        # default: 256
+        return 256
+    catch _
+        return 256
+    end
 end
 
 function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::Integer, y1::Integer, y2::Integer, E1::Float32, E2::Float32, NAXIS3::Integer)
@@ -878,7 +896,7 @@ function write_html_header(io::IO, hdr::FITSHeader)
     end
 end
 
-function getViewportSpectrum(x, y, energy, req::Dict{String,Any})
+function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::Integer)
     local pixels, mask, spectrum
     local min_count, max_count
     local view_resp, spec_resp
@@ -946,9 +964,9 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any})
 
     # get the spectrum
     if beam == CIRCLE
-        spectrum = getCircleSpectrum(x, y, energy, energy_start, energy_end, cx, cy, r2, NUM_CHANNELS)
+        spectrum = getCircleSpectrum(x, y, energy, energy_start, energy_end, cx, cy, r2, num_channels)
     elseif beam == SQUARE
-        spectrum = getSquareSpectrum(x, y, energy, energy_start, energy_end, x1, x2, y1, y2, NUM_CHANNELS)
+        spectrum = getSquareSpectrum(x, y, energy, energy_start, energy_end, x1, x2, y1, y2, num_channels)
     end
 
     # optionally downsample the spectrum

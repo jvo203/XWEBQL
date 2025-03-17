@@ -1288,7 +1288,7 @@ function ws_coroutine(ws, ids)
             end
 
             elapsed =
-                @elapsed viewport, spectrum = getViewportSpectrum(x, y, energy, req)
+                @elapsed viewport, spectrum = getViewportSpectrum(x, y, energy, req, getNumChannels(xobject.header))
             elapsed *= 1000.0 # [ms]
 
             println("[getViewportSpectrum] elapsed: $elapsed [ms]")
@@ -1640,7 +1640,7 @@ function ws_coroutine(ws, ids)
                 req["y2"] = offsety + inner_height - 1
 
                 elapsed =
-                    @elapsed image, spectrum = getViewportSpectrum(x, y, energy, req)
+                    @elapsed image, spectrum = getViewportSpectrum(x, y, energy, req, getNumChannels(xobject.header))
                 elapsed *= 1000.0 # [ms]
 
                 println("[getViewportSpectrum] elapsed: $elapsed [ms]")
