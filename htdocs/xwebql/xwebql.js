@@ -1072,6 +1072,43 @@ async function mainRenderer() {
             }
         }
 
+        // a progress bar
+        var has_events = htmlData.getAttribute('data-has-events');
+        {
+            var display_progress = 'block';
+            if (has_events == '1')
+                display_progress = 'none';
+
+            var div = d3.select("body").append("div")
+                .attr("id", "welcome")
+                .attr("class", "container welcome")
+                .style('display', display_progress);
+
+            var group = div.append("g")
+                .attr("id", "welcomeGroup");
+
+            group.append("h1")
+                .text("XWEBQLSE");
+
+            group.append("p")
+                .text(htmlData.getAttribute('data-server-version') + "/" + get_js_version());
+
+            group.append("p")
+                .text("Processing request, please wait ...");
+
+            group.append("div")
+                .attr("class", "progress")
+                .append("div")
+                .attr("id", "progress-bar")
+                .attr("class", "progress-bar progress-bar-info progress-bar-striped active")
+                .attr("role", "progressbar")
+                .attr("aria-valuenow", 0)
+                .attr("aria-valuemin", 0)
+                .attr("aria-valuemax", 100)
+                .style("width", "0%")
+                .html("0%");
+        }
+
         d3.select("body").append("div")
             .attr("id", "lineidentification")
             .attr("class", "molecularmodal");
