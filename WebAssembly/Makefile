@@ -59,7 +59,7 @@ wasm: $(FFMPEG_OBJ) $(OBJ)
 	em++ -Oz $(EMFLAGS) $(DEFS) main.cc $(OBJ) $(FFMPEG_OBJ) -o ../htdocs/xwebql/client.$(VERSION).js $(INCLUDE) -L$(LIBRARY) $(CXXFLAGS) $(LDFLAGS)
 
 hevc: $(FFMPEG_OBJ) $(OBJ)
-	em++ -Oz $(EMFLAGS) $(DEFS) -DHEVC -s ENVIRONMENT=worker main.cc $(OBJ) $(FFMPEG_OBJ) -o ../htdocs/xwebql/hevc.js --post-js module-post.js $(INCLUDE) -L$(LIBRARY) $(CXXFLAGS) $(LDFLAGS)
+	em++ -Oz $(EMFLAGS) $(DEFS) -DHEVC -s ENVIRONMENT=worker main.cc $(OBJ) $(FFMPEG_OBJ) -o ../htdocs/xwebql/hevc.js $(INCLUDE) -L$(LIBRARY) $(CXXFLAGS) $(LDFLAGS)
 
 
 # -s "EXPORTED_FUNCTIONS=['_hevc_init','_hevc_destroy','_hevc_decode_nal_unit']"
