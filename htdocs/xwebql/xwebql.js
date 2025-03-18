@@ -1381,8 +1381,7 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
                             let elapsed = Math.round(performance.now() - start);
 
                             console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
-                        } catch (e) {
-                            console.log(e);
+                        } catch (_) {
                             has_spectrum = false;
                         }
 
