@@ -1096,6 +1096,7 @@ async function mainRenderer() {
         open_websocket_connection(datasetId);
         fetch_image_spectrum(datasetId, true, false);
         fetch_spectral_lines(datasetId, 0, 0);
+        poll_progress(datasetId);
 
     };
 
@@ -1171,6 +1172,94 @@ async function fetch_spectral_lines(datasetId, ene_start, ene_end) {
     xmlhttp.timeout = 0;
     xmlhttp.send();
 };
+
+async function poll_progress(datasetId) {
+    var xmlhttp = new XMLHttpRequest();
+    var url = 'progress/' + encodeURIComponent(datasetId);
+
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 404) {
+            console.log("poll_progress: dataset not found.");
+        };
+
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 202) {
+            console.log("Server not ready, long-polling progress again after 250 ms.");
+            setTimeout(function () {
+                poll_progress(datasetId);
+            }, 250);
+        }
+
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+            var data = xmlhttp.response;
+            console.log("poll_progress: data:", data);
+
+            try {
+                process_progress_event(data);
+
+                // if (data.total == 0 || data.running != data.total)
+                if (data.progress == 0 || data.progress < 100.0)
+                    setTimeout(function () {
+                        poll_progress(datasetId);
+                    }, 250);
+            } catch (e) {
+                console.log(e, data);
+                setTimeout(function () {
+                    poll_progress(datasetId);
+                }, 250);
+            }
+        }
+    }
+
+    xmlhttp.open("POST", url, true);
+    xmlhttp.responseType = 'json';
+    xmlhttp.timeout = 0;
+    xmlhttp.send();
+}
+
+function process_progress_event(data, index) {
+    if (data != null) {
+        var progress = data.progress;
+        var elapsed = data.elapsed;
+
+        if (progress > 0) {
+            notifications_received[index - 1] = Math.max(progress, notifications_received[index - 1]);
+
+            /*if(running > 0)
+            PROGRESS_VARIABLE = running/total ;
+            else*/
+            var PROGRESS_VARIABLE = progress;
+
+            if (PROGRESS_VARIABLE != previous_progress[index - 1]) {
+                previous_progress[index - 1] = PROGRESS_VARIABLE;
+
+                PROGRESS_INFO = "&nbsp;" + numeral(PROGRESS_VARIABLE / 100.0).format('0.0%');
+
+                if (!isNaN(elapsed)) {
+                    var speed = notifications_received[index - 1] / elapsed;
+                    var remaining_time = (100.0 - notifications_received[index - 1]) / speed;//[s]
+
+                    //console.log("speed:", speed, "remaining:", remaining_time);
+                    if (remaining_time > 1)
+                        PROGRESS_INFO += ", " + numeral(remaining_time).format('00:00:00');
+                }
+
+                d3.select("#progress-bar" + index)
+                    .attr("aria-valuenow", (PROGRESS_VARIABLE))
+                    .style("width", (PROGRESS_VARIABLE) + "%")
+                    .html(PROGRESS_INFO);
+            }
+
+            if (progress >= 100.0)
+                document.getElementById('welcome').style.display = "none";
+        }
+        /*else {
+          notifications_completed++;
+ 
+          if (notifications_completed == va_count)
+            document.getElementById('welcome').style.display = "none";
+        }*/
+    }
+}
 
 async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
     var rect = document.getElementById('mainDiv').getBoundingClientRect();
