@@ -1278,9 +1278,10 @@ function process_progress_event(data) {
                     var speed = notifications_received / elapsed;
                     var remaining_time = (100.0 - notifications_received) / speed;//[s]
 
-                    //console.log("speed:", speed, "remaining:", remaining_time);
-                    if (remaining_time > 1)
+                    // console.log("speed:", speed, "remaining:", remaining_time);
+                    if (remaining_time > 1) {
                         PROGRESS_INFO += ", " + numeral(remaining_time).format('00:00:00');
+                    }
                 }
 
                 d3.select("#progress-bar")
