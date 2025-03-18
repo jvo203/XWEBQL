@@ -482,6 +482,46 @@ function streamHeartBeat(http::HTTP.Streams.Stream)
     return nothing
 end
 
+function streamProgress(http::HTTP.Streams.Stream)
+    global XOBJECTS, XLOCK
+
+    request::HTTP.Request = http.message
+    request.body = read(http)
+    closeread(http)
+
+    datasetid = HTTP.URIs.splitpath(HTTP.unescapeuri(request.target))[3]
+    xobject = get_dataset(datasetid, XOBJECTS, XLOCK)
+
+    if xobject.id == ""
+        HTTP.setstatus(http, 404)
+        startwrite(http)
+        write(http, "Not Found")
+        return nothing
+    end
+
+    if has_error(xobject)
+        HTTP.setstatus(http, 500)
+        startwrite(http)
+        write(http, "Internal Server Error")
+        return nothing
+    end
+
+    update_timestamp(xobject)
+
+    # get the progress tuple
+    progress, elapsed = get_progress(xobject)
+
+    # form a JSON response
+    resp = IOBuffer()
+    write(resp, "{\"progress\" : $progress, \"elapsed\" : $elapsed}")
+
+    HTTP.setstatus(http, 200)
+    HTTP.setheader(http, "Content-Type" => "application/json")
+    startwrite(http)
+    write(http, take!(resp))
+    return nothing
+end
+
 function streamXEvents(http::HTTP.Streams.Stream)
     global XOBJECTS, XLOCK
 
@@ -1128,6 +1168,7 @@ HTTP.register!(XROUTER, "GET", "/exit", gracefullyShutdown)
 HTTP.register!(XROUTER, "GET", "/get_directory", streamDirectory)
 HTTP.register!(XROUTER, "GET", "/*/events.html", streamXEvents)
 HTTP.register!(XROUTER, "POST", "/*/heartbeat/*", streamHeartBeat)
+HTTP.register!(XROUTER, "POST", "/*/progress/*", streamProgress)
 HTTP.register!(XROUTER, "GET", "*/*", streamDocument)
 HTTP.register!(XROUTER, "GET", "*", streamDocument)
 HTTP.register!(XROUTER, "GET", "/*/image_spectrum/", streamImageSpectrum)

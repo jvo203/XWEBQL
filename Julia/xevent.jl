@@ -108,6 +108,17 @@ function get_dataset(datasetid::String, xobjects, xlock)::XDataSet
     return dataset
 end
 
+
+function get_progress(xobject::XDataSet)
+    progress = 0.0
+
+    if xobject.total[] > 0
+        progress = 100.0 * Float64(xobject.progress[]) / Float64(xobject.total[])
+    end
+
+    return progress, xobject.elapsed[]
+end
+
 function garbage_collector(xobjects, xlock, timeout::Int64)
     global running
 
