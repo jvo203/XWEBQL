@@ -157,6 +157,10 @@ function garbage_collector(xobjects, xlock, timeout::Int64)
     @info "Garbage collection loop terminated."
 end
 
+function download_progress(total::Integer, now::Integer)
+    println("Downloaded: $now / $total")
+end
+
 function load_events(xdataset::XDataSet, uri::String)
     global XCACHE
     local f
@@ -166,7 +170,13 @@ function load_events(xdataset::XDataSet, uri::String)
     # check if the uri starts with "http" or "ftp"
     if startswith(uri, "http") || startswith(uri, "ftp")
         # check if the uri is already in the cache (not implemented yet)
-        f = FITS(Downloads.download(uri))
+        try
+            f = FITS(Downloads.download(uri, progress=download_progress))
+        catch e
+            println("Failed to download events: $e")
+            xdataset.has_error[] = true
+            return
+        end
     else
         f = FITS(uri)
     end
