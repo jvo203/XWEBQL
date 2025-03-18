@@ -585,6 +585,8 @@ function streamXEvents(http::HTTP.Streams.Stream)
     println("dataset: \"$dataset\"")
     println("ext: \"$ext\"")
 
+    data_has_events = false
+
     if !dataset_exists(dataset, XOBJECTS, XLOCK)
         if uri == ""
             if dir != ""
@@ -618,10 +620,13 @@ function streamXEvents(http::HTTP.Streams.Stream)
         # start a new event processing thread
         Threads.@spawn load_events(xdataset, uri)
     else
-        # update_timestamp
+        # update_timestamp and data_has_events
         xdataset = get_dataset(dataset, XOBJECTS, XLOCK)
         update_timestamp(xdataset)
+        data_has_events = has_events(xdataset)
     end
+
+    println("data_has_events: $data_has_events")
 
     html = IOBuffer()
 
@@ -839,8 +844,8 @@ function streamXEvents(http::HTTP.Streams.Stream)
         write(html, "' data-server-mode='SERVER")
     end
 
-    write(html, "'></div>\n")
-
+    has_events_str = data_has_events ? "1" : "0"
+    write(html, "' data-has-events='$has_events_str'></div>\n")
     write(html, "<script>var WS_PORT = $WS_PORT;</script>\n")
 
     # the page entry point
