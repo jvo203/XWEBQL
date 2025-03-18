@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-02-20.0";
+    return "JS2025-03-18.0";
 }
 
 function uuidv4() {
@@ -374,8 +374,6 @@ function enable_3d_view() {
 }
 
 async function open_3d_view() {
-    // await sleep(5000);
-
     try {
         enable_3d_view();
     }
@@ -708,18 +706,6 @@ function poll_heartbeat() {
     xmlhttp.responseType = 'text';
     xmlhttp.timeout = 0;
     xmlhttp.send();
-}
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-// async function to wait until Module.ready is defined
-async function waitForModuleReady() {
-    while (typeof Module === 'undefined' || typeof Module.ready === 'undefined') {
-        console.log('waiting for Module.ready...');
-        await sleep(100);
-    }
 }
 
 async function mainRenderer() {
@@ -1282,255 +1268,256 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
             setup_window_timeout();
 
             // wait for WebAssembly to get compiled
-            waitForModuleReady().then(() => {
-                Module.ready
-                    .then(_ => {
-                        var received_msg = xmlhttp.response;
+            Module().then(instance => {
+                console.log("WebAssembly compiled successfully.");
+                WASM = instance;
 
-                        if (received_msg.byteLength == 0) {
-                            hide_hourglass();
-                            show_not_found();
-                            return;
+                {
+                    var received_msg = xmlhttp.response;
+
+                    if (received_msg.byteLength == 0) {
+                        hide_hourglass();
+                        show_not_found();
+                        return;
+                    }
+
+                    if (received_msg instanceof ArrayBuffer) {
+                        var fitsHeader;
+
+                        var dv = new DataView(received_msg);
+                        console.log("FITSImage dataview byte length: ", dv.byteLength);
+
+                        var offset = 0;
+                        var str_length = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        let flux = new Uint8Array(received_msg, offset, str_length);
+                        flux = (new TextDecoder("utf-8").decode(flux)).trim();
+                        offset += str_length;
+
+                        console.log("flux: ", flux);
+
+                        let min_count = getUint64(dv, offset, endianness);
+                        offset += 8;
+
+                        let max_count = getUint64(dv, offset, endianness);
+                        offset += 8;
+
+                        console.log("min_count: ", min_count, "max_count: ", max_count);
+
+                        let img_width = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        let img_height = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        console.log('img_width:', img_width, 'img_height:', img_height);
+
+                        let pixels_length = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        console.log('pixels length:', pixels_length);
+
+                        let frame_pixels = new Uint8Array(received_msg, offset, pixels_length);
+                        offset += pixels_length;
+
+                        let mask_length = dv.getUint32(offset, endianness);
+                        offset += 4;
+
+                        console.log('mask length:', mask_length);
+
+                        let frame_mask = new Uint8Array(received_msg, offset, mask_length);
+                        offset += mask_length;
+
+                        var has_json = true;
+
+                        try {
+                            var json_len = dv.getUint32(offset, endianness);
+                            offset += 4;
+
+                            var buffer_len = dv.getUint32(offset, endianness);
+                            offset += 4;
+
+                            var json = new Uint8Array(received_msg, offset, buffer_len);
+                            offset += buffer_len;
+                            console.log("X-ray json length:", json_len);
+                        } catch (_) {
+                            has_json = false;
                         }
 
-                        if (received_msg instanceof ArrayBuffer) {
-                            var fitsHeader;
+                        var has_header = true;
 
-                            var dv = new DataView(received_msg);
-                            console.log("FITSImage dataview byte length: ", dv.byteLength);
-
-                            var offset = 0;
-                            var str_length = dv.getUint32(offset, endianness);
+                        try {
+                            var header_len = dv.getUint32(offset, endianness);
                             offset += 4;
 
-                            let flux = new Uint8Array(received_msg, offset, str_length);
-                            flux = (new TextDecoder("utf-8").decode(flux)).trim();
-                            offset += str_length;
-
-                            console.log("flux: ", flux);
-
-                            let min_count = getUint64(dv, offset, endianness);
-                            offset += 8;
-
-                            let max_count = getUint64(dv, offset, endianness);
-                            offset += 8;
-
-                            console.log("min_count: ", min_count, "max_count: ", max_count);
-
-                            let img_width = dv.getUint32(offset, endianness);
+                            var buffer_len = dv.getUint32(offset, endianness);
                             offset += 4;
 
-                            let img_height = dv.getUint32(offset, endianness);
+                            var header = new Uint8Array(received_msg, offset, buffer_len);
+                            offset += buffer_len;
+                            console.log("FITS header length:", header_len);
+                        } catch (_) {
+                            has_header = false;
+                        }
+
+                        var has_spectrum = true;
+
+                        try {
+                            var spectrum_len = dv.getUint32(offset, endianness);
                             offset += 4;
 
-                            console.log('img_width:', img_width, 'img_height:', img_height);
-
-                            let pixels_length = dv.getUint32(offset, endianness);
+                            var buffer_len = dv.getUint32(offset, endianness);
                             offset += 4;
 
-                            console.log('pixels length:', pixels_length);
+                            var buffer = new Uint8Array(received_msg, offset, buffer_len);
+                            offset += buffer_len;
+                            console.log("X-ray spectrum length:", spectrum_len);
 
-                            let frame_pixels = new Uint8Array(received_msg, offset, pixels_length);
-                            offset += pixels_length;
+                            // ZFP decoder part                            
+                            let start = performance.now();
+                            var res = WASM.decompressZFPspectrum(spectrum_len, buffer);
+                            var spectrum = WASM.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
+                            let elapsed = Math.round(performance.now() - start);
 
-                            let mask_length = dv.getUint32(offset, endianness);
-                            offset += 4;
+                            console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
+                        } catch (e) {
+                            console.log(e);
+                            has_spectrum = false;
+                        }
 
-                            console.log('mask length:', mask_length);
+                        if (has_header) {
+                            // decompress the FITS data etc.
+                            var LZ4 = require('lz4');
 
-                            let frame_mask = new Uint8Array(received_msg, offset, mask_length);
-                            offset += mask_length;
-
-                            var has_json = true;
+                            var uncompressed = new Uint8Array(header_len);
+                            uncompressedSize = LZ4.decodeBlock(header, uncompressed);
+                            uncompressed = uncompressed.slice(0, uncompressedSize);
 
                             try {
-                                var json_len = dv.getUint32(offset, endianness);
-                                offset += 4;
-
-                                var buffer_len = dv.getUint32(offset, endianness);
-                                offset += 4;
-
-                                var json = new Uint8Array(received_msg, offset, buffer_len);
-                                offset += buffer_len;
-                                console.log("X-ray json length:", json_len);
-                            } catch (_) {
-                                has_json = false;
+                                fitsHeader = new TextDecoder().decode(uncompressed);
                             }
+                            catch (err) {
+                                fitsHeader = '';
+                                for (var i = 0; i < uncompressed.length; i++)
+                                    fitsHeader += String.fromCharCode(uncompressed[i]);
+                            };
 
-                            var has_header = true;
+                            console.log(fitsHeader);
+                        }
+
+                        if (has_json) {
+                            // decompress the FITS data etc.
+                            var LZ4 = require('lz4');
+
+                            var uncompressed = new Uint8Array(json_len);
+                            uncompressedSize = LZ4.decodeBlock(json, uncompressed);
+                            uncompressed = uncompressed.slice(0, uncompressedSize);
 
                             try {
-                                var header_len = dv.getUint32(offset, endianness);
-                                offset += 4;
-
-                                var buffer_len = dv.getUint32(offset, endianness);
-                                offset += 4;
-
-                                var header = new Uint8Array(received_msg, offset, buffer_len);
-                                offset += buffer_len;
-                                console.log("FITS header length:", header_len);
-                            } catch (_) {
-                                has_header = false;
+                                fitsData = new TextDecoder().decode(uncompressed);
                             }
+                            catch (err) {
+                                fitsData = '';
+                                for (var i = 0; i < uncompressed.length; i++)
+                                    fitsData += String.fromCharCode(uncompressed[i]);
+                            };
 
-                            var has_spectrum = true;
+                            //console.log(fitsData);
+                            fitsData = JSON.parse(fitsData);
 
-                            try {
-                                var spectrum_len = dv.getUint32(offset, endianness);
-                                offset += 4;
-
-                                var buffer_len = dv.getUint32(offset, endianness);
-                                offset += 4;
-
-                                var buffer = new Uint8Array(received_msg, offset, buffer_len);
-                                offset += buffer_len;
-                                console.log("X-ray spectrum length:", spectrum_len);
-
-                                // ZFP decoder part                            
-                                let start = performance.now();
-                                var res = Module.decompressZFPspectrum(spectrum_len, buffer);
-                                var spectrum = Module.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
-                                let elapsed = Math.round(performance.now() - start);
-
-                                console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
-                            } catch (_) {
-                                has_spectrum = false;
-                            }
-
+                            // replace the dummy FITS header
                             if (has_header) {
-                                // decompress the FITS data etc.
-                                var LZ4 = require('lz4');
+                                fitsData.HEADER = fitsHeader;
+                            } else {
+                                fitsData.HEADER = 'N/A';
+                            };
 
-                                var uncompressed = new Uint8Array(header_len);
-                                uncompressedSize = LZ4.decodeBlock(header, uncompressed);
-                                uncompressed = uncompressed.slice(0, uncompressedSize);
-
-                                try {
-                                    fitsHeader = new TextDecoder().decode(uncompressed);
-                                }
-                                catch (err) {
-                                    fitsHeader = '';
-                                    for (var i = 0; i < uncompressed.length; i++)
-                                        fitsHeader += String.fromCharCode(uncompressed[i]);
-                                };
-
-                                console.log(fitsHeader);
+                            // replace the dummy spectrum
+                            if (has_spectrum) {
+                                fitsData.spectrum = spectrum;
                             }
+
+                            console.log(fitsData);
+
+                            /*if (!isLocal) {
+                                let filesize = fitsData.filesize;
+                                let strFileSize = numeral(filesize).format('0.0b');
+                                d3.select("#FITS").html("full download (" + strFileSize + ")");
+                            }*/
+
+                            {
+                                frame_reference_unit();
+
+                                //rescale CRVAL3 and CDELT3
+                                fitsData.CRVAL3 *= frame_multiplier;
+                                fitsData.CDELT3 *= frame_multiplier;
+                            }
+
+                            display_dataset_info();
+
+                            try {
+                                display_scale_info();
+                            }
+                            catch (err) {
+                            };
+
+                            display_preferences();
+
+                            display_FITS_header();
+
+                            frame_start = 0;
+                            frame_end = fitsData.depth - 1;
+
+                            if (fitsData.depth > 1) {
+                                setup_axes();
+
+                                plot_spectrum(fitsData.spectrum);
+
+                                if (lines.length > 0)
+                                    display_lines();
+                            }
+                        }
+
+                        // image
+                        {
+                            //console.log("processing an HDR image");
+                            let start = performance.now();
+
+                            // decompressZFP returns std::vector<float>
+                            // decompressZFPimage returns Float32Array but emscripten::typed_memory_view is buggy
+                            var res = WASM.decompressZFPimage(img_width, img_height, frame_pixels);
+                            const pixels = WASM.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
+
+                            var res = WASM.decompressLZ4mask(img_width, img_height, frame_mask);
+                            const alpha = WASM.HEAPU8.slice(res[0], res[0] + res[1]);
+
+                            let elapsed = Math.round(performance.now() - start);
+
+                            console.log("image width: ", img_width, "height: ", img_height, "elapsed: ", elapsed, "[ms]");
+
+                            process_hdr_image(img_width, img_height, pixels, alpha, min_count, max_count);
 
                             if (has_json) {
-                                // decompress the FITS data etc.
-                                var LZ4 = require('lz4');
-
-                                var uncompressed = new Uint8Array(json_len);
-                                uncompressedSize = LZ4.decodeBlock(json, uncompressed);
-                                uncompressed = uncompressed.slice(0, uncompressedSize);
+                                // display_histogram(index);
 
                                 try {
-                                    fitsData = new TextDecoder().decode(uncompressed);
+                                    display_gridlines();
                                 }
                                 catch (err) {
-                                    fitsData = '';
-                                    for (var i = 0; i < uncompressed.length; i++)
-                                        fitsData += String.fromCharCode(uncompressed[i]);
-                                };
-
-                                //console.log(fitsData);
-                                fitsData = JSON.parse(fitsData);
-
-                                // replace the dummy FITS header
-                                if (has_header) {
-                                    fitsData.HEADER = fitsHeader;
-                                } else {
-                                    fitsData.HEADER = 'N/A';
-                                };
-
-                                // replace the dummy spectrum
-                                if (has_spectrum) {
-                                    fitsData.spectrum = spectrum;
-                                }
-
-                                console.log(fitsData);
-
-                                /*if (!isLocal) {
-                                    let filesize = fitsData.filesize;
-                                    let strFileSize = numeral(filesize).format('0.0b');
-                                    d3.select("#FITS").html("full download (" + strFileSize + ")");
-                                }*/
-
-                                {
-                                    frame_reference_unit();
-
-                                    //rescale CRVAL3 and CDELT3
-                                    fitsData.CRVAL3 *= frame_multiplier;
-                                    fitsData.CDELT3 *= frame_multiplier;
-                                }
-
-                                display_dataset_info();
-
-                                try {
-                                    display_scale_info();
-                                }
-                                catch (err) {
-                                };
-
-                                display_preferences();
-
-                                display_FITS_header();
-
-                                frame_start = 0;
-                                frame_end = fitsData.depth - 1;
-
-                                if (fitsData.depth > 1) {
-                                    setup_axes();
-
-                                    plot_spectrum(fitsData.spectrum);
-
-                                    if (lines.length > 0)
-                                        display_lines();
+                                    console.log("display_gridlines:", err);
                                 }
                             }
 
-                            // image
-                            {
-                                //console.log("processing an HDR image");
-                                let start = performance.now();
-
-                                // decompressZFP returns std::vector<float>
-                                // decompressZFPimage returns Float32Array but emscripten::typed_memory_view is buggy
-                                var res = Module.decompressZFPimage(img_width, img_height, frame_pixels);
-                                const pixels = Module.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
-
-                                var res = Module.decompressLZ4mask(img_width, img_height, frame_mask);
-                                const alpha = Module.HEAPU8.slice(res[0], res[0] + res[1]);
-
-                                let elapsed = Math.round(performance.now() - start);
-
-                                console.log("image width: ", img_width, "height: ", img_height, "elapsed: ", elapsed, "[ms]");
-
-                                process_hdr_image(img_width, img_height, pixels, alpha, min_count, max_count);
-
-                                if (has_json) {
-                                    // display_histogram(index);
-
-                                    try {
-                                        display_gridlines();
-                                    }
-                                    catch (err) {
-                                        console.log("display_gridlines:", err);
-                                    }
-                                }
-
-                                try {
-                                    display_legend();
-                                } catch (err) {
-                                    console.log("display_legend:", err);
-                                }
+                            try {
+                                display_legend();
+                            } catch (err) {
+                                console.log("display_legend:", err);
                             }
-
                         }
 
-                    })
-                    .catch(e => console.error(e));
+                    }
+                }
             }).catch(e => console.error(e));
         }
     }
@@ -6438,27 +6425,22 @@ async function open_websocket_connection(_datasetId, index) {
                         var frame = new Uint8Array(received_msg, offset);
                         // console.log("computed:", computed, "spectrum length:", spectrum_len, "frame.length:", frame.length);
 
-                        waitForModuleReady().then(() => {
-                            // ZFP decoder part				
-                            Module.ready
-                                .then(_ => {
-                                    let start = performance.now();
-                                    var res = Module.decompressZFPspectrum(spectrum_len, frame);
-                                    const spectrum = Module.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
-                                    let elapsed = Math.round(performance.now() - start);
+                        {
+                            // ZFP decoder part				                            
+                            let start = performance.now();
+                            var res = WASM.decompressZFPspectrum(spectrum_len, frame);
+                            const spectrum = WASM.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
+                            let elapsed = Math.round(performance.now() - start);
 
-                                    // console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
+                            // console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
 
-                                    if (spectrum.length > 0) {
-                                        if (!windowLeft) {
-                                            spectrum_stack.push({ spectrum: spectrum, id: recv_seq_id });
-                                            // console.log("spectrum_stack length:", spectrum_stack.length);
-                                        };
-                                    }
-
-                                })
-                                .catch(e => console.error(e));
-                        }).catch(e => console.error(e));
+                            if (spectrum.length > 0) {
+                                if (!windowLeft) {
+                                    spectrum_stack.push({ spectrum: spectrum, id: recv_seq_id });
+                                    // console.log("spectrum_stack length:", spectrum_stack.length);
+                                };
+                            }
+                        }
 
                         //console.log("[ws] computed = " + computed.toFixed(1) + " [ms]" + " length: " + length + " spectrum length:" + spectrum.length + " spectrum: " + spectrum);
 
@@ -6497,11 +6479,11 @@ async function open_websocket_connection(_datasetId, index) {
 
                             // decompressZFP returns std::vector<float>
                             // decompressZFPimage returns Float32Array but emscripten::typed_memory_view is buggy
-                            var res = Module.decompressZFPimage(view_width, view_height, frame_pixels);
-                            const pixels = Module.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
+                            var res = WASM.decompressZFPimage(view_width, view_height, frame_pixels);
+                            const pixels = WASM.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
 
-                            var res = Module.decompressLZ4mask(view_width, view_height, frame_mask);
-                            const alpha = Module.HEAPU8.slice(res[0], res[0] + res[1]);
+                            var res = WASM.decompressLZ4mask(view_width, view_height, frame_mask);
+                            const alpha = WASM.HEAPU8.slice(res[0], res[0] + res[1]);
 
                             let elapsed = Math.round(performance.now() - start);
 
@@ -6556,11 +6538,11 @@ async function open_websocket_connection(_datasetId, index) {
                                     if (displayContours)
                                         contours = parseInt(document.getElementById('contour_lines').value) + 1;
 
-                                    //HEVC                                   
-                                    var res = Module.hevc_decode_frame(videoFrame.width, videoFrame.height, frame, 0, colourmap, fill, contours);
-                                    data = new Uint8ClampedArray(Module.HEAPU8.subarray(res[0], res[0] + res[1])); // it's OK to use .subarray() instead of .slice() as a copy is made in "new Uint8ClampedArray()"
+                                    //HEVC                                 
+                                    var res = WASM.hevc_decode_frame(videoFrame.width, videoFrame.height, frame, 0, colourmap, fill, contours);
+                                    data = new Uint8ClampedArray(WASM.HEAPU8.subarray(res[0], res[0] + res[1])); // it's OK to use .subarray() instead of .slice() as a copy is made in "new Uint8ClampedArray()"                                    
                                 } catch (e) {
-                                    // console.log(e);
+                                    console.log(e);
                                 };
 
                                 var img = new ImageData(data, videoFrame.width, videoFrame.height);
@@ -6570,10 +6552,10 @@ async function open_websocket_connection(_datasetId, index) {
                             }
                             else {
                                 try {
-                                    //HEVC, ignore the decompressed output, just purge the HEVC buffers
-                                    Module.hevc_decode_frame(0, 0, frame, 0, 'greyscale', fill, 0);
+                                    //HEVC, ignore the decompressed output, just purge the HEVC buffers                                    
+                                    WASM.hevc_decode_frame(0, 0, frame, 0, 'greyscale', fill, 0);
                                 } catch (e) {
-                                    // console.log(e);
+                                    console.log(e);
                                 };
                             }
 
@@ -6646,11 +6628,11 @@ async function open_websocket_connection(_datasetId, index) {
 
                             // decompressZFP returns std::vector<float>
                             // decompressZFPimage returns Float32Array but emscripten::typed_memory_view is buggy
-                            var res = Module.decompressZFPimage(img_width, img_height, frame_pixels);
-                            const pixels = Module.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
+                            var res = WASM.decompressZFPimage(img_width, img_height, frame_pixels);
+                            const pixels = WASM.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
 
-                            var res = Module.decompressLZ4mask(img_width, img_height, frame_mask);
-                            const alpha = Module.HEAPU8.slice(res[0], res[0] + res[1]);
+                            var res = WASM.decompressLZ4mask(img_width, img_height, frame_mask);
+                            const alpha = WASM.HEAPU8.slice(res[0], res[0] + res[1]);
 
                             let elapsed = Math.round(performance.now() - start);
 
@@ -6677,31 +6659,26 @@ async function open_websocket_connection(_datasetId, index) {
                         var frame = new Uint8Array(received_msg, offset);
                         // console.log("computed:", computed, "spectrum length:", spectrum_len, "frame.length:", frame.length);
 
-                        waitForModuleReady().then(() => {
-                            // ZFP decoder part				
-                            Module.ready
-                                .then(_ => {
-                                    let start = performance.now();
-                                    var res = Module.decompressZFPspectrum(spectrum_len, frame);
-                                    const spectrum = Module.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
-                                    let elapsed = Math.round(performance.now() - start);
+                        {
+                            // ZFP decoder part				                            
+                            let start = performance.now();
+                            var res = WASM.decompressZFPspectrum(spectrum_len, frame);
+                            const spectrum = WASM.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
+                            let elapsed = Math.round(performance.now() - start);
 
-                                    // console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
+                            // console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
 
-                                    if (spectrum.length > 0) {
-                                        fitsData.depth = spectrum.length;
-                                        fitsData.spectrum = spectrum;
+                            if (spectrum.length > 0) {
+                                fitsData.depth = spectrum.length;
+                                fitsData.spectrum = spectrum;
 
-                                        setup_axes();
+                                setup_axes();
 
-                                        plot_spectrum(fitsData.spectrum);
+                                plot_spectrum(fitsData.spectrum);
 
-                                        hide_hourglass();
-                                    }
-
-                                })
-                                .catch(e => console.error(e));
-                        }).catch(e => console.error(e));
+                                hide_hourglass();
+                            }
+                        }
 
                         //console.log("[ws] computed = " + computed.toFixed(1) + " [ms]" + " length: " + length + " spectrum length:" + spectrum.length + " spectrum: " + spectrum);
 
@@ -6799,8 +6776,8 @@ async function open_websocket_connection(_datasetId, index) {
                             }
 
                             try {
-                                //init the HEVC decoder		
-                                Module.hevc_init_frame(1, width, height);
+                                //init the HEVC decoder                                                                
+                                WASM.hevc_init_frame(1, width, height);
                             } catch (e) {
                                 //console.log(e);
                             };
@@ -7261,7 +7238,7 @@ function x_axis_mouseleave() {
         video_stack = [];
 
         try {
-            Module.hevc_destroy_frame(1);
+            WASM.hevc_destroy_frame(1);
         } catch (e) {
             //console.log(e);
         };

@@ -30,6 +30,7 @@ EMFLAGS+=-s NO_FILESYSTEM=1
 #EMFLAGS+=-s USE_PTHREADS=1 -s PROXY_TO_PTHREAD -s WASM_MEM_MAX=2GB
 EMFLAGS+=-s USE_ZLIB=1
 EMFLAGS+=-s ERROR_ON_UNDEFINED_SYMBOLS=0
+EMFLAGS+=-s MODULARIZE=1
 
 #EMFLAGS+=-s MODULARIZE=1
 #EMFLAGS+=-s EXPORT_NAME="WASM"
@@ -55,7 +56,7 @@ DEP = $(OBJ:%.o=%.d)
 	em++ -Oz $(EMFLAGS) $(DEFS) $(INCLUDE) $(CXXFLAGS) -MMD -o $@ -c $<
 
 wasm: $(FFMPEG_OBJ) $(OBJ)
-	em++ -Oz $(EMFLAGS) $(DEFS) main.cc $(OBJ) $(FFMPEG_OBJ) -o ../htdocs/xwebql/client.$(VERSION).js --post-js module-post.js $(INCLUDE) -L$(LIBRARY) $(CXXFLAGS) $(LDFLAGS)
+	em++ -Oz $(EMFLAGS) $(DEFS) main.cc $(OBJ) $(FFMPEG_OBJ) -o ../htdocs/xwebql/client.$(VERSION).js $(INCLUDE) -L$(LIBRARY) $(CXXFLAGS) $(LDFLAGS)
 
 hevc: $(FFMPEG_OBJ) $(OBJ)
 	em++ -Oz $(EMFLAGS) $(DEFS) -DHEVC -s ENVIRONMENT=worker main.cc $(OBJ) $(FFMPEG_OBJ) -o ../htdocs/xwebql/hevc.js --post-js module-post.js $(INCLUDE) -L$(LIBRARY) $(CXXFLAGS) $(LDFLAGS)

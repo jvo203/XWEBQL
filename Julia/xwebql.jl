@@ -111,7 +111,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "25.03.18.0"
-const VERSION_STRING = "J/SV2025-03-17.0-ALPHA"
+const VERSION_STRING = "J/SV2025-03-18.0-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -817,6 +817,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
         "var idleSearch = -1;",
         "var idleResize = -1;",
         "var idleWindow = -1;",
+        "var WASM = null;",
         "window.onresize = resizeMe;",
         "window.onbeforeunload = close_websocket_connection;",
         "mainRenderer(); </script>\n",
