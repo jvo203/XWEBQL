@@ -33,14 +33,18 @@ mutable struct XDataSet
     # house-keeping
     has_events::Threads.Atomic{Bool}
     has_error::Threads.Atomic{Bool}
+    created::Threads.Atomic{Float64}
     last_accessed::Threads.Atomic{Float64}
+    progress::Threads.Atomic{Int}
+    total::Threads.Atomic{Int}
+    elapsed::Threads.Atomic{Float64}
 
     function XDataSet()
-        new("", "", 0, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(0.0))
+        new("", "", 0, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(datetime2unix(now())), Threads.Atomic{Float64}(0.0), Threads.Atomic{Int}(0), Threads.Atomic{Int}(0), Threads.Atomic{Float64}(0.0))
     end
 
     function XDataSet(id::String, uri::String)
-        new(id, uri, 0, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(datetime2unix(now())))
+        new(id, uri, 0, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(datetime2unix(now())), Threads.Atomic{Float64}(datetime2unix(now())), Threads.Atomic{Int}(0), Threads.Atomic{Int}(0), Threads.Atomic{Float64}(0.0))
     end
 end
 
@@ -167,8 +171,16 @@ function load_events(xdataset::XDataSet, uri::String)
     if startswith(uri, "http") || startswith(uri, "ftp")
         # check if the uri is already in the cache (not implemented yet)
         try
-            function download_progress(total::Integer, now::Integer)
-                println("$(xdataset.id) :: downloaded: $now / $total")
+            function download_progress(total::Integer, progress::Integer)
+                println("$(xdataset.id) :: downloaded: $progress / $total")
+
+                try
+                    xdataset.total[] = total
+                    xdataset.progress[] = progress
+                    xdataset.elapsed[] = datetime2unix(now()) - xdataset.created[]
+                catch e
+                    println("Failed to update progress: $e")
+                end
             end
 
             f = FITS(Downloads.download(uri, progress=download_progress))
@@ -179,6 +191,9 @@ function load_events(xdataset::XDataSet, uri::String)
         end
     else
         f = FITS(uri)
+
+        xdataset.total[] = 1
+        xdataset.progress[] = 1
     end
 
     try
