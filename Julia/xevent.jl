@@ -191,10 +191,10 @@ function load_events(xdataset::XDataSet, uri::String)
         end
     else
         f = FITS(uri)
-
-        xdataset.total[] = 1
-        xdataset.progress[] = 1
     end
+
+    xdataset.total[] = 1
+    xdataset.progress[] = 1
 
     try
         xdataset.header = read_header(f[2])
