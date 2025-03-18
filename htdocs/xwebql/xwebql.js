@@ -1085,6 +1085,9 @@ async function mainRenderer() {
         /*if (welcome)
             show_welcome();*/
 
+        notifications_received = 0;
+        previous_progress = -1;
+
         display_hourglass();
         show_heartbeat();
         poll_heartbeat();
@@ -1216,34 +1219,34 @@ async function poll_progress(datasetId) {
     xmlhttp.send();
 }
 
-function process_progress_event(data, index) {
+function process_progress_event(data) {
     if (data != null) {
         var progress = data.progress;
         var elapsed = data.elapsed;
 
         if (progress > 0) {
-            notifications_received[index - 1] = Math.max(progress, notifications_received[index - 1]);
+            notifications_received = Math.max(progress, notifications_received);
 
             /*if(running > 0)
             PROGRESS_VARIABLE = running/total ;
             else*/
             var PROGRESS_VARIABLE = progress;
 
-            if (PROGRESS_VARIABLE != previous_progress[index - 1]) {
-                previous_progress[index - 1] = PROGRESS_VARIABLE;
+            if (PROGRESS_VARIABLE != previous_progress) {
+                previous_progress = PROGRESS_VARIABLE;
 
                 PROGRESS_INFO = "&nbsp;" + numeral(PROGRESS_VARIABLE / 100.0).format('0.0%');
 
                 if (!isNaN(elapsed)) {
-                    var speed = notifications_received[index - 1] / elapsed;
-                    var remaining_time = (100.0 - notifications_received[index - 1]) / speed;//[s]
+                    var speed = notifications_received / elapsed;
+                    var remaining_time = (100.0 - notifications_received) / speed;//[s]
 
                     //console.log("speed:", speed, "remaining:", remaining_time);
                     if (remaining_time > 1)
                         PROGRESS_INFO += ", " + numeral(remaining_time).format('00:00:00');
                 }
 
-                d3.select("#progress-bar" + index)
+                d3.select("#progress-bar")
                     .attr("aria-valuenow", (PROGRESS_VARIABLE))
                     .style("width", (PROGRESS_VARIABLE) + "%")
                     .html(PROGRESS_INFO);
@@ -1252,12 +1255,6 @@ function process_progress_event(data, index) {
             if (progress >= 100.0)
                 document.getElementById('welcome').style.display = "none";
         }
-        /*else {
-          notifications_completed++;
- 
-          if (notifications_completed == va_count)
-            document.getElementById('welcome').style.display = "none";
-        }*/
     }
 }
 
