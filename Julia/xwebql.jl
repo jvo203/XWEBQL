@@ -585,7 +585,8 @@ function streamXEvents(http::HTTP.Streams.Stream)
     println("dataset: \"$dataset\"")
     println("ext: \"$ext\"")
 
-    data_has_events = false
+    # only display a progress bar for external downloads
+    data_has_events = true
 
     if !dataset_exists(dataset, XOBJECTS, XLOCK)
         if uri == ""
@@ -608,6 +609,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
         else
             # extract the dataset name from the URI, take the string after the last slash
             dataset = String(split(uri, "/")[end])
+            data_has_events = false
         end
 
         # create a new dataset
