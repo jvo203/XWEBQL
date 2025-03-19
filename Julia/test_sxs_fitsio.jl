@@ -55,6 +55,9 @@ for hdu in f
     println(typeof(hdu))
 end
 
+# list column names in the second HDU
+println(FITSIO.colnames(f[2]))
+
 @time begin
     x = read(f[2], "X")
     y = read(f[2], "Y")

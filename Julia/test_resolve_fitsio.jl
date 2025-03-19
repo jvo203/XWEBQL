@@ -47,9 +47,9 @@ function get_spectrum(data::Vector{Float32}, E_min::Float32, E_max::Float32, ΔE
     return (new_spectrum, max_energy)
 end
 
-sxi = "file://" * homedir() * "/NAO/JAXA/ah100040060sxi_p110000360_cl.evt"
-println(sxi)
-f = FITS(sxi)
+Resolve = "file://" * homedir() * "/NAO/JAXA/XRISM/MAXI_J1744-294/xa901002010rsl_p0px5000_cl.evt.gz"
+println(Resolve)
+f = FITS(Resolve)
 
 for hdu in f
     println(typeof(hdu))
@@ -61,7 +61,7 @@ println(FITSIO.colnames(f[2]))
 @time begin
     x = read(f[2], "X")
     y = read(f[2], "Y")
-    energy = read(f[2], "PI")
+    energy = read(f[2], "UPI")
 end
 
 nevents = length(x)
