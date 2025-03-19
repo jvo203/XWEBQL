@@ -2,7 +2,7 @@ using FITSIO
 using FHist
 using Plots
 
-function truncate_spectrum(spectrum::Vector{Int64})
+function truncate_spectrum(spectrum)
     # find the first non-zero bin from the end
     i = length(spectrum)
     while i > 0 && spectrum[i] == 0
@@ -23,7 +23,7 @@ function get_spectrum(data::Vector{Float32}, E_min::Float32, E_max::Float32, ΔE
 
     while true
         # prepare the histogram
-        h1 = Hist1D(data, E_min:ΔE:max_energy, overflow=false)
+        h1 = Hist1D(data; binedges=E_min:ΔE:max_energy, overflow=false)
         spectrum = bincounts(h1)
         new_spectrum = truncate_spectrum(spectrum)
         new_length = length(new_spectrum)
@@ -40,7 +40,7 @@ function get_spectrum(data::Vector{Float32}, E_min::Float32, E_max::Float32, ΔE
         ΔE = (max_energy - E_min) / dx
         println("ΔE = ", ΔE)
 
-        h1 = Hist1D(data, E_min:ΔE:max_energy, overflow=false)
+        h1 = Hist1D(data; binedges=E_min:ΔE:max_energy, overflow=false)
         spectrum = bincounts(h1)
     end
 
@@ -77,7 +77,7 @@ E_min = Float32(minimum(energy)) # eV
 # E_max = Float32(1000.0) * 2^10 # eV
 E_max = Float32(maximum(energy)) # eV
 
-@time h1 = Hist1D(energy, E_min:ΔE:E_max, overflow=false)
+@time h1 = Hist1D(energy; binedges=E_min:ΔE:E_max, overflow=false)
 spectrum = bincounts(h1)
 #println(spectrum)
 
@@ -86,8 +86,8 @@ spectrum = bincounts(h1)
 println("E_min = ", E_min)
 println("E_max = ", E_max)
 
-@time h2 = Hist2D((x, y), (minimum(x)-0.5:1:maximum(x)+0.5, minimum(y)-0.5:1:maximum(y)+0.5))
-#@time h2 = Hist2D((x, y), (0.5:1:width+0.5, 0.5:1:height+0.5))
+@time h2 = Hist2D((x, y); binedges=(minimum(x)-0.5:1:maximum(x)+0.5, minimum(y)-0.5:1:maximum(y)+0.5))
+#@time h2 = Hist2D((x, y); binedges=(0.5:1:width+0.5, 0.5:1:height+0.5))
 pixels = bincounts(h2)
 
 println("size(pixels) = ", size(pixels))
