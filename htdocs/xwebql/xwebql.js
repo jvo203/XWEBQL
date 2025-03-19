@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-03-18.0";
+    return "JS2025-03-19.0";
 }
 
 function uuidv4() {
@@ -1076,8 +1076,10 @@ async function mainRenderer() {
         var has_events = htmlData.getAttribute('data-has-events');
         {
             var display_progress = 'block';
-            if (has_events == '1')
+
+            if (has_events == '1') {
                 display_progress = 'none';
+            }
 
             var div = d3.select("body").append("div")
                 .attr("id", "welcome")
@@ -1107,6 +1109,11 @@ async function mainRenderer() {
                 .attr("aria-valuemax", 100)
                 .style("width", "0%")
                 .html("0%");
+
+            // optionally display the hourglass
+            if (has_events == '0') {
+                display_hourglass();
+            }
         }
 
         d3.select("body").append("div")
