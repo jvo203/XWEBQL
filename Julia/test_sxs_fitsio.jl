@@ -93,7 +93,7 @@ spectrum = bincounts(h1)
 @time (spectrum, E_max) = get_spectrum(log.(energy), log(E_min), log(E_max), log(Float32(10.0)), Int32(512))
 
 println("E_min = ", E_min)
-println("E_max = ", E_max)
+println("E_max = ", exp(E_max))
 
 @time h2 = Hist2D((x, y); binedges=(minimum(x)-0.5:1:maximum(x)+0.5, minimum(y)-0.5:1:maximum(y)+0.5))
 #@time h2 = Hist2D((x, y); binedges=(0.5:1:width+0.5, 0.5:1:height+0.5))

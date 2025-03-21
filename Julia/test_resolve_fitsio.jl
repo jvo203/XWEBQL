@@ -1,6 +1,12 @@
 using FITSIO
 using FHist
 using Plots
+using ThreadsX
+
+const HITOMI_SXS_Pi2evFactor = 0.5f0
+const HITOMI_SXI_Pi2evFactor = 6.0f0
+const XRISM_RESOLVE_Pi2evFactor = 0.5f0
+const XRISM_XTEND_Pi2evFactor = 6.0f0
 
 function truncate_spectrum(spectrum)
     # find the first non-zero bin from the end
@@ -61,7 +67,7 @@ println(FITSIO.colnames(f[2]))
 @time begin
     x = read(f[2], "X")
     y = read(f[2], "Y")
-    energy = read(f[2], "UPI")
+    energy = Float32.(read(f[2], "PI")) .* XRISM_RESOLVE_Pi2evFactor
 end
 
 nevents = length(x)
@@ -80,6 +86,13 @@ E_min = Float32(minimum(energy)) # eV
 # E_max = Float32(1000.0) * 2^10 # eV
 E_max = Float32(maximum(energy)) # eV
 
+println("E_min = ", E_min)
+println("E_max = ", E_max)
+
+(E1, E2) = ThreadsX.extrema(energy)
+println("E1 = ", E1)
+println("E2 = ", E2)
+
 @time h1 = Hist1D(energy; binedges=E_min:ΔE:E_max, overflow=false)
 spectrum = bincounts(h1)
 #println(spectrum)
@@ -87,7 +100,7 @@ spectrum = bincounts(h1)
 @time (spectrum, E_max) = get_spectrum(log.(energy), log(E_min), log(E_max), log(Float32(10.0)), Int32(512))
 
 println("E_min = ", E_min)
-println("E_max = ", E_max)
+println("E_max = ", exp(E_max))
 
 @time h2 = Hist2D((x, y); binedges=(minimum(x)-0.5:1:maximum(x)+0.5, minimum(y)-0.5:1:maximum(y)+0.5))
 #@time h2 = Hist2D((x, y); binedges=(0.5:1:width+0.5, 0.5:1:height+0.5))
