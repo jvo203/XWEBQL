@@ -515,7 +515,8 @@ end
 
 function getNumChannels(header::FITSHeader)
     try
-        TELESCOP = header["TELESCOP"]
+        # convert to uppercase
+        TELESCOP = uppercase(header["TELESCOP"])
 
         # HITOMI: 128
         if TELESCOP == "HITOMI"
