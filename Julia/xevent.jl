@@ -724,8 +724,8 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     CRPIX3 = Float32(1.0) # first fix CRPIX3
     CDELT3 = (E2 - E1) / (NAXIS3 - 1)
     CRVAL3 = E1
-    CUNIT3 = "eV"
-    CTYPE3 = "LOG-ENERGY"
+    CUNIT3 = "log(eV)"
+    CTYPE3 = "LOG(ENERGY)"
 
     println("CRVAL1 = $CRVAL1, CDELT1 = $CDELT1, CRPIX1 = $CRPIX1, CUNIT1 = $CUNIT1, CTYPE1 = $CTYPE1")
     println("CRVAL2 = $CRVAL2, CDELT2 = $CDELT2, CRPIX2 = $CRPIX2, CUNIT2 = $CUNIT2, CTYPE2 = $CTYPE2")
