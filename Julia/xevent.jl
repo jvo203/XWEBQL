@@ -8,6 +8,11 @@ using JSON
 using Printf
 using ThreadsX
 
+const HITOMI_SXS_Pi2evFactor = 0.5f0
+const HITOMI_SXI_Pi2evFactor = 6.0f0
+const XRISM_RESOLVE_Pi2evFactor = 0.5f0
+const XRISM_XTEND_Pi2evFactor = 6.0f0
+
 @enum Quality low medium high
 @enum Beam CIRCLE SQUARE # "square" is a reserved Julia function
 
