@@ -8,10 +8,10 @@ using JSON
 using Printf
 using ThreadsX
 
-const HITOMI_SXS_Pi2evFactor = 0.5f0
-const HITOMI_SXI_Pi2evFactor = 6.0f0
-const XRISM_RESOLVE_Pi2evFactor = 0.5f0
-const XRISM_XTEND_Pi2evFactor = 6.0f0
+const HITOMI_SXS_PI2eV = 0.5f0
+const HITOMI_SXI_PI2eV = 6.0f0
+const XRISM_RESOLVE_PI2eV = 0.5f0
+const XRISM_XTEND_PI2eV = 6.0f0
 
 @enum Quality low medium high
 @enum Beam CIRCLE SQUARE # "square" is a reserved Julia function
@@ -523,22 +523,22 @@ function getEnergyConversionFactor(header::FITSHeader)::Float32
     # HITOMI
     if TELESCOP == "HITOMI"
         if INSTRUME == "SXS"
-            return HITOMI_SXS_Pi2evFactor
+            return HITOMI_SXS_PI2eV
         end
 
         if INSTRUME == "SXI"
-            return HITOMI_SXI_Pi2evFactor
+            return HITOMI_SXI_PI2eV
         end
     end
 
     # XRISM
     if TELESCOP == "XRISM"
         if INSTRUME == "RESOLVE"
-            return XRISM_RESOLVE_Pi2evFactor
+            return XRISM_RESOLVE_PI2eV
         end
 
         if INSTRUME == "XTEND"
-            return XRISM_XTEND_Pi2evFactor
+            return XRISM_XTEND_PI2eV
         end
     end
 
