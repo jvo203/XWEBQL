@@ -216,10 +216,12 @@ function load_events(xdataset::XDataSet, uri::String)
         xdataset.header = read_header(f[2])
         println("#keywords: ", length(xdataset.header))
 
+        PI2eV = getEnergyConversionFactor(xdataset.header)
+
         @time begin
             x = read(f[2], "X")
             y = read(f[2], "Y")
-            energy = read(f[2], "UPI")
+            energy = read(f[2], "PI") .* PI2eV
         end
 
         nevents = length(x)
@@ -511,6 +513,37 @@ function getKeyValueByComment(hdr::FITSHeader, comment::String)
     # throw an exception
     println("getKeyValueByComment: '$comment' not found in ", hdr.comments)
     throw("getKeyValueByComment: comment not found: $comment")
+end
+
+function getEnergyConversionFactor(header::FITSHeader)::Float32
+    # deliberately pass any exceptions higher up
+    TELESCOP = uppercase(header["TELESCOP"])
+    INSTRUME = uppercase(header["INSTRUME"])
+
+    # HITOMI
+    if TELESCOP == "HITOMI"
+        if INSTRUME == "SXS"
+            return HITOMI_SXS_Pi2evFactor
+        end
+
+        if INSTRUME == "SXI"
+            return HITOMI_SXI_Pi2evFactor
+        end
+    end
+
+    # XRISM
+    if TELESCOP == "XRISM"
+        if INSTRUME == "RESOLVE"
+            return XRISM_RESOLVE_Pi2evFactor
+        end
+
+        if INSTRUME == "XTEND"
+            return XRISM_XTEND_Pi2evFactor
+        end
+    end
+
+    # throw an exception    
+    throw("getEnergyConversionFactor: unsupported 'TELESCOP'($TELESCOP) or 'INSTRUME'($INSTRUME)")
 end
 
 function getNumChannels(header::FITSHeader)
