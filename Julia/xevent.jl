@@ -551,7 +551,7 @@ function getNumChannels(header::FITSHeader)
         TELESCOP = uppercase(header["TELESCOP"])
         INSTRUME = uppercase(header["INSTRUME"])
 
-        # HITOMI: 128
+        # HITOMI
         if TELESCOP == "HITOMI"
             if INSTRUME == "SXS"
                 return 128
@@ -562,7 +562,7 @@ function getNumChannels(header::FITSHeader)
             end
         end
 
-        # XRISM: 512
+        # XRISM
         if TELESCOP == "XRISM"
             if INSTRUME == "RESOLVE"
                 return 512
