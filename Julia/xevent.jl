@@ -548,24 +548,36 @@ end
 
 function getNumChannels(header::FITSHeader)
     try
-        # convert to uppercase
         TELESCOP = uppercase(header["TELESCOP"])
+        INSTRUME = uppercase(header["INSTRUME"])
 
         # HITOMI: 128
         if TELESCOP == "HITOMI"
-            return 128
+            if INSTRUME == "SXS"
+                return 128
+            end
+
+            if INSTRUME == "SXI"
+                return 32
+            end
         end
 
         # XRISM: 512
         if TELESCOP == "XRISM"
-            return 512
+            if INSTRUME == "RESOLVE"
+                return 512
+            end
+
+            if INSTRUME == "XTEND"
+                return 128
+            end
         end
     catch _
-        println("getNumChannels: 'TELESCOP' not found")
+        println("getNumChannels: 'TELESCOP' or 'INSTRUME' not found")
     end
 
     # a default number of channels
-    return 256
+    return 128
 end
 
 function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::Integer, y1::Integer, y2::Integer, E1::Float32, E2::Float32, NAXIS3::Integer)
