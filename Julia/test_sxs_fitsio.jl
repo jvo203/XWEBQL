@@ -67,6 +67,7 @@ println(FITSIO.colnames(f[2]))
     x = read(f[2], "X")
     y = read(f[2], "Y")
     energy = read(f[2], "PI") .* HITOMI_SXS_Pi2evFactor
+    #energy = read(f[2], "UPI")
 end
 
 nevents = length(x)
