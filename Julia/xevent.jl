@@ -569,7 +569,7 @@ function getNumChannels(header::FITSHeader)
             end
 
             if INSTRUME == "XTEND"
-                return 64
+                return 128
             end
         end
     catch _
