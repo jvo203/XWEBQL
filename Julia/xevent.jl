@@ -1120,9 +1120,8 @@ function getVideoFrame(
     keyframe::Bool,
     fill::UInt8,
 )
-    local frame_pixels, frame_mask
+    local frame_pixels, frame_mask, max_count
     local pixels, mask
-    local dstWidth, dstHeight
 
     x1 = offsetx
     x2 = offsetx + inner_width - 1
@@ -1132,53 +1131,30 @@ function getVideoFrame(
     frame_pixels, frame_mask, _, _ = getViewport(x, y, energy, x1, x2, y1, y2, Float32(energy_start), Float32(energy_end))
     max_count = ThreadsX.maximum(frame_pixels)
 
-    dims = size(frame_pixels)
-    width = dims[1]
-    height = dims[2]
-
     if bDownsize
         dstWidth = image_width
         dstHeight = image_height
-    else
-        dstWidth = width
-        dstHeight = height
+
+        task = Threads.@spawn frame_mask = Bool.(imresize(frame_mask, (dstWidth, dstHeight), method=Constant())) # use Nearest-Neighbours for the mask
+        frame_pixels = imresize(frame_pixels, (dstWidth, dstHeight))
+        max_count = ThreadsX.maximum(frame_pixels)
+
+        wait(task)
     end
 
-    pixels = Matrix{UInt8}(undef, (dstWidth, dstHeight))
-    mask = Matrix{UInt8}(undef, (dstWidth, dstHeight))
-
-    if bDownsize
-        pixels =
-            round.(
-                UInt8,
-                clamp.(imresize(frame_pixels, (dstWidth, dstHeight)), 0, 255),
-            )
-
-        mask =
-            round.(
-                UInt8,
-                clamp.(
-                    imresize(frame_mask, (dstWidth, dstHeight), method=Constant()),
-                    0,
-                    255,
-                ),
-            ) # use Nearest-Neighbours for the mask
+    if max_count > 0
+        pixels = round.(UInt8, clamp.(frame_pixels ./ max_count .* 255, 0, 255))
     else
-        if max_count > 0
-            pixels = round.(UInt8, clamp.(frame_pixels ./ max_count .* 255, 0, 255))
-        else
-            pixels .= 0
-            pixels[frame_mask] .= UInt8(255)
+        pixels .= 0
+        pixels[frame_mask] .= UInt8(255)
 
-            println("mask range:", ThreadsX.extrema(frame_mask))
-            println("pixels range:", ThreadsX.extrema(pixels))
-        end
-
-        # fill pixels with the fill colour where mask is false
-        pixels[.!frame_mask] .= fill
-
-        mask = UInt8(255) .* UInt8.(frame_mask)
+        println("mask range:", ThreadsX.extrema(frame_mask))
+        println("pixels range:", ThreadsX.extrema(pixels))
     end
+
+    # fill pixels with the fill colour where mask is false
+    pixels[.!frame_mask] .= fill
+    mask = UInt8(255) .* UInt8.(frame_mask)
 
     return (pixels, mask)
 end
