@@ -13,7 +13,7 @@ Prerequisites: Julia, git
 
 # 2. Install Julia packages
     
-    ArgParse CodecBzip2 CodecLz4 CodecZlib CodecZstd ConfParser HTTP JSON SQLite WebSockets x265_jll ZfpCompression FITSIO FHist ImageTransformations Interpolations ThreadsX
+    ArgParse BayesHistogram CodecBzip2 CodecLz4 CodecZlib CodecZstd ConfParser HTTP JSON SQLite WebSockets x265_jll ZfpCompression FITSIO FHist ImageTransformations Interpolations ThreadsX
 
 # 3. Clone XWEBQL
 
