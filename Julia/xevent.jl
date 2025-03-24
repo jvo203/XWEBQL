@@ -20,7 +20,8 @@ const XRISM_XTEND_PI2eV = 6.0f0
 finale(x) = @async println("Finalized $(x.id) :: $(x.uri)")
 
 # energy cap
-const MAXIMUM_ENERGY = 30000.0 # eV
+#const MAXIMUM_ENERGY = 30000.0 # eV
+const MAXIMUM_ENERGY = 20000.0 # eV
 
 mutable struct XDataSet
     id::String
@@ -267,7 +268,7 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
 
     # the spectrum
     #(spectrum, E_min, E_max) = getSpectrum(xobject, getNumChannels(xobject.header))
-    (spectrum, E_min, E_max, num_channels) = getBayesSpectrum(xobject)
+    (spectrum, E_min, E_max, num_channels) = getBayesSpectrum(xobject, getNumChannels(xobject.header))
     println("E_min = ", E_min)
     println("E_max = ", E_max)
     println("spectrum length:", length(spectrum))
@@ -357,14 +358,14 @@ function get_energy_range(xobject::XDataSet)
     return (exp(E_min) / 1000.0, exp(E_max) / 1000.0) # keV
 end
 
-function getBayesSpectrum(xobject::XDataSet)
+function getBayesSpectrum(xobject::XDataSet, dx::Integer)
     energy = xobject.energy
 
-    E_max = ThreadsX.maximum(energy) # log eV
+    E_max = ThreadsX.maximum(energy) # log eV    
     E_max = min(E_max, log(MAXIMUM_ENERGY)) # log eV
 
     # cap the energy at E_max    
-    @time bl = bayesian_blocks(Float64.(energy[(energy.<=E_max)]))#, prior=AIC())
+    @time bl = bayesian_blocks(Float64.(energy[(energy.<=E_max)]), resolution=5 * dx, min_counts=1, prior=HQIC())
     heights = Float32.(bl.heights)
 
     # get the bin centers and widths

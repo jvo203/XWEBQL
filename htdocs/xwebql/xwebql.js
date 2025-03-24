@@ -3914,16 +3914,14 @@ function plot_spectrum(spectrum) {
     ctx.lineWidth = 1;// 0
     ctx.strokeWidth = emStrokeWidth;
 
-    spectrum.forEach(function (bin) {
+    for (var i = 0; i < spectrum.length; i++) {
+        let bin = spectrum[i];
+
         let height = bin.height;
         let center = bin.center;
         let width = bin.width;
 
         let y = (Math.log(height) - dmin) / (dmax - dmin) * dy;
-
-        if (!isFinite(y)) {
-            return;
-        }
 
         // use xR to get the x1 and x2 values
         let x0 = xR(center);
@@ -3935,9 +3933,24 @@ function plot_spectrum(spectrum) {
         ctx.lineTo(x2, range.yMax - y);
 
         // make a cross at the centre of the bin
-        ctx.moveTo(x0, range.yMax - y - emFontSize / 2);
-        ctx.lineTo(x0, range.yMax - y + emFontSize / 2);
-    });
+        ctx.moveTo(x0, range.yMax - y - emFontSize / 4);
+        ctx.lineTo(x0, range.yMax - y + emFontSize / 4);
+
+        // if the bin is not the last one, connect the bin to the next one
+        if (i < spectrum.length - 1) {
+            let next = spectrum[i + 1];
+            let nextHeight = next.height;
+            let nextCenter = next.center;
+            let nextWidth = next.width;
+
+            let nextY = (Math.log(nextHeight) - dmin) / (dmax - dmin) * dy;
+
+            // use xR to get the next X1 value
+            let nextX1 = xR(nextCenter - nextWidth / 2);
+            ctx.moveTo(x2, range.yMax - y);
+            ctx.lineTo(nextX1, range.yMax - nextY);
+        }
+    };
 
     ctx.stroke();
     ctx.closePath();
