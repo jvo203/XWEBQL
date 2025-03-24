@@ -3914,7 +3914,6 @@ function plot_spectrum(spectrum) {
     ctx.lineWidth = 1;// 0
     ctx.strokeWidth = emStrokeWidth;
 
-    //for (var i = 0; i < spectrum.length; i++) {
     spectrum.forEach((bin, i) => {
         let height = bin.height;
         let center = bin.center;
