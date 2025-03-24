@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-03-23.0";
+    return "JS2025-03-23.1";
 }
 
 function uuidv4() {
@@ -3928,28 +3928,19 @@ function plot_spectrum(spectrum) {
         let x1 = xR(center - width / 2);
         let x2 = xR(center + width / 2);
 
-        // make a line from x1, y to x2, y
-        ctx.moveTo(x1, range.yMax - y);
-        ctx.lineTo(x2, range.yMax - y);
+        // skip for the first bin
+        if (i > 0) {
+            // link the previous bin to the current bin
+            ctx.lineTo(x1, range.yMax - y);
+        };
 
         // make a cross at the centre of the bin
         ctx.moveTo(x0, range.yMax - y - emFontSize / 4);
         ctx.lineTo(x0, range.yMax - y + emFontSize / 4);
 
-        // if the bin is not the last one, connect the bin to the next one
-        if (i < spectrum.length - 1) {
-            let next = spectrum[i + 1];
-            let nextHeight = next.height;
-            let nextCenter = next.center;
-            let nextWidth = next.width;
-
-            let nextY = (Math.log(nextHeight) - dmin) / (dmax - dmin) * dy;
-
-            // use xR to get the next X1 value
-            let nextX1 = xR(nextCenter - nextWidth / 2);
-            ctx.moveTo(x2, range.yMax - y);
-            ctx.lineTo(nextX1, range.yMax - nextY);
-        }
+        // make a line from x1, y to x2, y
+        ctx.moveTo(x1, range.yMax - y);
+        ctx.lineTo(x2, range.yMax - y);
     };
 
     ctx.stroke();
