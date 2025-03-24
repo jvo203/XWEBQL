@@ -3884,7 +3884,6 @@ function plot_spectrum(spectrum) {
 
     // xmin = take the first bin center and subtract half of the bin width
     // xmax = take the last bin center and add half of the bin width
-
     var xmin = spectrum[0].center - spectrum[0].width / 2;
     var xmax = spectrum[spectrum.length - 1].center + spectrum[spectrum.length - 1].width / 2;
 
@@ -3900,9 +3899,6 @@ function plot_spectrum(spectrum) {
             .range([range.xMin, range.xMax])
             .domain([xmin, xmax]);
     }
-
-    console.log("range.xMin:", range.xMin, "range.xMax:", range.xMax);
-    console.log("xmin:", xmin, "xmax:", xmax);
 
     ctx.clearRect(0, 0, width, height);
     ctx.save();

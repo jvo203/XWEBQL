@@ -270,7 +270,7 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     (spectrum, E_min, E_max, num_channels) = getBayesSpectrum(xobject)
     println("E_min = ", E_min)
     println("E_max = ", E_max)
-    println("spectrum:", spectrum)
+    println("spectrum length:", length(spectrum))
 
     # JSON + HEADER
     (header, json) = getHeader(xobject, pixels, xmin, xmax, ymin, ymax, E_min, E_max, num_channels)
@@ -364,7 +364,7 @@ function getBayesSpectrum(xobject::XDataSet)
     E_max = min(E_max, log(MAXIMUM_ENERGY)) # log eV
 
     # cap the energy at E_max    
-    @time bl = bayesian_blocks(Float64.(energy[(energy.<=E_max)]))#, prior=AIC())
+    @time bl = bayesian_blocks(Float64.(energy[(energy.<=E_max)]))
     heights = Float32.(bl.heights)
 
     # get the bin centers and widths
