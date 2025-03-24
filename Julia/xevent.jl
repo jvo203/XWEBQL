@@ -1,3 +1,4 @@
+using BayesHistogram
 using Dates
 using Distributed
 using Downloads
@@ -265,13 +266,14 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     println("min_count = $min_count, max_count = ", max_count)
 
     # the spectrum
-    (spectrum, E_min, E_max) = getSpectrum(xobject, getNumChannels(xobject.header))
+    #(spectrum, E_min, E_max) = getSpectrum(xobject, getNumChannels(xobject.header))
+    (spectrum, E_min, E_max, num_channels) = getBayesSpectrum(xobject)
     println("E_min = ", E_min)
     println("E_max = ", E_max)
     println("spectrum:", spectrum)
 
     # JSON + HEADER
-    (header, json) = getHeader(xobject, pixels, xmin, xmax, ymin, ymax, E_min, E_max, length(spectrum))
+    (header, json) = getHeader(xobject, pixels, xmin, xmax, ymin, ymax, E_min, E_max, num_channels)
     println(header)
     println(json)
 
@@ -320,8 +322,8 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     # replace Infinity by 0.0
     pixels[isinf.(pixels)] .= Float32(0.0)
 
-    # return the image
-    return (pixels, mask, Float32.(spectrum), header, json, min_count, max_count)
+    # return the image and a Bayesian Blocks spectrum
+    return (pixels, mask, spectrum, header, json, min_count, max_count)
 end
 
 function getImage(xobject::XDataSet)
@@ -353,6 +355,31 @@ function get_energy_range(xobject::XDataSet)
     E_max = min(E_max, log(MAXIMUM_ENERGY)) # log eV
 
     return (exp(E_min) / 1000.0, exp(E_max) / 1000.0) # keV
+end
+
+function getBayesSpectrum(xobject::XDataSet)
+    energy = xobject.energy
+
+    E_max = ThreadsX.maximum(energy) # log eV
+    E_max = min(E_max, log(MAXIMUM_ENERGY)) # log eV
+
+    # cap the energy at E_max    
+    @time bl = bayesian_blocks(Float64.(energy[(energy.<=E_max)]))#, prior=AIC())
+    heights = Float32.(bl.heights)
+
+    # get the bin centers and widths
+    centers = Float32.(bl.centers)
+    widths = Float32.(bl.widths)
+
+    # get the E_min and E_max from the bin edges    
+    edges = bl.edges
+    E_min = Float32(edges[1]) # log eV
+    E_max = Float32(edges[end]) # log eV
+
+    # spectrum = JSON object, zip through centers, heights and widths
+    spectrum = JSON.json([Dict("center" => c, "height" => h, "width" => w) for (c, h, w) in zip(centers, heights, widths)])
+
+    return (spectrum, E_min, E_max, length(centers))
 end
 
 function getSpectrum(xobject::XDataSet, dx::Integer)
