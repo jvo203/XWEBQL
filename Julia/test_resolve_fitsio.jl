@@ -1,3 +1,4 @@
+using BayesHistogram
 using FITSIO
 using FHist
 using Plots
@@ -110,3 +111,16 @@ println("size(pixels) = ", size(pixels))
 
 plot(log.(spectrum))
 #heatmap(log.(pixels))
+
+# Bayesian Blocks
+
+# take the energy between 0.5 and 10 keV
+energy = energy[(energy.>500.0).&(energy.<10000.0)]
+
+bl = bayesian_blocks(Float64.(energy))#, prior=AIC())
+println("bl = ", bl)
+
+scatter(bl.centers, log.(bl.heights))#, yerr=log.(bl.error_heights), color="black")
+
+#support, density = to_pdf(bl)
+#   plot(support, log.(density))
