@@ -1514,19 +1514,13 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
                             uncompressedSize = LZ4.decodeBlock(buffer, uncompressed);
                             uncompressed = uncompressed.slice(0, uncompressedSize);
 
-                            // parse JSON
-                            try {
-                                var spectrum = JSON.parse(new TextDecoder().decode(uncompressed));
-                            }
-                            catch (err) {
-                                console.log("JSON.parse error:", err);
-                                var spectrum = [];
-                            };
-
+                            // parse JSON                            
+                            var spectrum = JSON.parse(new TextDecoder().decode(uncompressed));
                             let elapsed = Math.round(performance.now() - start);
 
                             console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
-                        } catch (_) {
+                        } catch (err) {
+                            console.log("spectrum error:", err);
                             has_spectrum = false;
                         }
 
@@ -3607,7 +3601,7 @@ function scaled(event) {
     replot_y_axis();
 }
 
-function plot_spectrum(spectrum) {
+function plot_line_spectrum(spectrum) {
     if (mousedown)
         return;
 
@@ -3779,6 +3773,182 @@ function plot_spectrum(spectrum) {
     y = (0 - dmin) / (dmax - dmin) * dy;
     ctx.moveTo(range.xMin, range.yMax - y + emStrokeWidth / 2); // "- y" or "+ 1"
     ctx.lineTo(range.xMax, range.yMax - y + emStrokeWidth / 2); // "- y" or "+ 1"
+
+    ctx.stroke();
+    ctx.closePath();
+    ctx.restore();
+}
+
+function plot_spectrum(spectrum) {
+    if (mousedown)
+        return;
+
+    if (fitsData.depth <= 1) {
+        return;
+    }
+
+    var elem = document.getElementById("SpectrumCanvas");
+    if (displaySpectrum) {
+        elem.style.display = "block";
+        d3.select("#yaxis").attr("opacity", 1);
+        d3.select("#ylabel").attr("opacity", 1);
+    }
+    else {
+        elem.style.display = "none";
+        d3.select("#yaxis").attr("opacity", 0);
+        d3.select("#ylabel").attr("opacity", 0);
+    }
+
+    var canvas = document.getElementById("SpectrumCanvas");
+    var ctx = canvas.getContext('2d');
+
+    var width = canvas.width;
+    var height = canvas.height;
+
+    // maximum possible JavaScript number
+    tmp_data_min = Number.MAX_VALUE;
+    tmp_data_max = Number.MIN_VALUE;
+
+    // go through the spectrum and find the minimum and maximum values of the height property in the spectrum JSON object array    
+    for (var i = 0; i < spectrum.length; i++) {
+        let bin_height = spectrum[i].height;
+
+        if (bin_height < tmp_data_min) {
+            tmp_data_min = bin_height;
+        }
+        if (bin_height > tmp_data_max) {
+            tmp_data_max = bin_height;
+        }
+    }
+
+    if (autoscale) {
+        dmin = tmp_data_min;
+        dmax = tmp_data_max;
+    }
+    else {
+        if ((user_data_min != null) && (user_data_max != null)) {
+            dmin = user_data_min;
+            dmax = user_data_max;
+        }
+        else {
+            dmin = data_min;
+            dmax = data_max;
+        }
+    };
+
+    if (windowLeft) {
+        dmin = data_min;
+        dmax = data_max;
+    }
+
+    if (dmin == dmax) {
+        if (dmin == 0.0 && dmax == 0.0) {
+            dmin = -1.0;
+            dmax = 1.0;
+        } else {
+            if (dmin > 0.0) {
+                dmin *= 0.99;
+                dmax *= 1.01;
+            };
+
+            if (dmax < 0.0) {
+                dmax *= 0.99;
+                dmin *= 1.01;
+            }
+        }
+    }
+
+    var range = get_axes_range(width, height);
+    var dy = range.yMax - range.yMin;
+
+    var interval = dmax - dmin;
+    dmax += get_spectrum_margin() * interval;
+
+    // take the natural logarithm
+    dmin = Math.log(dmin);
+    dmax = Math.log(dmax);
+
+    // xmin = take the first bin center and subtract half of the bin width
+    // xmax = take the last bin center and add half of the bin width
+
+    var xmin = spectrum[0].center - spectrum[0].width / 2;
+    var xmax = spectrum[spectrum.length - 1].center + spectrum[spectrum.length - 1].width / 2;
+
+    //get display direction
+    var reverse = get_spectrum_direction(fitsData);
+
+    if (reverse) {
+        var xR = d3.scaleLog()
+            .range([range.xMax, range.xMin])
+            .domain([xmax, xmin]);
+    } else {
+        var xR = d3.scaleLog()
+            .range([range.xMin, range.xMax])
+            .domain([xmin, xmax]);
+    }
+
+    console.log("range.xMin:", range.xMin, "range.xMax:", range.xMax);
+    console.log("xmin:", xmin, "xmax:", xmax);
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.save();
+    ctx.beginPath();
+
+    ctx.shadowColor = getShadowStyle();
+    ctx.shadowBlur = 5;//20
+    //ctx.shadowOffsetX = 10; 
+    //ctx.shadowOffsetY = 10;
+
+    var style = getStrokeStyle();
+    ctx.strokeStyle = style;
+
+    ctx.lineWidth = 1;// 0
+    ctx.strokeWidth = emStrokeWidth;
+
+    spectrum.forEach(function (bin) {
+        let height = bin.height;
+        let center = bin.center;
+        let width = bin.width;
+
+        let y = (Math.log(height) - dmin) / (dmax - dmin) * dy;
+
+        if (!isFinite(y)) {
+            return;
+        }
+
+        console.log("center:", center, "width:", width, "height:", height, "y:", y);
+
+        // use xR to get the x1 and x2 values
+        let x0 = xR(center);
+        let x1 = xR(center - width / 2);
+        let x2 = xR(center + width / 2);
+        console.log("x0:", x0, "x1:", x1, "x2:", x2);
+    });
+
+    for (var x = 1 | 0; x < data.length; x = (x + 1) | 0) {
+        if (reverse)
+            y = (Math.log(data[data.length - 1 - x]) - dmin) / (dmax - dmin) * dy;
+        else
+            y = (Math.log(data[x]) - dmin) / (dmax - dmin) * dy;
+
+        isFinite(y);
+
+        // test y for Infinity
+        if (isFinite(y)) {
+            //ctx.setLineDash([]);
+            //ctx.strokeStyle = style;
+            ctx.lineTo(offset, range.yMax - y);
+        }
+        else {
+            //ctx.moveTo(offset, range.yMax + 1);
+            //ctx.setLineDash([10, 10]);
+            //ctx.strokeStyle = "red";
+            ctx.lineTo(offset, range.yMax + 10);
+        }
+
+        offset += incrx;
+        previousY = y;
+    };
 
     ctx.stroke();
     ctx.closePath();
