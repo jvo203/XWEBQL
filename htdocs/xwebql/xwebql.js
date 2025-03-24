@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-03-23.1";
+    return "JS2025-03-23.2";
 }
 
 function uuidv4() {
@@ -3914,9 +3914,8 @@ function plot_spectrum(spectrum) {
     ctx.lineWidth = 1;// 0
     ctx.strokeWidth = emStrokeWidth;
 
-    for (var i = 0; i < spectrum.length; i++) {
-        let bin = spectrum[i];
-
+    //for (var i = 0; i < spectrum.length; i++) {
+    spectrum.forEach((bin, i) => {
         let height = bin.height;
         let center = bin.center;
         let width = bin.width;
@@ -3941,7 +3940,7 @@ function plot_spectrum(spectrum) {
         // make a line from x1, y to x2, y
         ctx.moveTo(x1, range.yMax - y);
         ctx.lineTo(x2, range.yMax - y);
-    };
+    });
 
     ctx.stroke();
     ctx.closePath();
