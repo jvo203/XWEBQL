@@ -364,7 +364,7 @@ function getBayesSpectrum(xobject::XDataSet)
     E_max = min(E_max, log(MAXIMUM_ENERGY)) # log eV
 
     # cap the energy at E_max    
-    @time bl = bayesian_blocks(Float64.(energy[(energy.<=E_max)]), prior=AIC())
+    @time bl = bayesian_blocks(Float64.(energy[(energy.<=E_max)]))#, prior=AIC())
     heights = Float32.(bl.heights)
 
     # get the bin centers and widths
@@ -654,8 +654,8 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
         RADECSYS = "UNKNOWN"
     end
 
-    BUNIT = "counts density"
-    BTYPE = "COUNTS PDF"
+    BUNIT = "counts"
+    BTYPE = "COUNT DENSITY"
 
     println("TELESCOP = $TELESCOP, INSTRUME = $INSTRUME, OBSERVER = $OBSERVER, EQUINOX = $EQUINOX, RADECSYS = $RADECSYS")
 

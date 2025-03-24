@@ -3376,11 +3376,10 @@ function setup_axes() {
     //y-axis label
     var yLabel = "EVENTS PDF";
 
-    var bunit = '';
-    if (fitsData.BUNIT != '') {
-        bunit = fitsData.BUNIT.trim();
-
-        bunit = "[" + bunit + "]";
+    var btype = '';
+    if (fitsData.BTYPE != '') {
+        btype = fitsData.BTYPE.trim().toLowerCase();
+        btype = "[" + btype + "]";
     }
 
     svg.append("text")
@@ -3394,7 +3393,7 @@ function setup_axes() {
         //.style("opacity", 0.7)
         .attr("stroke", "none")
         .attr("transform", "rotate(-90)")
-        .text(yLabel + " " + bunit);
+        .text(yLabel + " " + btype);
 
     // Add the T Axis
     svg.append("g")
@@ -4019,14 +4018,13 @@ function replot_y_axis() {
     //y-axis label
     var yLabel = "EVENTS PDF";
 
-    var bunit = '';
-    if (fitsData.BUNIT != '') {
-        bunit = fitsData.BUNIT.trim();
-
-        bunit = "[" + bunit + "]";
+    var btype = '';
+    if (fitsData.BTYPE != '') {
+        btype = fitsData.BTYPE.trim().toLowerCase();
+        btype = "[" + btype + "]";
     }
 
-    d3.select("#ylabel").text(yLabel + " " + bunit);
+    d3.select("#ylabel").text(yLabel + " " + btype);
 }
 
 function largestTriangleThreeBuckets(data, threshold) {
