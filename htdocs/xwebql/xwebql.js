@@ -3285,8 +3285,22 @@ function setup_axes() {
     svg = svg.append("g").attr("id", "axes");
 
     let spectrum = fitsData.spectrum;
-    data_min = Math.max(d3.min(spectrum), 1); // omit zero counts
-    data_max = d3.max(spectrum);
+
+    // maximum possible JavaScript number
+    data_min = Number.MAX_VALUE;
+    data_max = Number.MIN_VALUE;
+
+    // go through the spectrum and find the minimum and maximum values of the height property in the spectrum JSON object array    
+    for (var i = 0; i < spectrum.length; i++) {
+        let bin_height = spectrum[i].height;
+
+        if (bin_height < data_min) {
+            data_min = bin_height;
+        }
+        if (bin_height > data_max) {
+            data_max = bin_height;
+        }
+    }
 
     var dmin = data_min;
     var dmax = data_max;
@@ -3360,7 +3374,7 @@ function setup_axes() {
         .call(xAxis);
 
     //y-axis label
-    var yLabel = "EVENTS";
+    var yLabel = "EVENTS PDF";
 
     var bunit = '';
     if (fitsData.BUNIT != '') {
@@ -3916,39 +3930,19 @@ function plot_spectrum(spectrum) {
             return;
         }
 
-        console.log("center:", center, "width:", width, "height:", height, "y:", y);
-
         // use xR to get the x1 and x2 values
         let x0 = xR(center);
         let x1 = xR(center - width / 2);
         let x2 = xR(center + width / 2);
-        console.log("x0:", x0, "x1:", x1, "x2:", x2);
+
+        // make a line from x1, y to x2, y
+        ctx.moveTo(x1, range.yMax - y);
+        ctx.lineTo(x2, range.yMax - y);
+
+        // make a cross at the centre of the bin
+        ctx.moveTo(x0, range.yMax - y - emFontSize / 2);
+        ctx.lineTo(x0, range.yMax - y + emFontSize / 2);
     });
-
-    for (var x = 1 | 0; x < data.length; x = (x + 1) | 0) {
-        if (reverse)
-            y = (Math.log(data[data.length - 1 - x]) - dmin) / (dmax - dmin) * dy;
-        else
-            y = (Math.log(data[x]) - dmin) / (dmax - dmin) * dy;
-
-        isFinite(y);
-
-        // test y for Infinity
-        if (isFinite(y)) {
-            //ctx.setLineDash([]);
-            //ctx.strokeStyle = style;
-            ctx.lineTo(offset, range.yMax - y);
-        }
-        else {
-            //ctx.moveTo(offset, range.yMax + 1);
-            //ctx.setLineDash([10, 10]);
-            //ctx.strokeStyle = "red";
-            ctx.lineTo(offset, range.yMax + 10);
-        }
-
-        offset += incrx;
-        previousY = y;
-    };
 
     ctx.stroke();
     ctx.closePath();
@@ -4027,7 +4021,7 @@ function replot_y_axis() {
         .call(yAxis);
 
     //y-axis label
-    var yLabel = "EVENTS";
+    var yLabel = "EVENTS PDF";
 
     var bunit = '';
     if (fitsData.BUNIT != '') {
