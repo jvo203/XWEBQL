@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-03-22.1";
+    return "JS2025-03-23.0";
 }
 
 function uuidv4() {
@@ -1505,10 +1505,24 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
                             offset += buffer_len;
                             console.log("X-ray spectrum length:", spectrum_len);
 
-                            // ZFP decoder part                            
+                            // LZ4 JSON decoder part                            
                             let start = performance.now();
-                            var res = WASM.decompressZFPspectrum(spectrum_len, buffer);
-                            var spectrum = WASM.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
+
+                            var LZ4 = require('lz4');
+
+                            var uncompressed = new Uint8Array(spectrum_len);
+                            uncompressedSize = LZ4.decodeBlock(buffer, uncompressed);
+                            uncompressed = uncompressed.slice(0, uncompressedSize);
+
+                            // parse JSON
+                            try {
+                                var spectrum = JSON.parse(new TextDecoder().decode(uncompressed));
+                            }
+                            catch (err) {
+                                console.log("JSON.parse error:", err);
+                                var spectrum = [];
+                            };
+
                             let elapsed = Math.round(performance.now() - start);
 
                             console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");

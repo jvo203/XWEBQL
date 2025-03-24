@@ -751,7 +751,7 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     CRPIX3 = Float32(1.0) # first fix CRPIX3
     CDELT3 = (E2 - E1) / (NAXIS3 - 1)
     CRVAL3 = E1
-    CUNIT3 = "log(eV)"
+    CUNIT3 = "eV"
     CTYPE3 = "LOG(ENERGY)"
 
     println("CRVAL1 = $CRVAL1, CDELT1 = $CDELT1, CRPIX1 = $CRPIX1, CUNIT1 = $CUNIT1, CTYPE1 = $CTYPE1")
@@ -808,7 +808,7 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
 
     set_comment!(new_header, "NAXIS1", "width")
     set_comment!(new_header, "NAXIS2", "height")
-    set_comment!(new_header, "NAXIS3", "energy bins")
+    set_comment!(new_header, "NAXIS3", "Bayesian Blocks variable-width energy bins")
 
     # information about the target
     new_header["OBJECT"] = OBJECT
