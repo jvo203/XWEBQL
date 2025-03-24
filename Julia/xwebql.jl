@@ -1147,15 +1147,14 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
             write(http, Int32(compressed_len))
             write(http, compressed_header)
 
-            # spectrum
-            println("typeof(spectrum) = ", typeof(spectrum))
-            compressed_spectrum = zfp_compress(
-                spectrum,
-                precision=SPECTRUM_HIGH_PRECISION,
-            )
+            # spectrum JSON
+            spectrum_len = length(spectrum)
+            compressed_spectrum = lz4_hc_compress(Vector{UInt8}(spectrum))
+            compressed_len = length(compressed_spectrum)
+            println("SPECTRUM JSON length: $spectrum_len; compressed: $compressed_len")
 
-            write(http, Int32(length(spectrum)))
-            write(http, Int32(length(compressed_spectrum)))
+            write(http, Int32(spectrum_len))
+            write(http, Int32(compressed_len))
             write(http, compressed_spectrum)
         end
 
