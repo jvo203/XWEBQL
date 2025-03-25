@@ -9,7 +9,10 @@
         min_counts::Real = 0,
     ) where {T<:Real,W<:Real}
 """
-#module BayesHistogram
+module BayesHistogram
+
+include("SimultaneousSortperm.jl")
+using .SimultaneousSortperm
 
 struct BHist{T<:Real}
     edges::Vector{T}
@@ -25,7 +28,7 @@ include("priors.jl")
 include("utils.jl")
 
 function sort_sane(raw_x, raw_w, raw_w2)
-    p = sortperm(raw_x)
+    @time p = ssortperm(raw_x)
     tmp_x = raw_x[p]
     tmp_w = raw_w[p]
     tmp_w2 = raw_w2[p]
@@ -185,5 +188,5 @@ function bayesian_blocks(
     return build_blocks(t, edges, weights, sumw2)
 end
 
-#export BHist, bayesian_blocks
-#end
+export BHist, bayesian_blocks
+end

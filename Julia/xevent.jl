@@ -8,9 +8,9 @@ using JSON
 using Printf
 using ThreadsX
 
-include("BayesHistogram.jl")
 # using a local custom (faster) version of BayesHistogram.jl
-#using .BayesHistogram
+include("BayesHistogram.jl")
+using .BayesHistogram
 
 const HITOMI_SXS_PI2eV = 0.5f0
 const HITOMI_SXI_PI2eV = 6.0f0
