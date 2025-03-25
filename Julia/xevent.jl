@@ -365,7 +365,7 @@ function getBayesSpectrum(xobject::XDataSet, dx::Integer)
     E_max = min(E_max, log(MAXIMUM_ENERGY)) # log eV
 
     # cap the energy at E_max    
-    @time bl = bayesian_blocks(Float64.(energy[(energy.<=E_max)]), resolution=5 * dx, min_counts=1)#, prior=HQIC())
+    @time bl = bayesian_blocks(Float64.(energy[(energy.<=E_max)]), resolution=5 * dx)#, min_counts=1)#, prior=HQIC())
     heights = Float32.(bl.heights)
 
     # get the bin centers and widths
