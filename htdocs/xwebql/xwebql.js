@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-03-23.2";
+    return "JS2025-03-25.0";
 }
 
 function uuidv4() {
@@ -1495,27 +1495,14 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
                         var has_spectrum = true;
 
                         try {
-                            var spectrum_len = dv.getUint32(offset, endianness);
-                            offset += 4;
-
-                            var buffer_len = dv.getUint32(offset, endianness);
-                            offset += 4;
-
-                            var buffer = new Uint8Array(received_msg, offset, buffer_len);
-                            offset += buffer_len;
-                            console.log("X-ray spectrum length:", spectrum_len);
-
-                            // LZ4 JSON decoder part                            
                             let start = performance.now();
 
-                            var LZ4 = require('lz4');
-
-                            var uncompressed = new Uint8Array(spectrum_len);
-                            uncompressedSize = LZ4.decodeBlock(buffer, uncompressed);
-                            uncompressed = uncompressed.slice(0, uncompressedSize);
+                            // bzip2 decoder                            
+                            var bytes = new Uint8Array(received_msg, offset); // read till the end
+                            uncompressed = bzip2.simple(bzip2.array(bytes));
 
                             // parse JSON                            
-                            var spectrum = JSON.parse(new TextDecoder().decode(uncompressed));
+                            var spectrum = JSON.parse(uncompressed);
                             let elapsed = Math.round(performance.now() - start);
 
                             console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
@@ -3933,8 +3920,8 @@ function plot_spectrum(spectrum) {
         };
 
         // make a cross at the centre of the bin
-        ctx.moveTo(x0, range.yMax - y - emFontSize / 4);
-        ctx.lineTo(x0, range.yMax - y + emFontSize / 4);
+        ctx.moveTo(x0, range.yMax - y - emFontSize / 5);
+        ctx.lineTo(x0, range.yMax - y + emFontSize / 5);
 
         // make a line from x1, y to x2, y
         ctx.moveTo(x1, range.yMax - y);
