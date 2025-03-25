@@ -4,6 +4,8 @@ using FHist
 using Plots
 using ThreadsX
 
+include("BayesianBlocks.jl")
+
 const HITOMI_SXS_Pi2evFactor = 0.5f0
 const HITOMI_SXI_Pi2evFactor = 6.0f0
 const XRISM_RESOLVE_Pi2evFactor = 0.5f0
@@ -117,10 +119,12 @@ plot(log.(spectrum))
 # take the energy between 0.5 and 10 keV
 energy = energy[(energy.>500.0).&(energy.<10000.0)]
 
-bl = bayesian_blocks(Float64.(energy))#, prior=AIC())
+@time bl = bayesian_blocks(Float64.(energy))#, prior=AIC())
 println("bl = ", bl)
 
 scatter(bl.centers, log.(bl.heights))#, yerr=log.(bl.error_heights), color="black")
 
 #support, density = to_pdf(bl)
 #   plot(support, log.(density))
+
+@time bl2 = partition(energy, progress=true)
