@@ -1,4 +1,3 @@
-using BayesHistogram
 using Dates
 using Distributed
 using Downloads
@@ -8,6 +7,10 @@ using ImageTransformations, Interpolations
 using JSON
 using Printf
 using ThreadsX
+
+include("BayesHistogram.jl")
+# using a local custom (faster) version of BayesHistogram.jl
+#using .BayesHistogram
 
 const HITOMI_SXS_PI2eV = 0.5f0
 const HITOMI_SXI_PI2eV = 6.0f0
@@ -365,7 +368,7 @@ function getBayesSpectrum(xobject::XDataSet, dx::Integer)
     E_max = min(E_max, log(MAXIMUM_ENERGY)) # log eV
 
     # cap the energy at E_max    
-    @time bl = bayesian_blocks(Float64.(energy[(energy.<=E_max)]), resolution=5 * dx)#, min_counts=1)#, prior=HQIC())
+    @time bl = bayesian_blocks(energy[(energy.<=E_max)], resolution=5 * dx)#, min_counts=1)#, prior=HQIC())
     heights = Float32.(bl.heights)
 
     # get the bin centers and widths
