@@ -111,7 +111,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "25.03.19.0"
-const VERSION_STRING = "J/SV2025-03-24.0-ALPHA"
+const VERSION_STRING = "J/SV2025-03-25.0-ALPHA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -1148,6 +1148,7 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
             write(http, compressed_header)
 
             # spectrum JSON
+            #=
             spectrum_len = length(spectrum)
             compressed_spectrum = lz4_compress(Vector{UInt8}(spectrum))
             compressed_len = length(compressed_spectrum)
@@ -1156,12 +1157,14 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
             write(http, Int32(spectrum_len))
             write(http, Int32(compressed_len))
             write(http, compressed_spectrum)
+            =#
 
             # compress with bzip2 (more efficient than LZ4HC)
-            compressed = transcode(Bzip2Compressor, spectrum)
+            compressed_spectrum = transcode(Bzip2Compressor, spectrum)
             println(
-                "SPECTRUM JSON length: $(length(spectrum)); bzip2-compressed: $(length(compressed))",
+                "SPECTRUM JSON length: $(length(spectrum)); bzip2-compressed: $(length(compressed_spectrum))",
             )
+            write(http, compressed_spectrum)
         end
 
         return nothing
