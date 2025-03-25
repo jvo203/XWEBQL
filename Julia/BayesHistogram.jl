@@ -2,8 +2,7 @@
     main procedure: 
     function bayesian_blocks(
         t::AbstractVector{T};
-        weights::AbstractVector{W} = one.(t),
-        sumw2::AbstractVector{W} = abs2.(weights),
+        weights::AbstractVector{W} = one.(t),        
         prior = BIC(),
         resolution = Inf,
         min_counts::Real = 0,
@@ -20,28 +19,25 @@ struct BHist{T<:Real}
     centers::Vector{T}
     widths::Vector{T}
     heights::Vector{T}
-    error_counts::Vector{T}
-    error_heights::Vector{T}
 end
 
 include("priors.jl")
 include("utils.jl")
 
-function sort_sane(raw_x, raw_w, raw_w2)
+function sort_sane(raw_x, raw_w)
     p = ssortperm(raw_x)
     tmp_x = raw_x[p]
-    tmp_w2 = raw_w2[p]
     tmp_w = raw_w[p]
     f = tmp_w .> 0
 
-    tmp_x[f], tmp_w[f], tmp_w2[f]
+    tmp_x[f], tmp_w[f]
 end
 
-function sanitize(raw_x, raw_w, raw_w2)
+function sanitize(raw_x, raw_w)
     # first round:
     # - sort by x
     # - skip values with weights < 0
-    x, w, w2 = sort_sane(raw_x, raw_w, raw_w2)
+    x, w = sort_sane(raw_x, raw_w)
     # second round:
     # - merge entries with same x value
     m = fill(true, length(x))
@@ -49,12 +45,10 @@ function sanitize(raw_x, raw_w, raw_w2)
         if x[i] == x[i-1] && m[i-1] && m[i] # merge
             m[i-1] = false
             w[i] += w[i-1]
-            w2[i] += w2[i-1]
             w[i-1] = 0
-            w2[i-1] = 0
         end
     end
-    return x[m], w[m], w2[m]
+    return x[m], w[m]
 end
 
 function count_between_edges(edges::AbstractVector{T}, weights::AbstractVector{T}, observations::AbstractVector{T}, shift::Bool=false) where {T<:Real}
@@ -70,23 +64,19 @@ function count_between_edges(edges::AbstractVector{T}, weights::AbstractVector{T
     return out
 end
 
-function build_blocks(t, edges, weights, weights2)
+function build_blocks(t, edges, weights)
     centers = @views(edges[begin:end-1] .+ edges[begin+1:end]) ./ 2
     counts = count_between_edges(edges, weights, t)
-    counts2 = count_between_edges(edges, weights2, t)
     total = sum(counts)
-    error_counts = sqrt.(max.(counts2 .- counts .^ 2 ./ total, 0))
     widths = diff(edges)
     heights = counts ./ (total .* widths)
-    error_heights = error_counts ./ (total .* widths)
-    return BHist(edges, counts, centers, widths, heights, error_counts, error_heights)
+    return BHist(edges, counts, centers, widths, heights)
 end
 
 """
     function bayesian_blocks(
         datas::AbstractVector{T};
-        weights::AbstractVector{W} = one.(t),
-        sumw2::AbstractVector{W} = abs2.(weights),
+        weights::AbstractVector{W} = one.(t),        
         prior = BIC(),
         resolution = Inf,
         min_counts::Real = 0,
@@ -94,9 +84,6 @@ end
 
 - `datas`: Observations
 - `weights`: sample weight of each observation
-- `sumw2`: sum of weight^2 in each observation, this is particularly useful
-when this algorihtm is used for re-binning of already made histograms where
-the `sumw2` for each bin is different from `weight^2` of each bin.
 - `prior`: choose from `NoPrior`, `Pearson`, `Geometric`, `BIC`, `AIC`, `HQIC`, `FPR`, `Scargle` (identical to `FPR`)
 - resolution: handles on how fine we count along the `datas axis
 - min_counts: minimum sum of weights of a block that can be splitted.
@@ -105,20 +92,19 @@ the `sumw2` for each bin is different from `weight^2` of each bin.
 function bayesian_blocks(
     t::AbstractVector{T};
     weights::AbstractVector{W}=one.(t),
-    sumw2::AbstractVector{W}=abs2.(weights),
     prior=BIC(),
     resolution=Inf,
     min_counts::Real=0,
 ) where {T<:Real,W<:Real}
     # copy and sort the arrays
-    @time t, weights, sumw2 = sanitize(t, weights, sumw2)
+    t, weights = sanitize(t, weights)
 
     # check trivial cases
     N = length(t)
     if N == 0
-        return build_blocks(T[], T[-Inf, Inf], T[], sumw2)
+        return build_blocks(T[], T[-Inf, Inf], T[])
     elseif N == 1
-        return build_blocks(t, T[t[1], t[1]], weights, sumw2)
+        return build_blocks(t, T[t[1], t[1]], weights)
     end
     # create cell edges
     edges = [t[begin]; @views(t[begin+1:end] .+ t[begin:end-1]) ./ 2; t[end]]
@@ -186,7 +172,7 @@ function bayesian_blocks(
     edges = edges[change_points]
 
     # Evaluate densities and heights
-    return build_blocks(t, edges, weights, sumw2)
+    return build_blocks(t, edges, weights)
 end
 
 export BHist, bayesian_blocks
