@@ -1124,7 +1124,8 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
         write(http, compressed_pixels)
 
         println("typeof(mask) = ", typeof(mask))
-        compressed_mask = lz4_compress(collect(flatten(UInt8.(mask))))
+        #@time compressed_mask = lz4_compress(collect(flatten(UInt8.(mask))))
+        compressed_mask = transcode(Bzip2Compressor, collect(flatten(UInt8.(mask))))
         write(http, Int32(length(compressed_mask)))
         write(http, compressed_mask)
 

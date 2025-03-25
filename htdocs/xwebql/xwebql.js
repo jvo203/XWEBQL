@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-03-25.0";
+    return "JS2025-03-25.1";
 }
 
 function uuidv4() {
@@ -1614,8 +1614,13 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
                             var res = WASM.decompressZFPimage(img_width, img_height, frame_pixels);
                             const pixels = WASM.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
 
-                            var res = WASM.decompressLZ4mask(img_width, img_height, frame_mask);
-                            const alpha = WASM.HEAPU8.slice(res[0], res[0] + res[1]);
+                            //var res = WASM.decompressLZ4mask(img_width, img_height, frame_mask);
+                            //const alpha = WASM.HEAPU8.slice(res[0], res[0] + res[1]);
+
+                            // bzip2 decoder                                                          
+                            const uncompressed = bzip2.simple(bzip2.array(frame_mask));
+                            // turn the uncompressed string into a Uint8Array of length img_width * img_height
+                            const alpha = Uint8Array.from(encodeURI(uncompressed).split(/%|(?<!%.?)/).map((x) => ((x[1]) ? parseInt(x, 16) : x.charCodeAt(x))))
 
                             let elapsed = Math.round(performance.now() - start);
 
