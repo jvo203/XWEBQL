@@ -28,11 +28,12 @@ include("priors.jl")
 include("utils.jl")
 
 function sort_sane(raw_x, raw_w, raw_w2)
-    @time p = ssortperm(raw_x)
+    p = ssortperm(raw_x)
     tmp_x = raw_x[p]
-    tmp_w = raw_w[p]
     tmp_w2 = raw_w2[p]
+    tmp_w = raw_w[p]
     f = tmp_w .> 0
+
     tmp_x[f], tmp_w[f], tmp_w2[f]
 end
 
@@ -110,7 +111,7 @@ function bayesian_blocks(
     min_counts::Real=0,
 ) where {T<:Real,W<:Real}
     # copy and sort the arrays
-    t, weights, sumw2 = sanitize(t, weights, sumw2)
+    @time t, weights, sumw2 = sanitize(t, weights, sumw2)
 
     # check trivial cases
     N = length(t)
