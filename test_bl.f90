@@ -10,9 +10,9 @@ program test
    call random_number(data)
    data(4:8) = -1.0
 
-   call bayesian_binning(data, NOSAMPLES)
+   call fast_bayesian_binning(data, NOSAMPLES)
 contains
-   subroutine bayesian_binning(x, n, resolution) bind(c)
+   subroutine fast_bayesian_binning(x, n, resolution) bind(c)
       integer(kind=c_size_t), intent(in) :: n
       real(kind=c_float), intent(inout) :: x(n)
       integer(kind=c_int), intent(in), optional :: resolution
@@ -22,20 +22,19 @@ contains
 
       if(n .eq. 0) return
 
-      call partition(x, unique, weights)
+      call partition(x, unique, weights, edges)
       print *, 'unique:', unique
       print *, 'weights:', weights
-      tail = size(unique, kind=8)
-
-      ! auto-allocate and fill-in the edges
-      edges = (/unique(1), 0.5 * (unique(1:tail-1) + unique(2:tail)), unique(tail)/)
       print *, 'edges:', edges
-   end subroutine bayesian_binning
+
+      tail = size(unique, kind=8)
+      print *, 'n:', n, 'tail:', tail
+   end subroutine fast_bayesian_binning
 
    ! partition the data (sort and remove duplicates)
-   subroutine partition(x, unique, weights)
+   subroutine partition(x, unique, weights, edges)
       real(kind=c_float), intent(inout) :: x(:)
-      real(kind=c_float), dimension(:), allocatable, intent(out) :: unique, weights
+      real(kind=c_float), dimension(:), allocatable, intent(out) :: unique, weights, edges
 
       real(kind=c_float), dimension(:), allocatable :: sorted, w
 
@@ -64,7 +63,21 @@ contains
       ! truncate the outputs
       unique = sorted(1:tail)
       weights = w(1:tail)
+
+      ! auto-allocate and fill-in the edges
+      edges = (/unique(1), 0.5 * (unique(1:tail-1) + unique(2:tail)), unique(tail)/)
    end subroutine partition
+
+   function count_between_edges(x, edges, weights, shift) result (counts)
+      real(kind=c_float), dimension(:), intent(in) :: x
+      real(kind=c_float), dimension(:), intent(in) :: edges, weights
+      integer, intent(in) :: shift
+      integer(kind=8), dimension(:), allocatable :: counts
+
+      integer(kind=8) :: i
+
+      i = 1
+   end function count_between_edges
 
    ! in-place cumulative sum
    subroutine cumsum(x)
