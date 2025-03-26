@@ -19,7 +19,7 @@ for:
 	gfortran -march=native -shared -fPIC -mcmodel=small -Ofast -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=1 -funroll-loops -fmax-stack-var-size=32768 $(INC) -o deep.so deep.f90 $(LIBS) -framework Accelerate
 
 test:
-	gfortran -march=native -Ofast -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=1 -funroll-loops -fmax-stack-var-size=32768 $(INC) -o test_bl deep.f90 test_bl.f90 $(LIBS)
+	gfortran -march=native -Ofast -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=1 -funroll-loops -fmax-stack-var-size=32768 $(INC) -o test_bl test_bl.f90 $(LIBS)
 
 clean:
 	rm -f *.o *.mod *.a *.so test
