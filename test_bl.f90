@@ -18,19 +18,24 @@ contains
       integer(kind=c_int), intent(in), optional :: resolution
 
       real(kind=c_float), dimension(:), allocatable :: unique, weights, edges, wh_in_edge
-      integer(kind=8) :: i, tail
+      real(kind=c_float), dimension(:), allocatable :: best
+      integer(kind=8), dimension(:), allocatable :: best_idx
+
+      integer(kind=8) :: i, L
 
       if(n .eq. 0) return
 
-      tail = partition(x, unique, weights, edges)
+      L = partition(x, unique, weights, edges)
       print *, 'unique:', unique
       print *, 'weights:', weights
       print *, 'edges:', edges
-      print *, 'n:', n, 'tail:', tail
+      print *, 'n:', n, 'unique samples:', L
 
       wh_in_edge = count_between_edges(unique, edges, weights, 1)
       call cumsum(wh_in_edge)
       print *, 'wh_in_edge:', wh_in_edge
+
+      allocate(best(L), best_idx(L))
    end subroutine fast_bayesian_binning
 
    ! partition the data (sort and remove duplicates)
