@@ -8,6 +8,7 @@ program test
 
    ! initialize x with random data
    call random_number(data)
+   data(4:8) = -1.0
 
    call bayesian_binning(data, NOSAMPLES)
 contains
@@ -18,22 +19,42 @@ contains
       real(kind=c_float), dimension(:), allocatable :: sorted, weights
 
       call partition(x, sorted, weights)
+      print *, "sorted: ", sorted
+      print *, "weights: ", weights
    end subroutine bayesian_binning
 
    ! partition the data (sort and remove duplicates)
-   subroutine partition(x, sorted, weights)
+   subroutine partition(x, unique, weights)
       real(kind=c_float), intent(inout) :: x(:)
-      real(kind=c_float), dimension(:), allocatable, intent(out) :: sorted, weights
+      real(kind=c_float), dimension(:), allocatable, intent(out) :: unique, weights
 
-      integer(kind=8) :: i
+      real(kind=c_float), dimension(:), allocatable :: sorted, w
+
+      integer(kind=8) :: i, tail
 
       ! sort the data
       call quicksort(x, int(1, kind=8), size(x, kind=8))
       print *, "sorted: ", x
 
-      allocate(weights(size(x)), source=1.0)
-      print *, "weights: ", weights
+      allocate(sorted(size(x)))
+      allocate(w(size(x)), source=1.0)
+      print *, "w: ", w
 
+      tail = 1
+      sorted(1) = x(1)
+
+      do i = 2, size(x)
+         if(x(i) .eq. x(i-1)) then
+            w(tail) = w(tail) + 1
+         else
+            tail = tail + 1
+            sorted(tail) = x(i)
+         end if
+      end do
+
+      ! truncate the outputs
+      unique = sorted(1:tail)
+      weights = w(1:tail)
    end subroutine partition
 
    ! in-place cumulative sum
