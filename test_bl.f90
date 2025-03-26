@@ -3,7 +3,7 @@ program test
    use omp_lib
    implicit none
 
-   integer(kind=c_size_t), parameter :: NOSAMPLES = 100
+   integer(kind=c_size_t), parameter :: NOSAMPLES = 10
    real(kind=c_float), dimension(NOSAMPLES) :: data
 
    ! initialize x with random data
@@ -12,16 +12,25 @@ program test
 
    call bayesian_binning(data, NOSAMPLES)
 contains
-   subroutine bayesian_binning(x, n) bind(c)
+   subroutine bayesian_binning(x, n, resolution) bind(c)
       integer(kind=c_size_t), intent(in) :: n
       real(kind=c_float), intent(inout) :: x(n)
+      integer(kind=c_int), intent(in), optional :: resolution
 
-      real(kind=c_float), dimension(:), allocatable :: sorted
+      real(kind=c_float), dimension(:), allocatable :: unique, edges
       integer, dimension(:), allocatable :: weights
+      integer(kind=8) :: i, tail
 
       if(n .eq. 0) return
 
-      call partition(x, sorted, weights)
+      call partition(x, unique, weights)
+      print *, 'unique:', unique
+      print *, 'weights:', weights
+      tail = size(unique, kind=8)
+
+      ! auto-allocate and fill-in the edges
+      edges = (/unique(1), 0.5 * (unique(1:tail-1) + unique(2:tail)), unique(tail)/)
+      print *, 'edges:', edges
    end subroutine bayesian_binning
 
    ! partition the data (sort and remove duplicates)
