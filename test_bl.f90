@@ -18,9 +18,9 @@ contains
 
       real(kind=c_float), dimension(:), allocatable :: sorted, weights
 
+      if(n .eq. 0) return
+
       call partition(x, sorted, weights)
-      print *, "sorted: ", sorted
-      print *, "weights: ", weights
    end subroutine bayesian_binning
 
    ! partition the data (sort and remove duplicates)
