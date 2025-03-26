@@ -3,7 +3,7 @@ program test
    use omp_lib
    implicit none
 
-   integer(kind=c_size_t), parameter :: NOSAMPLES = 10
+   integer(kind=c_size_t), parameter :: NOSAMPLES = 100
    real(kind=c_float), dimension(NOSAMPLES) :: data
 
    ! initialize x with random data
@@ -17,9 +17,9 @@ contains
       real(kind=c_float), intent(inout) :: x(n)
       integer(kind=c_int), intent(in), optional :: resolution
 
-      real(kind=c_float), dimension(:), allocatable :: unique, weights, edges, wh_in_edge
+      real(kind=c_float), dimension(:), allocatable :: unique, weights, edges, wh_in_edge, change_points
       real(kind=c_float), dimension(:), allocatable :: best
-      integer(kind=8), dimension(:), allocatable :: best_idx, change_points
+      integer(kind=8), dimension(:), allocatable :: best_idx
       real(kind=c_float) :: extent, dt, width, fit_max, cnt_in_range, fitness
       integer(kind=8) :: i, Q, L, i_max
 
@@ -50,7 +50,7 @@ contains
          i_max = 0
 
          do i = 1,Q
-            cnt_in_range = wh_in_edge(Q+1) - wh_in_edge(i-1)
+            cnt_in_range = wh_in_edge(Q+1) - wh_in_edge(i)
             width = edges(Q+1) - edges(i)
             if (width .le. dt) exit
 
@@ -71,14 +71,21 @@ contains
       print *, 'best_idx:', best_idx
 
       ! pre-allocate change_points
-      allocate(change_points(L))
+      allocate(change_points(L+1))
+      i = 1
 
-      ! iteratively peel off the last block
+      ! iteratively peel off the last block (this works fine)
+      L = L + 1
       do while (L .gt. 0)
-         print *, 'block:', edges(best_idx(L)), edges(L+1)
-         L = best_idx(L) - 1
+         print *, 'block:', edges(L)
+         change_points(i) = edges(L)
+         i = i + 1
+
+         if (L .eq. 1) exit
+         L = best_idx(L-1)
       end do
 
+      print *, 'change_points:', change_points(1:i-1)
    end subroutine fast_bayesian_binning
 
    ! partition the data (sort and remove duplicates)
@@ -132,10 +139,11 @@ contains
       i = 1
 
       ! edges are longer by one element
-      do k = 1, len
+      do k = 1, size(x, kind=8)
          ! the floating-point comparison is not exact ... watch out!
          do while (.not. (x(k) .ge. edges(i) .and. x(k) .le. edges(i+1)))
             i = i + 1
+            !if (i .ge. len-1) exit
          end do
 
          counts(i+shift) = counts(i+shift) + weights(k)
