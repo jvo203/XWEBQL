@@ -17,22 +17,24 @@ contains
       real(kind=c_float), intent(inout) :: x(n)
       integer(kind=c_int), intent(in), optional :: resolution
 
-      real(kind=c_float), dimension(:), allocatable :: unique, weights, edges
+      real(kind=c_float), dimension(:), allocatable :: unique, weights, edges, wh_in_edge
       integer(kind=8) :: i, tail
 
       if(n .eq. 0) return
 
-      call partition(x, unique, weights, edges)
+      tail = partition(x, unique, weights, edges)
       print *, 'unique:', unique
       print *, 'weights:', weights
       print *, 'edges:', edges
-
-      tail = size(unique, kind=8)
       print *, 'n:', n, 'tail:', tail
+
+      wh_in_edge = count_between_edges(unique, edges, weights, 1)
+      call cumsum(wh_in_edge)
+      print *, 'wh_in_edge:', wh_in_edge
    end subroutine fast_bayesian_binning
 
    ! partition the data (sort and remove duplicates)
-   subroutine partition(x, unique, weights, edges)
+   function partition(x, unique, weights, edges) result(tail)
       real(kind=c_float), intent(inout) :: x(:)
       real(kind=c_float), dimension(:), allocatable, intent(out) :: unique, weights, edges
 
@@ -66,17 +68,26 @@ contains
 
       ! auto-allocate and fill-in the edges
       edges = (/unique(1), 0.5 * (unique(1:tail-1) + unique(2:tail)), unique(tail)/)
-   end subroutine partition
+   end function partition
 
    function count_between_edges(x, edges, weights, shift) result (counts)
-      real(kind=c_float), dimension(:), intent(in) :: x
-      real(kind=c_float), dimension(:), intent(in) :: edges, weights
+      real(kind=c_float), dimension(:), intent(in) :: x, edges, weights
       integer, intent(in) :: shift
-      integer(kind=8), dimension(:), allocatable :: counts
 
-      integer(kind=8) :: i
+      real(kind=c_float), dimension(:), allocatable :: counts
+
+      integer(kind=8) :: i, k
+
+      allocate(counts(size(edges, kind=8)-1+shift), source=0.0)
 
       i = 1
+
+      do k = 1, size(x, kind=8)
+         do while (.not. (x(k) .ge. edges(i) .and. x(k) .le. edges(i+1)))
+            i = i + 1
+         end do
+         counts(i+shift) = counts(i+shift) + weights(k)
+      end do
    end function count_between_edges
 
    ! in-place cumulative sum
