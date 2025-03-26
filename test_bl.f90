@@ -96,33 +96,32 @@ contains
       real(kind=c_float), intent(inout) :: x(:)
       real(kind=c_float), dimension(:), allocatable, intent(out) :: unique, weights, edges
 
-      real(kind=c_float), dimension(:), allocatable :: sorted, w
-
+      real(kind=c_float), dimension(:), allocatable :: sorted
       integer(kind=8) :: i, tail
 
       ! sort the data
       call quicksort(x, int(1, kind=8), size(x, kind=8))
 
       allocate(sorted(size(x)))
-      allocate(w(size(x)))
+      allocate(weights(size(x)))
 
       tail = 1
       sorted(1) = x(1)
-      w(1) = 1
+      weights(1) = 1
 
       do i = 2, size(x, kind=8)
          if(x(i) .eq. x(i-1)) then
-            w(tail) = w(tail) + 1
+            weights(tail) = weights(tail) + 1
          else
             tail = tail + 1
             sorted(tail) = x(i)
-            w(tail) = 1
+            weights(tail) = 1
          end if
       end do
 
       ! truncate the outputs
       unique = sorted(1:tail)
-      weights = w(1:tail)
+      weights = weights(1:tail)
 
       ! auto-allocate and fill-in the edges
       edges = (/unique(1), 0.5 * (unique(1:tail-1) + unique(2:tail)), unique(tail)/)
