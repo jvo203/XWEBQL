@@ -144,7 +144,7 @@ contains
       ! edges are longer by one element
       do k = 1, size(x, kind=8)
          ! the floating-point comparison is not exact ... watch out!
-         do while (.not. (x(k) .ge. edges(i) .and. x(k) .le. edges(i+1)))
+         do while (.not. (x(k) .ge. edges(i) .and. x(k) .le. edges(i+1)) .and. i .lt. len-1)
             i = i + 1
             !if (i .ge. len-1) exit
          end do

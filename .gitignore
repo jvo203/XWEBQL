@@ -66,3 +66,4 @@ Manifest.toml
 /.vscode/
 
 test_bl
+/*.dSYM
