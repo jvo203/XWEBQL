@@ -146,7 +146,6 @@ contains
          ! the floating-point comparison is not exact ... watch out!
          do while (.not. (x(k) .ge. edges(i) .and. x(k) .le. edges(i+1)) .and. i .lt. len-1)
             i = i + 1
-            !if (i .ge. len-1) exit
          end do
 
          counts(i+shift) = counts(i+shift) + weights(k)
