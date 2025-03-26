@@ -34,21 +34,21 @@ contains
 
       ! sort the data
       call quicksort(x, int(1, kind=8), size(x, kind=8))
-      print *, "sorted: ", x
 
       allocate(sorted(size(x)))
-      allocate(w(size(x)), source=1.0)
-      print *, "w: ", w
+      allocate(w(size(x)))
 
       tail = 1
       sorted(1) = x(1)
+      w(1) = 1
 
-      do i = 2, size(x)
+      do i = 2, size(x, kind=8)
          if(x(i) .eq. x(i-1)) then
             w(tail) = w(tail) + 1
          else
             tail = tail + 1
             sorted(tail) = x(i)
+            w(tail) = 1
          end if
       end do
 
@@ -62,7 +62,7 @@ contains
       real(kind=c_float), intent(inout) :: x(:)
       integer(kind=8) :: i
 
-      do i = 2, size(x)
+      do i = 2, size(x, kind=8)
          x(i) = x(i-1) + x(i)
       end do
 
