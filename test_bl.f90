@@ -19,9 +19,9 @@ contains
 
       real(kind=c_float), dimension(:), allocatable :: unique, weights, edges, wh_in_edge
       real(kind=c_float), dimension(:), allocatable :: best
-      integer(kind=8), dimension(:), allocatable :: best_idx
-
-      integer(kind=8) :: i, L
+      integer(kind=8), dimension(:), allocatable :: best_idx, change_points
+      real(kind=c_float) :: extent, dt, width, fit_max, cnt_in_range, fitness
+      integer(kind=8) :: i, Q, L, i_max
 
       if(n .eq. 0) return
 
@@ -35,7 +35,50 @@ contains
       call cumsum(wh_in_edge)
       print *, 'wh_in_edge:', wh_in_edge
 
+      extent = unique(L) - unique(1)
+
+      if(present(resolution)) then
+         dt = abs(extent / resolution)
+      else
+         dt = 0.0 ! by default the resolution is infinite
+      end if
+
       allocate(best(L), best_idx(L))
+
+      do Q = 1, L
+         fit_max = -1.0e38 ! -Inf
+         i_max = 0
+
+         do i = 1,Q
+            cnt_in_range = wh_in_edge(Q+1) - wh_in_edge(i-1)
+            width = edges(Q+1) - edges(i)
+            if (width .le. dt) exit
+
+            fitness = cnt_in_range * log(cnt_in_range / width) - log(wh_in_edge(size(wh_in_edge)))
+            if (i.gt. 1) fitness = fitness + best(i-1)
+
+            if (fitness .gt. fit_max) then
+               fit_max = fitness
+               i_max = i
+            end if
+         end do
+
+         best(Q) = fit_max
+         best_idx(Q) = i_max
+      end do
+
+      print *, 'best:', best
+      print *, 'best_idx:', best_idx
+
+      ! pre-allocate change_points
+      allocate(change_points(L))
+
+      ! iteratively peel off the last block
+      do while (L .gt. 0)
+         print *, 'block:', edges(best_idx(L)), edges(L+1)
+         L = best_idx(L) - 1
+      end do
+
    end subroutine fast_bayesian_binning
 
    ! partition the data (sort and remove duplicates)
