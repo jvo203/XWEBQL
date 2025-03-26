@@ -76,16 +76,20 @@ contains
 
       real(kind=c_float), dimension(:), allocatable :: counts
 
-      integer(kind=8) :: i, k
+      integer(kind=8) :: i, k, len
 
-      allocate(counts(size(edges, kind=8)-1+shift), source=0.0)
+      len = size(edges, kind=8)
+      allocate(counts(len-1+shift), source=0.0)
 
       i = 1
 
-      do k = 1, size(x, kind=8)
+      ! edges are longer by one element
+      do k = 1, len
+         ! the floating-point comparison is not exact ... watch out!
          do while (.not. (x(k) .ge. edges(i) .and. x(k) .le. edges(i+1)))
             i = i + 1
          end do
+
          counts(i+shift) = counts(i+shift) + weights(k)
       end do
    end function count_between_edges
