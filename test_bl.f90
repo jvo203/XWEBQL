@@ -16,7 +16,8 @@ contains
       integer(kind=c_size_t), intent(in) :: n
       real(kind=c_float), intent(inout) :: x(n)
 
-      real(kind=c_float), dimension(:), allocatable :: sorted, weights
+      real(kind=c_float), dimension(:), allocatable :: sorted
+      integer, dimension(:), allocatable :: weights
 
       if(n .eq. 0) return
 
@@ -26,9 +27,11 @@ contains
    ! partition the data (sort and remove duplicates)
    subroutine partition(x, unique, weights)
       real(kind=c_float), intent(inout) :: x(:)
-      real(kind=c_float), dimension(:), allocatable, intent(out) :: unique, weights
+      real(kind=c_float), dimension(:), allocatable, intent(out) :: unique
+      integer, dimension(:), allocatable, intent(out) :: weights
 
-      real(kind=c_float), dimension(:), allocatable :: sorted, w
+      real(kind=c_float), dimension(:), allocatable :: sorted
+      integer, dimension(:), allocatable :: w
 
       integer(kind=8) :: i, tail
 
