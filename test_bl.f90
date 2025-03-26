@@ -26,14 +26,14 @@ contains
       if(n .eq. 0) return
 
       L = partition(x, unique, weights, edges)
-      print *, 'unique:', unique
-      print *, 'weights:', weights
-      print *, 'edges:', edges
+      !print *, 'unique:', unique
+      !print *, 'weights:', weights
+      !print *, 'edges:', edges
       print *, 'n:', n, 'unique samples:', L
 
       wh_in_edge = count_between_edges(unique, edges, weights, 1)
       call cumsum(wh_in_edge)
-      print *, 'wh_in_edge:', wh_in_edge
+      !print *, 'wh_in_edge:', wh_in_edge
 
       extent = unique(L) - unique(1)
 
@@ -67,8 +67,8 @@ contains
          best_idx(Q) = i_max
       end do
 
-      print *, 'best:', best
-      print *, 'best_idx:', best_idx
+      !print *, 'best:', best
+      !print *, 'best_idx:', best_idx
 
       ! pre-allocate change_points
       allocate(change_points(L+1))
@@ -85,7 +85,10 @@ contains
          L = best_idx(L-1)
       end do
 
-      print *, 'change_points:', change_points(1:i-1)
+      ! in-place reverse the change_points between 1 and i-1
+      change_points = change_points( i-1:1:-1 )
+
+      print *, 'change_points:', change_points
    end subroutine fast_bayesian_binning
 
    ! partition the data (sort and remove duplicates)
