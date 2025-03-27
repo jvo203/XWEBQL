@@ -1,3 +1,21 @@
+# Set the library path
+@static if Sys.isapple()
+    forlib = "../fbh.dylib"
+end
+
+@static if Sys.islinux()
+    forlib = "../fbh.so"
+end
+
+@static if Sys.iswindows()
+    error("Unsupported OS: Windows")
+end
+
+# real(kind=c_float) function fast_bayesian_histogram(energy, n) bind(c)
+function FastBayesianHistogram(x::Vector{Float32}, n::Int32)
+    return @ccall forlib.fast_bayesian_histogram(x::Ref{Float32}, n::Ref{Cint})::Float32
+end
+
 const XRISM_RESOLVE_Pi2evFactor = 0.5f0
 
 # using a local debug version of BayesHistogram.jl
@@ -35,3 +53,6 @@ println("heights = ", bl.heights)
 
 # export the energy to a text file
 writedlm("energy.txt", energy)
+
+@time println("Julia:", sum(energy))
+@time println("Fortran:", FastBayesianHistogram(energy, Int32(length(energy))))
