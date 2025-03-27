@@ -5,7 +5,7 @@ program test
 
    integer(kind=c_size_t), parameter :: NOSAMPLES = 200000
    real(kind=c_float), dimension(NOSAMPLES) :: data
-   integer(kind=c_size_t) :: ios, M
+   integer(kind=c_size_t) :: i, ios, M
 
    ! initialize x with random data
    !call random_number(data)
@@ -37,9 +37,9 @@ contains
 
       real(kind=c_float), dimension(:), allocatable :: unique, weights, edges, wh_in_edge, change_points
       real(kind=c_float), dimension(:), allocatable :: best
-      integer, dimension(:), allocatable :: best_idx
+      integer(kind=8), dimension(:), allocatable :: best_idx
       real(kind=c_float) :: extent, dt, width, fit_max, cnt_in_range, fitness
-      integer :: i, Q, L, i_max
+      integer(kind=8) :: i, Q, L, i_max
 
       if(n .eq. 0) return
 
@@ -114,10 +114,10 @@ contains
       real(kind=c_float), intent(inout) :: x(:)
       real(kind=c_float), dimension(:), allocatable, intent(out) :: unique, weights, edges
 
-      integer:: i, tail
+      integer(kind=8) :: i, tail
 
       ! sort the data
-      call quicksort(x, 1, size(x))
+      call quicksort(x, int(1, kind=8), size(x, kind=8))
 
       allocate(unique(size(x)))
       allocate(weights(size(x)))
@@ -126,7 +126,7 @@ contains
       unique(1) = x(1)
       weights(1) = 1
 
-      do i = 2, size(x)
+      do i = 2, size(x, kind=8)
          if(x(i) .eq. x(i-1)) then
             weights(tail) = weights(tail) + 1
          else
@@ -149,15 +149,16 @@ contains
       integer, intent(in) :: shift
 
       real(kind=c_float), dimension(:), allocatable :: counts
-      integer :: i, k, len
 
-      len = size(edges)
+      integer(kind=8) :: i, k, len
+
+      len = size(edges, kind=8)
       allocate(counts(len-1+shift), source=0.0)
 
       i = 1
 
       ! edges are longer by one element
-      do k = 1, size(x)
+      do k = 1, size(x, kind=8)
          ! the floating-point comparison is not exact ... watch out!
          do while (.not. (x(k) .ge. edges(i) .and. x(k) .le. edges(i+1)) .and. i .lt. len-1)
             i = i + 1
@@ -170,9 +171,9 @@ contains
    ! in-place cumulative sum
    subroutine cumsum(x)
       real(kind=c_float), intent(inout) :: x(:)
-      integer :: i
+      integer(kind=8) :: i
 
-      do i = 2, size(x)
+      do i = 2, size(x, kind=8)
          x(i) = x(i-1) + x(i)
       end do
 
@@ -181,10 +182,10 @@ contains
    recursive subroutine quicksort(a, first, last)
       implicit none
       real(kind=c_float), intent(inout) :: a(*)
-      integer, intent(in) :: first, last
+      integer(kind=8), intent(in) :: first, last
 
       real(kind=c_float) :: x, t
-      integer:: i, j
+      integer(kind=8) :: i, j
 
       x = a( (first+last) / 2 )
       i = first
