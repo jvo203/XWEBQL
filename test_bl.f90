@@ -36,6 +36,9 @@ program test
 
    !call fast_bayesian_binning(data, NOSAMPLES)
    histogram = fast_bayesian_binning(data, M, 512)
+
+   ! release the memory
+   call delete_blocks(histogram)
 contains
    function fast_bayesian_binning(x, n, resolution) result(blocks)
       integer(kind=c_size_t), intent(in) :: n
@@ -50,6 +53,8 @@ contains
       integer :: i, Q, L, i_max
 
       type(BayesHistogram) :: blocks
+
+      blocks = BayesHistogram(c_null_ptr, c_null_ptr, c_null_ptr, 0)
 
       if(n .eq. 0) return
 
@@ -117,12 +122,12 @@ contains
 
       print *, 'change_points:', change_points
 
-      call build_blocks(unique, change_points, weights)
+      blocks = build_blocks(unique, change_points, weights)
    end function fast_bayesian_binning
 
-   subroutine build_blocks(x, edges, weights) !result(blocks)
+   function build_blocks(x, edges, weights) result(blocks)
       real(kind=c_float), dimension(:), intent(in) :: x, edges, weights
-      !type(BayesHistogram) :: blocks
+      type(BayesHistogram) :: blocks
 
       real(kind=c_float), dimension(:), pointer :: centers, heights, widths, counts
       real(kind=c_float) :: total
@@ -142,8 +147,24 @@ contains
       heights = counts / (total * widths)
       print *, 'heights:', heights
 
-      !blocks = BayesHistogram(c_loc(centers), c_loc(widths), c_loc(heights), len-1)
-   end subroutine build_blocks
+      blocks = BayesHistogram(c_loc(centers), c_loc(widths), c_loc(heights), len-1)
+   end function build_blocks
+
+   subroutine delete_blocks(blocks)
+      type(BayesHistogram), intent(inout) :: blocks
+      real(kind=c_float), dimension(:), pointer :: centers, heights, widths
+
+      if (blocks%n .eq. 0) return
+
+      ! TO-DO: convert c pointer to fortran pointer
+      call c_f_pointer(blocks%centers, centers, [blocks%n])
+      call c_f_pointer(blocks%widths, widths, [blocks%n])
+      call c_f_pointer(blocks%heights, heights, [blocks%n])
+
+      deallocate(centers)
+      deallocate(widths)
+      deallocate(heights)
+   end subroutine delete_blocks
 
    ! partition the data (sort and remove duplicates)
    function partition(x, unique, weights, edges) result(tail)
