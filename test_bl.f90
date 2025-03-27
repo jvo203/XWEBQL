@@ -4,8 +4,7 @@ program test
    implicit none
 
    type, bind(c) :: BayesHistogram
-      !real(kind=c_float), dimension(:), pointer :: centers, height, widths
-      type(c_ptr) :: centers, height, widths
+      type(c_ptr) :: centers, widths, heights
       integer(kind=c_int) :: n
    end type BayesHistogram
 
@@ -43,7 +42,8 @@ contains
       real(kind=c_float), intent(inout) :: x(n)
       integer(kind=c_int), intent(in), optional :: resolution
 
-      real(kind=c_float), dimension(:), allocatable :: unique, weights, edges, wh_in_edge, change_points
+      real(kind=c_float), dimension(:), allocatable :: unique, weights, edges, change_points
+      real(kind=c_float), dimension(:), pointer :: wh_in_edge
       real(kind=c_float), dimension(:), allocatable :: best
       integer, dimension(:), allocatable :: best_idx
       real(kind=c_float) :: extent, dt, width, fit_max, cnt_in_range, fitness
@@ -59,7 +59,7 @@ contains
       !print *, 'edges:', edges
       print *, 'n:', n, 'unique samples:', L
 
-      wh_in_edge = count_between_edges(unique, edges, weights, 1)
+      wh_in_edge => count_between_edges(unique, edges, weights, 1)
       call cumsum(wh_in_edge)
       !print *, 'wh_in_edge:', wh_in_edge
 
@@ -96,6 +96,8 @@ contains
          !print *, 'Q:', Q, 'best:', best(Q), 'best_idx:', best_idx(Q)
       end do
 
+      deallocate(wh_in_edge)
+
       ! pre-allocate change_points
       allocate(change_points(L+1))
       i = 1
@@ -122,11 +124,12 @@ contains
       real(kind=c_float), dimension(:), intent(in) :: x, edges, weights
       !type(BayesHistogram) :: blocks
 
-      real(kind=c_float), dimension(:), allocatable, target :: centers, height, widths, counts
+      real(kind=c_float), dimension(:), pointer :: centers, heights, widths, counts
       real(kind=c_float) :: total
       integer :: i, j, len
 
       len = size(edges)
+      allocate(centers(len-1), heights(len-1), widths(len-1))
 
       centers = 0.5 * (edges(1:len-1) + edges(2:len))
       print *, 'centers:', centers
@@ -134,12 +137,12 @@ contains
       widths = edges(2:len) - edges(1:len-1)
       print *, 'widths:', widths
 
-      counts = count_between_edges(x, edges, weights, 0)
+      counts => count_between_edges(x, edges, weights, 0)
       total = sum(counts)
-      height = counts / (total * widths)
-      print *, 'height:', height
+      heights = counts / (total * widths)
+      print *, 'heights:', heights
 
-      !blocks = BayesHistogram(c_loc(centers), c_loc(height), c_loc(widths), len-1)
+      !blocks = BayesHistogram(c_loc(centers), c_loc(widths), c_loc(heights), len-1)
    end subroutine build_blocks
 
    ! partition the data (sort and remove duplicates)
@@ -181,7 +184,7 @@ contains
       real(kind=c_float), dimension(:), intent(in) :: x, edges, weights
       integer, intent(in) :: shift
 
-      real(kind=c_float), dimension(:), allocatable :: counts
+      real(kind=c_float), dimension(:), pointer :: counts
       integer :: i, k, len
 
       len = size(edges)
