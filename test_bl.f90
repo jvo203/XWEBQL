@@ -3,6 +3,14 @@ program test
    use omp_lib
    implicit none
 
+   type, bind(c) :: BayesHistogram
+      !real(kind=c_float), dimension(:), pointer :: centers, height, widths
+      type(c_ptr) :: centers, height, widths
+      integer(kind=c_int) :: n
+   end type BayesHistogram
+
+   type(BayesHistogram) :: histogram
+
    integer(kind=c_size_t), parameter :: NOSAMPLES = 200000
    real(kind=c_float), dimension(NOSAMPLES) :: data
    integer(kind=c_size_t) :: ios, M
@@ -28,9 +36,9 @@ program test
    print *, 'data:', data(M-10:M)
 
    !call fast_bayesian_binning(data, NOSAMPLES)
-   call fast_bayesian_binning(data, M, 512)
+   histogram = fast_bayesian_binning(data, M, 512)
 contains
-   subroutine fast_bayesian_binning(x, n, resolution) bind(c)
+   function fast_bayesian_binning(x, n, resolution) result(blocks)
       integer(kind=c_size_t), intent(in) :: n
       real(kind=c_float), intent(inout) :: x(n)
       integer(kind=c_int), intent(in), optional :: resolution
@@ -40,6 +48,8 @@ contains
       integer, dimension(:), allocatable :: best_idx
       real(kind=c_float) :: extent, dt, width, fit_max, cnt_in_range, fitness
       integer :: i, Q, L, i_max
+
+      type(BayesHistogram) :: blocks
 
       if(n .eq. 0) return
 
@@ -104,7 +114,33 @@ contains
       change_points = change_points( i-1:1:-1 )
 
       print *, 'change_points:', change_points
-   end subroutine fast_bayesian_binning
+
+      call build_blocks(unique, change_points, weights)
+   end function fast_bayesian_binning
+
+   subroutine build_blocks(x, edges, weights) !result(blocks)
+      real(kind=c_float), dimension(:), intent(in) :: x, edges, weights
+      !type(BayesHistogram) :: blocks
+
+      real(kind=c_float), dimension(:), allocatable, target :: centers, height, widths, counts
+      real(kind=c_float) :: total
+      integer :: i, j, len
+
+      len = size(edges)
+
+      centers = 0.5 * (edges(1:len-1) + edges(2:len))
+      print *, 'centers:', centers
+
+      widths = edges(2:len) - edges(1:len-1)
+      print *, 'widths:', widths
+
+      counts = count_between_edges(x, edges, weights, 0)
+      total = sum(counts)
+      height = counts / (total * widths)
+      print *, 'height:', height
+
+      !blocks = BayesHistogram(c_loc(centers), c_loc(height), c_loc(widths), len-1)
+   end subroutine build_blocks
 
    ! partition the data (sort and remove duplicates)
    function partition(x, unique, weights, edges) result(tail)
