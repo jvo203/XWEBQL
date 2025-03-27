@@ -3,14 +3,32 @@ program test
    use omp_lib
    implicit none
 
-   integer(kind=c_size_t), parameter :: NOSAMPLES = 100
+   integer(kind=c_size_t), parameter :: NOSAMPLES = 200000
    real(kind=c_float), dimension(NOSAMPLES) :: data
+   integer(kind=c_size_t) :: i, ios, M
 
    ! initialize x with random data
-   call random_number(data)
-   data(4:8) = -1.0
+   !call random_number(data)
+   !data(4:8) = -1.0
 
-   call fast_bayesian_binning(data, NOSAMPLES)
+   ! read-in data from file energy.txt
+   open(10, file='Julia/energy.txt', status='old')
+
+   M = 0
+   ! read until the end of file, no more than NOSAMPLES
+   do
+      read(10, *, iostat=ios) data(M+1)
+      if (ios /= 0) exit
+      M = M + 1
+      if (M >= NOSAMPLES) exit
+   end do
+
+   print *, 'M:', M
+   ! print the last 10 elements
+   print *, 'data:', data(M-10:M)
+
+   !call fast_bayesian_binning(data, NOSAMPLES)
+   call fast_bayesian_binning(data, M, 512)
 contains
    subroutine fast_bayesian_binning(x, n, resolution) bind(c)
       integer(kind=c_size_t), intent(in) :: n
@@ -65,6 +83,7 @@ contains
 
          best(Q) = fit_max
          best_idx(Q) = i_max
+         !print *, 'Q:', Q, 'best:', best(Q), 'best_idx:', best_idx(Q)
       end do
 
       !print *, 'best:', best
@@ -77,7 +96,6 @@ contains
       ! iteratively peel off the last block (this works fine)
       L = L + 1
       do while (L .gt. 0)
-         print *, 'block:', edges(L)
          change_points(i) = edges(L)
          i = i + 1
 

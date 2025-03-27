@@ -28,7 +28,7 @@ energy = energy[(energy.>500.0).&(energy.<10000.0)]
 nevents = length(energy)
 println("nevents = ", nevents)
 
-@time bl = BayesHistogram.bayesian_blocks(energy)
+@time bl = BayesHistogram.bayesian_blocks(energy, resolution=512)
 
 # export the energy to a text file
 writedlm("energy.txt", energy)
