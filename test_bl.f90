@@ -86,9 +86,6 @@ contains
          !print *, 'Q:', Q, 'best:', best(Q), 'best_idx:', best_idx(Q)
       end do
 
-      !print *, 'best:', best
-      !print *, 'best_idx:', best_idx
-
       ! pre-allocate change_points
       allocate(change_points(L+1))
       i = 1
