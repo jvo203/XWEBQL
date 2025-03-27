@@ -23,19 +23,18 @@ UNAME_S := $(shell uname -s)
 SRC = fbh
 
 # on macOS use -dynamiclib instead of -shared
-# test the OS
 ifeq ($(UNAME_S),Linux)	
 	SHARED := -shared -Wl,-export-dynamic
-	OBJFILE := $(SRC).so
+	DYNLIB := $(SRC).so
 endif
 
 ifeq ($(UNAME_S),Darwin)
 	SHARED := -dynamiclib	
-	OBJFILE := $(SRC).dylib
+	DYNLIB := $(SRC).dylib
 endif
 
 for:
-	gfortran -march=native $(SHARED) -fPIC -mcmodel=small -Ofast -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=1 -funroll-loops -fmax-stack-var-size=32768 $(INC) -o $(OBJFILE) $(SRC).f90 $(LIBS)
+	gfortran -march=native $(SHARED) -fPIC -mcmodel=small -Ofast -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=1 -funroll-loops -fmax-stack-var-size=32768 $(INC) -o $(DYNLIB) $(SRC).f90 $(LIBS)
 
 test:
 	gfortran -march=native -g -Ofast -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=1 -funroll-loops -fmax-stack-var-size=32768 $(INC) -o test_bl test_bl.f90 $(LIBS)
