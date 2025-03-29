@@ -64,7 +64,7 @@ println("heights = ", bl.heights)
 # export the energy to a text file
 writedlm("energy.txt", energy)
 
-@time blocks = FastBayesianBinning(energy, length(energy))
+@time blocks = FastBayesianBinning(energy, length(energy), Int32(512))
 println("Fortran blocks = ", blocks)
 
 # delete the blocks
