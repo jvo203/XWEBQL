@@ -10,9 +10,9 @@ program test
 
    type(BayesHistogram) :: histogram
 
-   integer(kind=c_size_t), parameter :: NOSAMPLES = 200000
+   integer(kind=c_int64_t), parameter :: NOSAMPLES = 200000
    real(kind=c_float), dimension(NOSAMPLES) :: data
-   integer(kind=c_size_t) :: ios, M
+   integer(kind=c_int64_t) :: ios, M
 
    ! initialize x with random data
    !call random_number(data)
@@ -41,7 +41,7 @@ program test
    call delete_blocks(histogram)
 contains
    function fast_bayesian_binning(x, n, resolution) result(blocks)
-      integer(kind=c_size_t), intent(in) :: n
+      integer(kind=c_int64_t), intent(in) :: n
       real(kind=c_float), intent(inout) :: x(n)
       integer(kind=c_int), intent(in), optional :: resolution
 
