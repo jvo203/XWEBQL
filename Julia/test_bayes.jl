@@ -12,8 +12,8 @@ end
 end
 
 # real(kind=c_float) function fast_bayesian_histogram(energy, n) bind(c)
-function FastBayesianHistogram(x::Vector{Float32}, n::Int64)
-    return @ccall forlib.fast_bayesian_histogram(x::Ref{Float32}, n::Ref{Clonglong})::Float32
+function FastBayesianHistogram(x::Vector{Float32}, n::Int64, resolution::Int32=Int32(512))
+    return @ccall forlib.fast_bayesian_histogram(x::Ref{Float32}, n::Ref{Clonglong}, resolution::Ref{Cint})::Float32
 end
 
 const XRISM_RESOLVE_Pi2evFactor = 0.5f0
