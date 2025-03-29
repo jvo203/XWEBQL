@@ -57,6 +57,7 @@ nevents = length(energy)
 println("nevents = ", nevents)
 
 @time bl = BayesHistogram.bayesian_blocks(energy, resolution=512)
+@time bl = BayesHistogram.bayesian_blocks(energy, resolution=512)
 println("centers = ", bl.centers)
 println("widths = ", bl.widths)
 println("heights = ", bl.heights)
