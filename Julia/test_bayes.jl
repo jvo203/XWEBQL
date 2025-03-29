@@ -12,8 +12,8 @@ end
 end
 
 # real(kind=c_float) function fast_bayesian_histogram(energy, n) bind(c)
-function FastBayesianHistogram(x::Vector{Float32}, n::Int32)
-    return @ccall forlib.fast_bayesian_histogram(x::Ref{Float32}, n::Ref{Cint})::Float32
+function FastBayesianHistogram(x::Vector{Float32}, n::Int64)
+    return @ccall forlib.fast_bayesian_histogram(x::Ref{Float32}, n::Ref{Clonglong})::Float32
 end
 
 const XRISM_RESOLVE_Pi2evFactor = 0.5f0
@@ -55,4 +55,4 @@ println("heights = ", bl.heights)
 writedlm("energy.txt", energy)
 
 @time println("Julia:", sum(energy))
-@time println("Fortran:", FastBayesianHistogram(energy, Int32(length(energy))))
+@time println("Fortran:", FastBayesianHistogram(energy, length(energy)))
