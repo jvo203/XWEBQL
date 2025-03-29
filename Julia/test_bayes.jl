@@ -11,9 +11,16 @@ end
     error("Unsupported OS: Windows")
 end
 
-# real(kind=c_float) function fast_bayesian_histogram(energy, n) bind(c)
-function FastBayesianHistogram(x::Vector{Float32}, n::Int64, resolution::Int32=Int32(512))
-    return @ccall forlib.fast_bayesian_histogram(x::Ref{Float32}, n::Ref{Clonglong}, resolution::Ref{Cint})::Float32
+# type(c_ptr) function fast_bayesian_binning(energy, n, resolution) bind(c)
+function FastBayesianBinning(x::Vector{Float32}, n::Int64, resolution::Int32=Int32(512))
+    return @ccall forlib.fast_bayesian_binning(x::Ref{Float32}, n::Ref{Clonglong}, resolution::Ref{Cint})::Ptr{Cvoid}
+end
+
+# subroutine delete_blocks(ptr) bind(C)
+#    type(c_ptr), value :: ptr
+function DeleteBlocks(ptr::Ptr{Cvoid})
+    #return @ccall forlib.delete_blocks(ptr::Ptr{Cvoid})::Nothing
+    return @ccall forlib.delete_blocks(ptr::Ref{Cvoid})::Nothing
 end
 
 const XRISM_RESOLVE_Pi2evFactor = 0.5f0
@@ -37,6 +44,9 @@ end
 println(FITSIO.colnames(f[2]))
 energy = Float32.(read(f[2], "PI")) .* XRISM_RESOLVE_Pi2evFactor
 
+# delete the FITS file
+close(f)
+println("FITS file closed")
 
 nevents = length(energy)
 println("nevents = ", nevents)
@@ -54,5 +64,9 @@ println("heights = ", bl.heights)
 # export the energy to a text file
 writedlm("energy.txt", energy)
 
-@time println("Julia:", sum(energy))
-@time println("Fortran:", FastBayesianHistogram(energy, length(energy)))
+@time blocks = FastBayesianBinning(energy, length(energy))
+println("Fortran blocks = ", blocks)
+
+# delete the blocks
+DeleteBlocks(blocks)
+println("Fortran blocks deleted")
