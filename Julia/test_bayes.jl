@@ -78,14 +78,13 @@ writedlm("energy.txt", energy)
 println("Fortran blocks = ", blocks)
 
 hist = FastBayesHistogram(blocks)
-println("Fortran histogram centers = ", hist.centers)
-println("Fortran histogram widths = ", hist.widths)
-println("Fortran histogram heights = ", hist.heights)
 println("Fortran histogram n = ", hist.n)
 
-println("Fortran histogram centers = ", unsafe_wrap(Array, hist.centers, hist.n))
-println("Fortran histogram widths = ", unsafe_wrap(Array, hist.widths, hist.n))
-println("Fortran histogram heights = ", unsafe_wrap(Array, hist.heights, hist.n))
+if hist.n > 0
+    println("Fortran histogram centers = ", unsafe_wrap(Array, hist.centers, hist.n))
+    println("Fortran histogram widths = ", unsafe_wrap(Array, hist.widths, hist.n))
+    println("Fortran histogram heights = ", unsafe_wrap(Array, hist.heights, hist.n))
+end
 
 # delete the blocks
 DeleteBlocks(blocks)
