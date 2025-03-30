@@ -11,16 +11,25 @@ end
     error("Unsupported OS: Windows")
 end
 
+struct FastBayesHistogram
+    centers::Ptr{Float32}
+    widths::Ptr{Float32}
+    heights::Ptr{Float32}
+    n::Cint
+end
+
+FastBayesHistogram(hist::Ptr{FastBayesHistogram}) = unsafe_load(hist)
+
 # type(c_ptr) function fast_bayesian_binning(energy, n, resolution) bind(c)
 function FastBayesianBinning(x::Vector{Float32}, n::Int64, resolution::Int32=Int32(512))
-    return @ccall forlib.fast_bayesian_binning(x::Ref{Float32}, n::Ref{Clonglong}, resolution::Ref{Cint})::Ptr{Cvoid}
+    return @ccall forlib.fast_bayesian_binning(x::Ref{Float32}, n::Ref{Clonglong}, resolution::Ref{Cint})::Ptr{FastBayesHistogram}
 end
 
 # subroutine delete_blocks(ptr) bind(C)
 #    type(c_ptr), value :: ptr
-function DeleteBlocks(ptr::Ptr{Cvoid})
+function DeleteBlocks(ptr::Ptr{FastBayesHistogram})
     #return @ccall forlib.delete_blocks(ptr::Ptr{Cvoid})::Nothing
-    return @ccall forlib.delete_blocks(ptr::Ref{Cvoid})::Nothing
+    return @ccall forlib.delete_blocks(ptr::Ref{FastBayesHistogram})::Nothing
 end
 
 const XRISM_RESOLVE_Pi2evFactor = 0.5f0
@@ -67,6 +76,16 @@ writedlm("energy.txt", energy)
 
 @time blocks = FastBayesianBinning(energy, length(energy), Int32(512))
 println("Fortran blocks = ", blocks)
+
+hist = FastBayesHistogram(blocks)
+println("Fortran histogram centers = ", hist.centers)
+println("Fortran histogram widths = ", hist.widths)
+println("Fortran histogram heights = ", hist.heights)
+println("Fortran histogram n = ", hist.n)
+
+println("Fortran histogram centers = ", unsafe_wrap(Array, hist.centers, hist.n))
+println("Fortran histogram widths = ", unsafe_wrap(Array, hist.widths, hist.n))
+println("Fortran histogram heights = ", unsafe_wrap(Array, hist.heights, hist.n))
 
 # delete the blocks
 DeleteBlocks(blocks)
