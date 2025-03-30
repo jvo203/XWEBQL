@@ -35,7 +35,7 @@ end
 const XRISM_RESOLVE_Pi2evFactor = 0.5f0
 
 # using a local debug version of BayesHistogram.jl
-include("BayesHistogram_debug.jl")
+include("BayesHistogram.jl")
 
 using .BayesHistogram
 using DelimitedFiles
