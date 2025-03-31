@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-03-25.1";
+    return "JS2025-03-31.0";
 }
 
 function uuidv4() {
@@ -3873,9 +3873,13 @@ function plot_spectrum(spectrum) {
     dmin = Math.log(dmin);
     dmax = Math.log(dmax);
 
+    var xR = d3.scaleLog()
+        .range([range.xMin, range.xMax])
+        .domain([Math.log(1000 * data_band_lo), Math.log(1000 * data_band_hi)]);
+
     // xmin = take the first bin center and subtract half of the bin width
     // xmax = take the last bin center and add half of the bin width
-    var xmin = spectrum[0].center - spectrum[0].width / 2;
+    /*var xmin = spectrum[0].center - spectrum[0].width / 2;
     var xmax = spectrum[spectrum.length - 1].center + spectrum[spectrum.length - 1].width / 2;
 
     //get display direction
@@ -3889,7 +3893,7 @@ function plot_spectrum(spectrum) {
         var xR = d3.scaleLog()
             .range([range.xMin, range.xMax])
             .domain([xmin, xmax]);
-    }
+    }*/
 
     ctx.clearRect(0, 0, width, height);
     ctx.save();
@@ -5738,8 +5742,8 @@ function setup_image_selection() {
                             width: _width,
                             height: _height,
                             beam: zoom_shape,
-                            frame_start: Math.log(1000 * data_band_lo) - 0.5 * fitsData.CDELT3,
-                            frame_end: Math.log(1000 * data_band_hi) + 0.5 * fitsData.CDELT3,
+                            frame_start: Math.log(1000 * data_band_lo),// - 0.5 * fitsData.CDELT3,
+                            frame_end: Math.log(1000 * data_band_hi),// + 0.5 * fitsData.CDELT3,
                             seq_id: sent_seq_id,
                             timestamp: performance.now()
                         };
@@ -6588,8 +6592,8 @@ function imageTimeout() {
             width: _width,
             height: _height,
             beam: zoom_shape,
-            frame_start: Math.log(1000 * data_band_lo) - 0.5 * fitsData.CDELT3,
-            frame_end: Math.log(1000 * data_band_hi) + 0.5 * fitsData.CDELT3,
+            frame_start: Math.log(1000 * data_band_lo),// - 0.5 * fitsData.CDELT3,
+            frame_end: Math.log(1000 * data_band_hi),// + 0.5 * fitsData.CDELT3,
             seq_id: sent_seq_id,
             timestamp: performance.now()
         };
