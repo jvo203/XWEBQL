@@ -24,10 +24,10 @@ end
 
 FastBayesHistogram(hist::Ptr{FastBayesHistogram}) = unsafe_load(hist)
 
-function FastBayesianBinning(x::Vector{Float32}, n::Int64, resolution::Int32=Int32(512))
+function FastBayesianBinning(x::Vector{Float32}, n::Integer, resolution::Integer=512)
     return ccall(fast_bayesian_binning_fptr, Ptr{FastBayesHistogram},
         (Ref{Float32}, Ref{Clonglong}, Ref{Cint}),
-        x, n, resolution)
+        x, Int64(n), Int32(resolution))
 end
 
 function DeleteBlocks(ptr::Ptr{FastBayesHistogram})
@@ -401,7 +401,7 @@ function getBayesSpectrum(xobject::XDataSet, dx::Integer)
 
     # cap the energy at E_max    
     energy = energy[(energy.<=E_max)]
-    @time blocks = FastBayesianBinning(energy, length(energy), Int32(5 * dx))
+    @time blocks = FastBayesianBinning(energy, length(energy), 5 * dx)
     hist = FastBayesHistogram(blocks)
     len = hist.n
 
