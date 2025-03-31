@@ -15,6 +15,7 @@ using ThreadsX
 include("FORTRAN.jl")
 
 struct FastBayesHistogram
+    edges::Ptr{Float32}
     centers::Ptr{Float32}
     widths::Ptr{Float32}
     heights::Ptr{Float32}
@@ -401,14 +402,15 @@ function getBayesSpectrum(xobject::XDataSet, dx::Integer)
     # cap the energy at E_max    
     energy = energy[(energy.<=E_max)]
     @time blocks = FastBayesianBinning(energy, length(energy), Int32(5 * dx))
+    hist = FastBayesHistogram(blocks)
 
-    len = blocks.n
-    centers = unsafe_wrap(Array, blocks.centers, len)
-    widths = unsafe_wrap(Array, blocks.widths, len)
-    heights = unsafe_wrap(Array, blocks.heights, len)
+    len = hist.n
+    edges = unsafe_wrap(Array, hist.edges, len + 1)
+    centers = unsafe_wrap(Array, hist.centers, len)
+    widths = unsafe_wrap(Array, hist.widths, len)
+    heights = unsafe_wrap(Array, hist.heights, len)
 
-    # get the E_min and E_max from the bin edges    
-    edges = bl.edges
+    # get the E_min and E_max from the bin edges        
     E_min = Float32(edges[1]) # log eV
     E_max = Float32(edges[end]) # log eV
 

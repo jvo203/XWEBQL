@@ -1,6 +1,7 @@
 include("FORTRAN.jl")
 
 struct FastBayesHistogram
+    edges::Ptr{Float32}
     centers::Ptr{Float32}
     widths::Ptr{Float32}
     heights::Ptr{Float32}
