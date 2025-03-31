@@ -32,14 +32,10 @@ contains
       end if
 
       L = partition(x, unique, weights, edges)
-!print *, 'unique:', unique
-!print *, 'weights:', weights
-!print *, 'edges:', edges
-      print *, 'n:', n, 'unique samples:', L
+      print *, '[FORTRAN] no. points:', n, 'unique samples:', L
 
       wh_in_edge => count_between_edges(unique, edges, weights, 1)
       call cumsum(wh_in_edge)
-!print *, 'wh_in_edge:', wh_in_edge
 
       extent = unique(L) - unique(1)
 
@@ -71,7 +67,6 @@ contains
 
          best(Q) = fit_max
          best_idx(Q) = i_max
-         !print *, 'Q:', Q, 'best:', best(Q), 'best_idx:', best_idx(Q)
       end do
 
       deallocate(wh_in_edge)
@@ -93,8 +88,6 @@ contains
 ! in-place reverse the change_points between 1 and i-1
       change_points = change_points( i-1:1:-1 )
 
-      print *, 'change_points:', change_points
-
       blocks => build_blocks(unique, change_points, weights)
       fast_bayesian_binning = c_loc(blocks)
    end function fast_bayesian_binning
@@ -112,15 +105,12 @@ contains
       allocate(centers(len-1), heights(len-1), widths(len-1))
 
       centers = 0.5 * (change_points(1:len-1) + change_points(2:len))
-      print *, 'centers:', centers
-
       widths = change_points(2:len) - change_points(1:len-1)
-      print *, 'widths:', widths
+
 
       counts => count_between_edges(x, change_points, weights, 0)
       total = sum(counts)
       heights = counts / (total * widths)
-      print *, 'heights:', heights
 
       allocate(blocks)
       blocks = BayesHistogram(c_loc(edges), c_loc(centers), c_loc(widths), c_loc(heights), len-1)
