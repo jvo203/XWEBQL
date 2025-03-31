@@ -74,6 +74,7 @@ hist = FastBayesHistogram(blocks)
 println("Fortran histogram n = ", hist.n)
 
 if hist.n > 0
+    println("Fortran histogram edges = ", unsafe_wrap(Array, hist.edges, hist.n + 1))
     println("Fortran histogram centers = ", unsafe_wrap(Array, hist.centers, hist.n))
     println("Fortran histogram widths = ", unsafe_wrap(Array, hist.widths, hist.n))
     println("Fortran histogram heights = ", unsafe_wrap(Array, hist.heights, hist.n))

@@ -3,7 +3,7 @@ module fbh
    implicit none
 
    type, bind(c) :: BayesHistogram
-      type(c_ptr) :: centers, widths, heights
+      type(c_ptr) :: edges, centers, widths, heights
       integer(kind=c_int) :: n
    end type BayesHistogram
 
@@ -26,7 +26,7 @@ contains
 
       if(n .eq. 0) then
          allocate(blocks)
-         blocks = BayesHistogram(c_null_ptr, c_null_ptr, c_null_ptr, 0)
+         blocks = BayesHistogram(c_null_ptr, c_null_ptr, c_null_ptr, c_null_ptr, 0)
          fast_bayesian_binning = c_loc(blocks)
          return
       end if
@@ -99,30 +99,31 @@ contains
       fast_bayesian_binning = c_loc(blocks)
    end function fast_bayesian_binning
 
-   function build_blocks(x, edges, weights) result(blocks)
-      real(kind=c_float), dimension(:), intent(in) :: x, edges, weights
+   function build_blocks(x, change_points, weights) result(blocks)
+      real(kind=c_float), dimension(:), intent(in) :: x, change_points, weights
       type(BayesHistogram), pointer :: blocks
 
-      real(kind=c_float), dimension(:), pointer :: centers, heights, widths, counts
+      real(kind=c_float), dimension(:), pointer :: edges, centers, heights, widths, counts
       real(kind=c_float) :: total
       integer :: len
 
-      len = size(edges)
+      len = size(change_points)
+      allocate(edges(len), source=change_points)
       allocate(centers(len-1), heights(len-1), widths(len-1))
 
-      centers = 0.5 * (edges(1:len-1) + edges(2:len))
+      centers = 0.5 * (change_points(1:len-1) + change_points(2:len))
       print *, 'centers:', centers
 
-      widths = edges(2:len) - edges(1:len-1)
+      widths = change_points(2:len) - change_points(1:len-1)
       print *, 'widths:', widths
 
-      counts => count_between_edges(x, edges, weights, 0)
+      counts => count_between_edges(x, change_points, weights, 0)
       total = sum(counts)
       heights = counts / (total * widths)
       print *, 'heights:', heights
 
       allocate(blocks)
-      blocks = BayesHistogram(c_loc(centers), c_loc(widths), c_loc(heights), len-1)
+      blocks = BayesHistogram(c_loc(edges), c_loc(centers), c_loc(widths), c_loc(heights), len-1)
    end function build_blocks
 
    subroutine delete_blocks(ptr) bind(C)
@@ -131,7 +132,7 @@ contains
       type(c_ptr), intent(in), value :: ptr
       type(BayesHistogram), pointer:: blocks
 
-      real(kind=c_float), dimension(:), pointer :: centers, heights, widths
+      real(kind=c_float), dimension(:), pointer :: edges, centers, heights, widths
 
 ! convert a C pointer to a Fortran pointer
       if (.not. c_associated(ptr)) return
@@ -142,10 +143,12 @@ contains
          return
       end if
 
+      call c_f_pointer(blocks%edges, edges, [blocks%n+1])
       call c_f_pointer(blocks%centers, centers, [blocks%n])
       call c_f_pointer(blocks%widths, widths, [blocks%n])
       call c_f_pointer(blocks%heights, heights, [blocks%n])
 
+      deallocate(edges)
       deallocate(centers)
       deallocate(widths)
       deallocate(heights)
