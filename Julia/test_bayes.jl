@@ -18,6 +18,8 @@ struct FastBayesHistogram
     n::Cint
 end
 
+include("FORTRAN.jl")
+
 FastBayesHistogram(hist::Ptr{FastBayesHistogram}) = unsafe_load(hist)
 
 # type(c_ptr) function fast_bayesian_binning(energy, n, resolution) bind(c)
