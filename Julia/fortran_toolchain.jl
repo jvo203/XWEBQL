@@ -24,7 +24,7 @@ function load_fortran(code, options=``)
         objfile = "$tmpdir/program.o"
         libfile = "$tmpdir/program.so"
 
-        # Pipe the input program to gfortran:
+        # Pass the code file to gfortran for compilation:
         fortran_cmd = `$gfortran -c -o "$objfile" -march=native -fPIC $options $code`
         println("Compiling Fortran code with a command: $fortran_cmd")
         run(fortran_cmd)
