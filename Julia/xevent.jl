@@ -390,13 +390,22 @@ function getBayesSpectrum(xobject::XDataSet, dx::Integer)
     E_max = ThreadsX.maximum(energy) # log eV    
     E_max = min(E_max, log(MAXIMUM_ENERGY)) # log eV
 
-    # cap the energy at E_max    
-    @time bl = bayesian_blocks(energy[(energy.<=E_max)], resolution=5 * dx)#, min_counts=1)#, prior=HQIC())
-    heights = Float32.(bl.heights)
-
-    # get the bin centers and widths
+    #=
+    @time bl = bayesian_blocks(energy[(energy.<=E_max)], resolution=5 * dx)
+    # get the bin centers, widths  and heights
     centers = Float32.(bl.centers)
     widths = Float32.(bl.widths)
+    heights = Float32.(bl.heights)
+        =#
+
+    # cap the energy at E_max    
+    energy = energy[(energy.<=E_max)]
+    @time blocks = FastBayesianBinning(energy, length(energy), Int32(5 * dx))
+
+    len = blocks.n
+    centers = unsafe_wrap(Array, blocks.centers, len)
+    widths = unsafe_wrap(Array, blocks.widths, len)
+    heights = unsafe_wrap(Array, blocks.heights, len)
 
     # get the E_min and E_max from the bin edges    
     edges = bl.edges
@@ -406,7 +415,9 @@ function getBayesSpectrum(xobject::XDataSet, dx::Integer)
     # spectrum = JSON object, zip through centers, heights and widths
     spectrum = JSON.json([Dict("center" => c, "height" => h, "width" => w) for (c, h, w) in zip(centers, heights, widths)])
 
-    return (spectrum, E_min, E_max, length(centers))
+    DeleteBlocks(blocks)
+
+    return (spectrum, E_min, E_max, len)
 end
 
 function getSpectrum(xobject::XDataSet, dx::Integer)
