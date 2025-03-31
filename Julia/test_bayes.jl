@@ -1,15 +1,4 @@
-# Set the library path
-@static if Sys.isapple()
-    forlib = "../fbh.dylib"
-end
-
-@static if Sys.islinux()
-    forlib = "../fbh.so"
-end
-
-@static if Sys.iswindows()
-    error("Unsupported OS: Windows")
-end
+include("FORTRAN.jl")
 
 struct FastBayesHistogram
     centers::Ptr{Float32}
@@ -18,20 +7,21 @@ struct FastBayesHistogram
     n::Cint
 end
 
-include("FORTRAN.jl")
-
 FastBayesHistogram(hist::Ptr{FastBayesHistogram}) = unsafe_load(hist)
 
 # type(c_ptr) function fast_bayesian_binning(energy, n, resolution) bind(c)
 function FastBayesianBinning(x::Vector{Float32}, n::Int64, resolution::Int32=Int32(512))
-    return @ccall forlib.fast_bayesian_binning(x::Ref{Float32}, n::Ref{Clonglong}, resolution::Ref{Cint})::Ptr{FastBayesHistogram}
+    return ccall(fast_bayesian_binning_fptr, Ptr{FastBayesHistogram},
+        (Ref{Float32}, Ref{Clonglong}, Ref{Cint}),
+        x, n, resolution)
 end
 
 # subroutine delete_blocks(ptr) bind(C)
 #    type(c_ptr), value :: ptr
 function DeleteBlocks(ptr::Ptr{FastBayesHistogram})
-    #return @ccall forlib.delete_blocks(ptr::Ptr{Cvoid})::Nothing
-    return @ccall forlib.delete_blocks(ptr::Ref{FastBayesHistogram})::Nothing
+    return ccall(delete_blocks_fptr, Nothing,
+        (Ref{FastBayesHistogram},),
+        ptr)
 end
 
 const XRISM_RESOLVE_Pi2evFactor = 0.5f0
