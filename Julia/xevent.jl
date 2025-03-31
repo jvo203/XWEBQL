@@ -9,8 +9,31 @@ using Printf
 using ThreadsX
 
 # using a local custom (faster) version of BayesHistogram.jl
-include("BayesHistogram.jl")
-using .BayesHistogram
+#include("BayesHistogram.jl")
+#using .BayesHistogram
+
+include("FORTRAN.jl")
+
+struct FastBayesHistogram
+    centers::Ptr{Float32}
+    widths::Ptr{Float32}
+    heights::Ptr{Float32}
+    n::Cint
+end
+
+FastBayesHistogram(hist::Ptr{FastBayesHistogram}) = unsafe_load(hist)
+
+function FastBayesianBinning(x::Vector{Float32}, n::Int64, resolution::Int32=Int32(512))
+    return ccall(fast_bayesian_binning_fptr, Ptr{FastBayesHistogram},
+        (Ref{Float32}, Ref{Clonglong}, Ref{Cint}),
+        x, n, resolution)
+end
+
+function DeleteBlocks(ptr::Ptr{FastBayesHistogram})
+    return ccall(delete_blocks_fptr, Nothing,
+        (Ref{FastBayesHistogram},),
+        ptr)
+end
 
 const HITOMI_SXS_PI2eV = 0.5f0
 const HITOMI_SXI_PI2eV = 6.0f0
