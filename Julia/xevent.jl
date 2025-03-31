@@ -298,7 +298,7 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     (spectrum, E_min, E_max, num_channels) = getBayesSpectrum(xobject, getNumChannels(xobject.header))
     println("E_min = ", E_min)
     println("E_max = ", E_max)
-    println("spectrum length:", length(spectrum), " (", num_channels, ")")
+    println("spectrum length: ", length(spectrum), " (", num_channels, ")")
 
     # JSON + HEADER
     (header, json) = getHeader(xobject, pixels, xmin, xmax, ymin, ymax, E_min, E_max, num_channels)
