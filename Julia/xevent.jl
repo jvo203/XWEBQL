@@ -1126,10 +1126,10 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
     end
 
     # optionally downsample the spectrum
-    if length(spectrum) > (dx >> 1)
-        println("downsampling spectrum from $(length(spectrum)) to $(dx >> 1)")
-        spectrum = imresize(spectrum, (dx >> 1,))
-    end
+    #if length(spectrum) > (dx >> 1)
+    #    println("downsampling spectrum from $(length(spectrum)) to $(dx >> 1)")
+    #    spectrum = imresize(spectrum, (dx >> 1,))
+    #end
 
     if image
         view_resp = IOBuffer()
