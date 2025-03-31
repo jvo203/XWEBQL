@@ -403,8 +403,14 @@ function getBayesSpectrum(xobject::XDataSet, dx::Integer)
     energy = energy[(energy.<=E_max)]
     @time blocks = FastBayesianBinning(energy, length(energy), Int32(5 * dx))
     hist = FastBayesHistogram(blocks)
-
     len = hist.n
+
+    if len == 0
+        DeleteBlocks(blocks)
+        println("No events in the energy range.")
+        throw("No events in the energy range.")
+    end
+
     edges = unsafe_wrap(Array, hist.edges, len + 1)
     centers = unsafe_wrap(Array, hist.centers, len)
     widths = unsafe_wrap(Array, hist.widths, len)
