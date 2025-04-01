@@ -17,7 +17,7 @@ contains
       integer(kind=c_int), intent(in), optional :: resolution
 
       real(kind=c_float), dimension(:), allocatable :: energy
-      logical(kind=1), dimension(:), allocatable :: mask
+      logical(kind=c_bool), dimension(:), allocatable :: mask
       integer(kind=c_int64_t) :: len
 
       type(BayesHistogram), pointer :: blocks
