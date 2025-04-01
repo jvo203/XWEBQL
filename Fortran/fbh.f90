@@ -32,7 +32,7 @@ contains
       mask = x .le. emax
       energy = pack(x, mask)
       len = size(energy, kind=c_int64_t)
-      print *, '[FORTRAN] no. points:', n, 'energy samples:', len
+      print *, '[FORTRAN] no. points:', n, 'capped samples:', len
 
       if (len .eq. 0) then
          allocate(blocks)

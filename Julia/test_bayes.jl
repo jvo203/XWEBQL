@@ -10,6 +10,13 @@ end
 
 FastBayesHistogram(hist::Ptr{FastBayesHistogram}) = unsafe_load(hist)
 
+# type(c_ptr) function fast_bayesian_binning_energy_cap(x, n, emax, resolution) bind(C)
+function FastBayesianBinningEnergyCap(x::Vector{Float32}, n::Integer, emax::Float32, resolution::Integer=512)
+    return ccall(fast_bayesian_binning_energy_cap_fptr, Ptr{FastBayesHistogram},
+        (Ref{Float32}, Ref{Clonglong}, Ref{Cfloat}, Ref{Cint}),
+        x, Int64(n), Float32(emax), Int32(resolution))
+end
+
 # type(c_ptr) function fast_bayesian_binning(energy, n, resolution) bind(c)
 function FastBayesianBinning(x::Vector{Float32}, n::Integer, resolution::Integer=512)
     return ccall(fast_bayesian_binning_fptr, Ptr{FastBayesHistogram},
@@ -54,20 +61,20 @@ nevents = length(energy)
 println("nevents = ", nevents)
 
 # take the energy between 0.5 and 20 keV
-energy = energy[(energy.>500.0).&(energy.<10000.0)]
-nevents = length(energy)
+energyCap = energy[(energy.>500.0).&(energy.<10000.0)]
+nevents = length(energyCap)
 println("nevents = ", nevents)
 
-@time bl = BayesHistogram.bayesian_blocks(energy, resolution=512)
-@time bl = BayesHistogram.bayesian_blocks(energy, resolution=512)
+@time bl = BayesHistogram.bayesian_blocks(energyCap, resolution=512)
+@time bl = BayesHistogram.bayesian_blocks(energyCap, resolution=512)
 println("centers = ", bl.centers)
 println("widths = ", bl.widths)
 println("heights = ", bl.heights)
 
 # export the energy to a text file
-writedlm("energy.txt", energy)
+#writedlm("energy.txt", energyCap)
 
-@time blocks = FastBayesianBinning(energy, length(energy), Int32(512))
+@time blocks = FastBayesianBinningEnergyCap(energy, length(energy), Float32(10000.0), Int32(512))
 println("Fortran blocks = ", blocks)
 
 hist = FastBayesHistogram(blocks)
