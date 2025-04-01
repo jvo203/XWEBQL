@@ -8391,10 +8391,8 @@ function cube_refresh() {
         width: width,
         height: height,
         quality: image_quality,
-        /*frame_start: data_band_lo,
-        frame_end: data_band_hi,*/
-        frame_start: Math.log(1000 * data_band_lo) - 0.5 * fitsData.CDELT3,
-        frame_end: Math.log(1000 * data_band_hi) + 0.5 * fitsData.CDELT3,
+        frame_start: Math.log(1000 * data_band_lo),
+        frame_end: Math.log(1000 * data_band_hi),
         timestamp: performance.now()
     };
 
