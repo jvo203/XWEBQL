@@ -77,11 +77,6 @@ contains
       end if
 
       L = partition(x, unique, weights, edges)
-      print *, '[FORTRAN] no. points:', n, 'unique samples:', L
-
-      wh_in_edge => count_between_edges(unique, edges, weights, 1)
-      call cumsum(wh_in_edge)
-
       extent = unique(L) - unique(1)
 
       if(present(resolution)) then
@@ -89,6 +84,11 @@ contains
       else
          dt = 0.0 ! by default the resolution is infinite
       end if
+
+      print *, '[FORTRAN] no. points:', n, 'unique samples:', L, 'dt:', dt
+
+      wh_in_edge => count_between_edges(unique, edges, weights, 1)
+      call cumsum(wh_in_edge)
 
       allocate(best(L), best_idx(L))
 
