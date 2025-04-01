@@ -30,6 +30,12 @@ function FastBayesianBinning(x::Vector{Float32}, n::Integer, resolution::Integer
         x, Int64(n), Int32(resolution))
 end
 
+function FastBayesianBinningEnergyCap(x::Vector{Float32}, n::Integer, emax::Float32, resolution::Integer=512)
+    return ccall(fast_bayesian_binning_energy_cap_fptr, Ptr{FastBayesHistogram},
+        (Ref{Float32}, Ref{Clonglong}, Ref{Cfloat}, Ref{Cint}),
+        x, Int64(n), Float32(emax), Int32(resolution))
+end
+
 function DeleteBlocks(ptr::Ptr{FastBayesHistogram})
     return ccall(delete_blocks_fptr, Nothing,
         (Ref{FastBayesHistogram},),
