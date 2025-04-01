@@ -40,4 +40,5 @@ test:
 	gfortran -march=native -g -Ofast -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=1 -funroll-loops -fmax-stack-var-size=32768 $(INC) -o test_bl test_bl.f90 $(LIBS)
 
 clean:
-	rm -f *.o *.mod *.a *.so test_bl
+	rm -rf *.o *.mod *.a *.so test_bl *.dylib *.dSYM
+	rm -rf $(DYNLIB)
