@@ -6719,26 +6719,35 @@ async function open_websocket_connection(_datasetId, index) {
                         computed = dv.getFloat32(12, endianness);
 
                         var offset = 16;
-                        var spectrum_len = dv.getUint32(offset, endianness);
-                        offset += 4;
+                        /*var spectrum_len = dv.getUint32(offset, endianness);
+                        offset += 4;*/
 
                         var frame = new Uint8Array(received_msg, offset);
                         // console.log("computed:", computed, "spectrum length:", spectrum_len, "frame.length:", frame.length);
 
                         {
                             // ZFP decoder part				                            
-                            let start = performance.now();
+                            /*let start = performance.now();
                             var res = WASM.decompressZFPspectrum(spectrum_len, frame);
                             const spectrum = WASM.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
-                            let elapsed = Math.round(performance.now() - start);
+                            let elapsed = Math.round(performance.now() - start);*/
 
                             // console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
 
-                            if (spectrum.length > 0) {
-                                if (!windowLeft) {
-                                    spectrum_stack.push({ spectrum: spectrum, id: recv_seq_id });
-                                    // console.log("spectrum_stack length:", spectrum_stack.length);
-                                };
+                            try {
+                                // bzip2 decoder
+                                let uncompressed = bzip2.simple(bzip2.array(frame));
+                                // parse JSON                            
+                                const spectrum = JSON.parse(uncompressed);
+
+                                if (spectrum.length > 0) {
+                                    if (!windowLeft) {
+                                        spectrum_stack.push({ spectrum: spectrum, id: recv_seq_id });
+                                        // console.log("spectrum_stack length:", spectrum_stack.length);
+                                    };
+                                }
+                            } catch (e) {
+                                console.log(e);
                             }
                         }
 
