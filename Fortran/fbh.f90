@@ -152,7 +152,6 @@ contains
       centers = 0.5 * (change_points(1:len-1) + change_points(2:len))
       widths = change_points(2:len) - change_points(1:len-1)
 
-
       counts => count_between_edges(x, change_points, weights, 0)
       total = sum(counts)
       heights = counts / (total * widths)
