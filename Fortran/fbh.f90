@@ -17,7 +17,7 @@ contains
       integer(kind=c_int), intent(in), optional :: resolution
 
       real(kind=c_float), dimension(:), allocatable :: energy
-      logical(kind=c_bool), dimension(:), allocatable :: mask
+      ! logical(kind=c_bool), dimension(:), allocatable :: mask
       integer(kind=c_int64_t) :: len
 
       type(BayesHistogram), pointer :: blocks
@@ -29,8 +29,8 @@ contains
          return
       end if
 
-      mask = x .le. emax
-      energy = pack(x, mask)
+      !mask = x .le. emax
+      energy = pack(x, x .le. emax)
       len = size(energy, kind=c_int64_t)
       print *, '[FORTRAN] no. points:', n, 'capped samples:', len
 
@@ -48,7 +48,7 @@ contains
       end if
 
       deallocate(energy)
-      deallocate(mask)
+      !deallocate(mask)
 
    end function fast_bayesian_binning_energy_cap
 
