@@ -461,68 +461,6 @@ function getSpectrum(xobject::XDataSet, dx::Integer)
     return (spectrum, E_min, E_max)
 end
 
-function getSquareSpectrum1(xobject::XDataSet, E_min::Float32, E_max::Float32, x1::Integer, x2::Integer, y1::Integer, y2::Integer, dx::Integer)
-    ΔE = (E_max - E_min) / dx
-
-    println("E_min = ", E_min)
-    println("E_max = ", E_max)
-    println("ΔE = ", ΔE)
-
-    # find X indices between x1 and x2
-    x = xobject.x
-    y = xobject.y
-
-    x_indices = findall(x -> x1 <= x <= x2, x)
-    y_indices = findall(y -> y1 <= y <= y2, y)
-
-    println("#x_indices: ", length(x_indices))
-    println("#y_indices: ", length(y_indices))
-
-    # take an intersection of the two
-    indices = intersect(x_indices, y_indices)
-
-    println("#indices: ", length(indices))
-
-    # get the log-energy values
-    energy = xobject.energy[indices]
-
-    h = Hist1D(energy; binedges=E_min:ΔE:E_max, overflow=false)
-    spectrum = Float32.(bincounts(h))
-
-    return spectrum
-end
-
-function getSquareSpectrum2(xobject::XDataSet, E_min::Float32, E_max::Float32, x1::Integer, x2::Integer, y1::Integer, y2::Integer, dx::Integer)
-    ΔE = (E_max - E_min) / dx
-
-    println("E_min = ", E_min)
-    println("E_max = ", E_max)
-    println("ΔE = ", ΔE)
-
-    # find X indices between x1 and x2
-    x = xobject.x
-    y = xobject.y
-
-    # make xy a vector of tuples (x,y)
-    # xy = [(x[i], y[i]) for i in 1:length(x)]
-
-    # re-do xy using zip
-    xy = zip(x, y)
-
-    println("size(xy) = ", size(xy))
-
-    indices = findall(xy -> x1 <= xy[1] <= x2 && y1 <= xy[2] <= y2, xy)
-    println("#indices: ", length(indices))
-
-    # get the log-energy values
-    energy = xobject.energy[indices]
-
-    h = Hist1D(energy; binedges=E_min:ΔE:E_max, overflow=false)
-    spectrum = Float32.(bincounts(h))
-
-    return spectrum
-end
-
 function getViewport(x, y, energy, xmin::Integer, xmax::Integer, ymin::Integer, ymax::Integer, emin::Float32, emax::Float32)
     # find E indices between emin and emax    
     # e_indices = findall(x -> x1 <= energy <= x2, energy)    
@@ -559,8 +497,30 @@ function getSquareSpectrum(x, y, energy, E_min::Float32, E_max::Float32, x1::Int
     # find points within a square    
     mask = [(x1 <= x <= x2 && y1 <= y <= y2) for (x, y) in zip(x, y)]
 
-    h = Hist1D(energy[mask]; binedges=E_min:ΔE:E_max, overflow=false)
-    spectrum = Float32.(bincounts(h))
+    #h = Hist1D(energy[mask]; binedges=E_min:ΔE:E_max, overflow=false)
+    #spectrum = Float32.(bincounts(h))
+
+    packed = energy[mask]
+    @time blocks = FastBayesianBinning(packed, length(packed), 5 * dx)
+
+    hist = FastBayesHistogram(blocks)
+    len = hist.n
+
+    if len == 0
+        DeleteBlocks(blocks)
+        println("No events in the space-energy range.")
+        throw("No events in the space-energy range.")
+    end
+
+    centers = unsafe_wrap(Array, hist.centers, len)
+    widths = unsafe_wrap(Array, hist.widths, len)
+    heights = unsafe_wrap(Array, hist.heights, len)
+
+    # spectrum = JSON object, zip through centers, heights and widths
+    spectrum = JSON.json([Dict("center" => c, "height" => h, "width" => w) for (c, h, w) in zip(centers, heights, widths)])
+    println("getSquareSpectrum::#bins: ", hist.n)
+
+    DeleteBlocks(blocks)
 
     return spectrum
 end
@@ -571,12 +531,35 @@ function getCircleSpectrum(x, y, energy, E_min::Float32, E_max::Float32, cx::Int
     println("E_min = ", E_min)
     println("E_max = ", E_max)
     println("ΔE = ", ΔE)
+    println(typeof(x), " ", typeof(y), " ", typeof(energy))
 
     # find points within a circle    
     mask = [(x - cx)^2 + (y - cy)^2 <= r2 for (x, y) in zip(x, y)]
 
-    h = Hist1D(energy[mask]; binedges=E_min:ΔE:E_max, overflow=false)
-    spectrum = Float32.(bincounts(h))
+    #h = Hist1D(energy[mask]; binedges=E_min:ΔE:E_max, overflow=false)
+    #spectrum = Float32.(bincounts(h))
+
+    packed = energy[mask]
+    @time blocks = FastBayesianBinning(packed, length(packed), 5 * dx)
+
+    hist = FastBayesHistogram(blocks)
+    len = hist.n
+
+    if len == 0
+        DeleteBlocks(blocks)
+        println("No events in the space-energy range.")
+        throw("No events in the space-energy range.")
+    end
+
+    centers = unsafe_wrap(Array, hist.centers, len)
+    widths = unsafe_wrap(Array, hist.widths, len)
+    heights = unsafe_wrap(Array, hist.heights, len)
+
+    # spectrum = JSON object, zip through centers, heights and widths
+    spectrum = JSON.json([Dict("center" => c, "height" => h, "width" => w) for (c, h, w) in zip(centers, heights, widths)])
+    println("getCircleSpectrum::#bins: ", hist.n)
+
+    DeleteBlocks(blocks)
 
     return spectrum
 end
