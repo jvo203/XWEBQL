@@ -8,16 +8,16 @@ module fbh
    end type BayesHistogram
 
 contains
-   type(c_ptr) function fast_bayesian_binning_energy_cap(x, n, emax, resolution) bind(C)
+   type(c_ptr) function fast_bayesian_binning_energy_range(x, n, emin, emax, resolution) bind(C)
       implicit none
 
       integer(kind=c_int64_t), intent(in) :: n
       real(kind=c_float), intent(in) :: x(n)
-      real(kind=c_float), intent(in) :: emax
+      real(kind=c_float), intent(in) :: emin, emax
       integer(kind=c_int), intent(in), optional :: resolution
 
       real(kind=c_float), dimension(:), allocatable :: energy
-      ! logical(kind=c_bool), dimension(:), allocatable :: mask
+      logical(kind=c_bool), dimension(:), allocatable :: mask
       integer(kind=c_int64_t) :: len
 
       type(BayesHistogram), pointer :: blocks
@@ -25,32 +25,33 @@ contains
       if(n .eq. 0) then
          allocate(blocks)
          blocks = BayesHistogram(c_null_ptr, c_null_ptr, c_null_ptr, c_null_ptr, 0)
-         fast_bayesian_binning_energy_cap = c_loc(blocks)
+         fast_bayesian_binning_energy_range = c_loc(blocks)
          return
       end if
 
-      !mask = x .le. emax
-      energy = pack(x, x .le. emax)
+      mask = (x .gt. emin) .and. (x .le. emax)
+      energy = pack(x, mask)
+
       len = size(energy, kind=c_int64_t)
-      print *, '[FORTRAN] no. points:', n, 'capped samples:', len
+      print *, '[FORTRAN] no. points:', n, 'energy-range samples:', len
 
       if (len .eq. 0) then
          allocate(blocks)
          blocks = BayesHistogram(c_null_ptr, c_null_ptr, c_null_ptr, c_null_ptr, 0)
-         fast_bayesian_binning_energy_cap = c_loc(blocks)
+         fast_bayesian_binning_energy_range = c_loc(blocks)
          return
       end if
 
       if(present(resolution)) then
-         fast_bayesian_binning_energy_cap = fast_bayesian_binning(energy, len, resolution)
+         fast_bayesian_binning_energy_range = fast_bayesian_binning(energy, len, resolution)
       else
-         fast_bayesian_binning_energy_cap = fast_bayesian_binning(energy, len)
+         fast_bayesian_binning_energy_range = fast_bayesian_binning(energy, len)
       end if
 
       deallocate(energy)
-      !deallocate(mask)
+      deallocate(mask)
 
-   end function fast_bayesian_binning_energy_cap
+   end function fast_bayesian_binning_energy_range
 
    type(c_ptr) function fast_bayesian_binning(x, n, resolution) bind(C)
       implicit none
