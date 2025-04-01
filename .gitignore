@@ -66,4 +66,4 @@ Manifest.toml
 /.vscode/
 
 /Fortran/test_bl
-/*.dSYM
+/Fortran/*.dSYM

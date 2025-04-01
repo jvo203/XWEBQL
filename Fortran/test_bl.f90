@@ -19,7 +19,7 @@ program test
    !data(4:8) = -1.0
 
    ! read-in data from file energy.txt
-   open(10, file='Julia/energy.txt', status='old')
+   open(10, file='../Julia/energy.txt', status='old')
 
    M = 0
    ! read until the end of file, no more than NOSAMPLES

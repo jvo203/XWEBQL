@@ -11,10 +11,10 @@ end
 FastBayesHistogram(hist::Ptr{FastBayesHistogram}) = unsafe_load(hist)
 
 # type(c_ptr) function fast_bayesian_binning(energy, n, resolution) bind(c)
-function FastBayesianBinning(x::Vector{Float32}, n::Int64, resolution::Int32=Int32(512))
+function FastBayesianBinning(x::Vector{Float32}, n::Integer, resolution::Integer=512)
     return ccall(fast_bayesian_binning_fptr, Ptr{FastBayesHistogram},
         (Ref{Float32}, Ref{Clonglong}, Ref{Cint}),
-        x, n, resolution)
+        x, Int64(n), Int32(resolution))
 end
 
 # subroutine delete_blocks(ptr) bind(C)
