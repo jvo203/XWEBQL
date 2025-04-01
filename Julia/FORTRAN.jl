@@ -8,5 +8,5 @@ lib = load_fortran(code, `-mcmodel=small -Ofast -fopenmp -ftree-vectorize -ftree
 
 # get function pointers
 const fast_bayesian_binning_fptr = Libc.Libdl.dlsym(lib, "fast_bayesian_binning")
-const fast_bayesian_binning_energy_cap_fptr = Libc.Libdl.dlsym(lib, "fast_bayesian_binning_energy_cap")
+const fast_bayesian_binning_energy_range_fptr = Libc.Libdl.dlsym(lib, "fast_bayesian_binning_energy_range")
 const delete_blocks_fptr = Libc.Libdl.dlsym(lib, "delete_blocks")
