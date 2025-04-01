@@ -500,7 +500,7 @@ function getSquareSpectrum(x, y, energy, E_min::Float32, E_max::Float32, x1::Int
     #spectrum = Float32.(bincounts(h))
 
     packed = energy[mask]
-    @time blocks = FastBayesianBinning(packed, length(packed), 5 * dx)
+    @time blocks = FastBayesianBinningEnergyRange(packed, length(packed), E_min, E_max, 5 * dx)
 
     hist = FastBayesHistogram(blocks)
     len = hist.n
@@ -539,7 +539,7 @@ function getCircleSpectrum(x, y, energy, E_min::Float32, E_max::Float32, cx::Int
     #spectrum = Float32.(bincounts(h))
 
     packed = energy[mask]
-    @time blocks = FastBayesianBinning(packed, length(packed), 5 * dx)
+    @time blocks = FastBayesianBinningEnergyRange(packed, length(packed), E_min, E_max, 5 * dx)
 
     hist = FastBayesHistogram(blocks)
     len = hist.n
