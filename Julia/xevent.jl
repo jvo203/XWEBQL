@@ -53,8 +53,8 @@ const XRISM_XTEND_PI2eV = 6.0f0
 finale(x) = @async println("Finalized $(x.id) :: $(x.uri)")
 
 # energy cap
-#const MAXIMUM_ENERGY = 30000.0 # eV
-const MAXIMUM_ENERGY = 20000.0 # eV
+#const MAXIMUM_ENERGY = Float32(30000.0) # eV
+const MAXIMUM_ENERGY = Float32(20000.0) # eV
 
 mutable struct XDataSet
     id::String
@@ -406,8 +406,9 @@ function getBayesSpectrum(xobject::XDataSet, dx::Integer)
         =#
 
     # cap the energy at E_max    
-    energy = energy[(energy.<=E_max)]
-    @time blocks = FastBayesianBinning(energy, length(energy), 5 * dx)
+    #energy = energy[(energy.<=E_max)]
+    #@time blocks = FastBayesianBinning(energy, length(energy), 5 * dx)
+    @time blocks = FastBayesianBinningEnergyCap(energy, length(energy), E_max, 5 * dx)
     hist = FastBayesHistogram(blocks)
     len = hist.n
 
