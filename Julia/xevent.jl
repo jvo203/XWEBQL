@@ -1153,8 +1153,7 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
     spec_resp = IOBuffer()
     #=
         # compress spectrum with ZFP
-        prec = SPECTRUM_MEDIUM_PRECISION
-        level = 1
+        prec = SPECTRUM_MEDIUM_PRECISION        
 
         if image
             prec = SPECTRUM_HIGH_PRECISION
@@ -1165,7 +1164,14 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
 
         write(spec_resp, Int32(length(spectrum)))
         =#
+
     # compress with bzip2 (more efficient than LZ4HC)
+    level = 1
+
+    if image
+        level = 9
+    end
+
     compressed_spectrum = transcode(Bzip2Compressor(blocksize100k=level), spectrum) # do it fast (in real-time)
     write(spec_resp, compressed_spectrum)
 
