@@ -341,13 +341,45 @@ contains
       real(kind=c_float), intent(in) :: dt
 
       real(kind=c_float), dimension(:), allocatable :: edges, change_points
-
-      integer :: L
+      real(kind=c_float), dimension(:), pointer :: wh_in_edge
+      real(kind=c_float), dimension(:), allocatable :: best
+      integer, dimension(:), allocatable :: best_idx
+      real(kind=c_float) :: width, fit_max, cnt_in_range, fitness
+      integer :: i, Q, L, i_max
 
       L = size(unique)
 
       ! auto-allocate and fill-in the edges
       edges = (/unique(1), 0.5 * (unique(1:L-1) + unique(2:L)), unique(L)/)
+
+      wh_in_edge => count_between_edges(unique, edges, weights, 1)
+      call cumsum(wh_in_edge)
+
+      allocate(best(L), best_idx(L))
+
+      do Q = 1, L
+         fit_max = -1.0e38 ! -Inf
+         i_max = 0
+
+         do i = 1,Q
+            cnt_in_range = wh_in_edge(Q+1) - wh_in_edge(i)
+            width = edges(Q+1) - edges(i)
+            if (width .le. dt) exit
+
+            fitness = cnt_in_range * log(cnt_in_range / width) - log(wh_in_edge(size(wh_in_edge)))
+            if (i.gt. 1) fitness = fitness + best(i-1)
+
+            if (fitness .gt. fit_max) then
+               fit_max = fitness
+               i_max = i
+            end if
+         end do
+
+         best(Q) = fit_max
+         best_idx(Q) = i_max
+      end do
+
+      deallocate(wh_in_edge)
 
       change_points = edges
    end function conquer_bayesian_binning
