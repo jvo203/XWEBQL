@@ -288,7 +288,7 @@ contains
       if(len .gt. WORKSIZE) then
          ! split the data into two overlapping halves, launch two OpenMP tasks and merge the results
          mid = len / 2
-         print *, '[FORTRAN] splitting the data into two halves @', mid
+         print *, '[FORTRAN] splitting the data into two halves@', mid
 
          !$omp parallel shared(edges, unique, weights) private(thread_edges)
          !$omp single
@@ -319,7 +319,7 @@ contains
 
          !$omp end single
          !$omp end parallel
-         print *, '[FORTRAN] merging the results:', mid
+         print *, '[FORTRAN] merging the results@', mid
       else
          ! base case: the input is small enough
          print *, '[FORTRAN] base case:', len
