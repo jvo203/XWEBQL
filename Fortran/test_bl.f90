@@ -336,23 +336,20 @@ contains
 
    end function divide_bayesian_binning
 
-   function conquer_bayesian_binning(unique, weights, dt) result(edges)
+   function conquer_bayesian_binning(unique, weights, dt) result(change_points)
       real(kind=c_float), dimension(:), intent(in) :: unique, weights
       real(kind=c_float), intent(in) :: dt
-      real(kind=c_float), dimension(:), allocatable :: edges
+
+      real(kind=c_float), dimension(:), allocatable :: edges, change_points
 
       integer :: L
 
       L = size(unique)
 
-      ! allocate the edges
-      allocate(edges(L+1), source=0.0)
-      edges(1) = unique(1)
-      edges(L+1) = unique(L)
+      ! auto-allocate and fill-in the edges
+      edges = (/unique(1), 0.5 * (unique(1:L-1) + unique(2:L)), unique(L)/)
 
-      ! find the change points
-      edges(2:L) = 0.5 * (unique(1:L-1) + unique(2:L))
-
+      change_points = edges
    end function conquer_bayesian_binning
 
    function count_between_edges(x, edges, weights, shift) result (counts)
