@@ -11,6 +11,7 @@ program test
    type(c_ptr) :: histogram
 
    integer(kind=c_int64_t), parameter :: NOSAMPLES = 200000
+   integer, parameter :: WORKSIZE = 1024 ! up to 1K per thread
    real(kind=c_float), dimension(NOSAMPLES) :: data
    integer(kind=c_int64_t) :: ios, M
 
@@ -131,7 +132,7 @@ contains
       real(kind=c_float), intent(inout) :: x(n)
       integer(kind=c_int), intent(in), optional :: resolution
 
-      real(kind=c_float), dimension(:), allocatable :: unique, weights
+      real(kind=c_float), dimension(:), allocatable :: unique, weights, change_points
       real(kind=c_float) :: extent, dt
       integer :: i, L
 
@@ -177,6 +178,9 @@ contains
       end if
 
       print *, '[FORTRAN] no. points:', n, 'unique samples:', L, 'dt:', dt
+
+      print *, '[FORTRAN] omp max threads:', omp_get_max_threads()
+      change_points = bayesian_binning(unique, weights)
 
       ! a placeholder for the time being
       allocate(blocks)
@@ -271,6 +275,69 @@ contains
       ! auto-allocate and fill-in the edges
       edges = (/unique(1), 0.5 * (unique(1:tail-1) + unique(2:tail)), unique(tail)/)
    end function partition
+
+   recursive function bayesian_binning(unique, weights) result(edges)
+      real(kind=c_float), dimension(:), intent(in) :: unique, weights
+      real(kind=c_float), dimension(:), allocatable :: edges, thread_edges
+
+      integer :: len, mid
+
+      len = size(unique)
+
+      ! check the length of the input
+      if(len .gt. WORKSIZE) then
+         ! split the data into two overlapping halves, launch two OpenMP tasks and merge the results
+         mid = len / 2
+         print *, '[FORTRAN] splitting the data into two halves:', mid
+
+         !$omp parallel private(thread_edges)
+         !$omp single
+         !$omp task
+         thread_edges = bayesian_binning(unique(1:mid), weights(1:mid))
+
+         !$omp critical
+         if(.not. allocated(edges)) then
+            allocate(edges(size(thread_edges-1)))
+            ! skip the first element
+            edges = thread_edges(2:size(thread_edges)-1)
+         else
+            edges = (/edges, thread_edges(2:size(thread_edges-1))/)
+         end if
+         !$omp end critical
+         !$omp end task
+
+         !$omp task
+         ! there is a deliberate overlap between the two halves
+         edges = bayesian_binning(unique(mid:len), weights(mid:len))
+
+         !$omp critical
+         if(.not. allocated(edges)) then
+            allocate(edges(size(thread_edges-1)))
+            ! skip the first element
+            edges = thread_edges(2:size(thread_edges)-1)
+         else
+            edges = (/edges, thread_edges(2:size(thread_edges-1))/)
+         end if
+         !$omp end critical
+         !$omp end task
+
+         !$omp end single
+         !$omp end parallel
+         print *, '[FORTRAN] merging the results:', mid
+      else
+         ! base case: the input is small enough
+         print *, '[FORTRAN] base case:', len
+
+         ! allocate the edges
+         allocate(edges(len+1), source=0.0)
+         edges(1) = unique(1)
+         edges(len+1) = unique(len)
+
+         ! find the change points
+         edges(2:len) = 0.5 * (unique(1:len-1) + unique(2:len))
+      end if
+
+   end function bayesian_binning
 
    function count_between_edges(x, edges, weights, shift) result (counts)
       real(kind=c_float), dimension(:), intent(in) :: x, edges, weights
