@@ -277,19 +277,23 @@ contains
    end function partition
 
    recursive function divide_bayesian_binning(unique, weights, dt) result(edges)
-      real(kind=c_float), dimension(:), intent(in) :: unique, weights
+      real(kind=c_float), dimension(:), intent(in) :: unique
+      real(kind=c_float), dimension(:), intent(inout) :: weights
       real(kind=c_float), intent(in) :: dt
       real(kind=c_float), dimension(:), allocatable :: edges, thread_edges
 
-      integer :: len, mid
+      integer :: L, mid
 
-      len = size(unique)
+      L = size(unique)
 
       ! check the length of the input
-      if(len .gt. WORKSIZE) then
+      if(L .gt. WORKSIZE) then
          ! split the data into two overlapping halves, launch two OpenMP tasks and merge the results
-         mid = len / 2
+         mid = L / 2
          print *, '[FORTRAN] splitting the data into two halves@', mid
+
+         ! the middle point will be counted twice, halve its weight
+         weights(mid) = weights(mid) / 2.0
 
          !$omp parallel shared(edges, unique, weights) private(thread_edges)
          !$omp single
@@ -307,7 +311,7 @@ contains
 
          !$omp task
          ! there is a deliberate overlap between the two halves
-         edges = divide_bayesian_binning(unique(mid:len), weights(mid:len), dt)
+         edges = divide_bayesian_binning(unique(mid:L), weights(mid:L), dt)
 
          !$omp critical
          if(.not. allocated(edges)) then
@@ -321,20 +325,35 @@ contains
          !$omp end single
          !$omp end parallel
          print *, '[FORTRAN] merging the results@', mid
+         ! restore the weight of the middle point
+         weights(mid) = weights(mid) * 2.0
       else
          ! base case: the input is small enough
-         print *, '[FORTRAN] base case:', len
+         print *, '[FORTRAN] base case:', L
 
-         ! allocate the edges
-         allocate(edges(len+1), source=0.0)
-         edges(1) = unique(1)
-         edges(len+1) = unique(len)
-
-         ! find the change points
-         edges(2:len) = 0.5 * (unique(1:len-1) + unique(2:len))
+         edges = conquer_bayesian_binning(unique, weights, dt)
       end if
 
    end function divide_bayesian_binning
+
+   function conquer_bayesian_binning(unique, weights, dt) result(edges)
+      real(kind=c_float), dimension(:), intent(in) :: unique, weights
+      real(kind=c_float), intent(in) :: dt
+      real(kind=c_float), dimension(:), allocatable :: edges
+
+      integer :: L
+
+      L = size(unique)
+
+      ! allocate the edges
+      allocate(edges(L+1), source=0.0)
+      edges(1) = unique(1)
+      edges(L+1) = unique(L)
+
+      ! find the change points
+      edges(2:L) = 0.5 * (unique(1:L-1) + unique(2:L))
+
+   end function conquer_bayesian_binning
 
    function count_between_edges(x, edges, weights, shift) result (counts)
       real(kind=c_float), dimension(:), intent(in) :: x, edges, weights
