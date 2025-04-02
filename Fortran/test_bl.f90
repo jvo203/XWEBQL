@@ -180,7 +180,7 @@ contains
       print *, '[FORTRAN] no. points:', n, 'unique samples:', L, 'dt:', dt
 
       print *, '[FORTRAN] omp max threads:', omp_get_max_threads()
-      change_points = bayesian_binning(unique, weights, dt)
+      change_points = divide_bayesian_binning(unique, weights, dt)
 
       ! a placeholder for the time being
       allocate(blocks)
@@ -276,7 +276,7 @@ contains
       edges = (/unique(1), 0.5 * (unique(1:tail-1) + unique(2:tail)), unique(tail)/)
    end function partition
 
-   recursive function bayesian_binning(unique, weights, dt) result(edges)
+   recursive function divide_bayesian_binning(unique, weights, dt) result(edges)
       real(kind=c_float), dimension(:), intent(in) :: unique, weights
       real(kind=c_float), intent(in) :: dt
       real(kind=c_float), dimension(:), allocatable :: edges, thread_edges
@@ -294,7 +294,7 @@ contains
          !$omp parallel shared(edges, unique, weights) private(thread_edges)
          !$omp single
          !$omp task
-         thread_edges = bayesian_binning(unique(1:mid), weights(1:mid), dt)
+         thread_edges = divide_bayesian_binning(unique(1:mid), weights(1:mid), dt)
 
          !$omp critical
          if(.not. allocated(edges)) then
@@ -307,7 +307,7 @@ contains
 
          !$omp task
          ! there is a deliberate overlap between the two halves
-         edges = bayesian_binning(unique(mid:len), weights(mid:len), dt)
+         edges = divide_bayesian_binning(unique(mid:len), weights(mid:len), dt)
 
          !$omp critical
          if(.not. allocated(edges)) then
@@ -334,7 +334,7 @@ contains
          edges(2:len) = 0.5 * (unique(1:len-1) + unique(2:len))
       end if
 
-   end function bayesian_binning
+   end function divide_bayesian_binning
 
    function count_between_edges(x, edges, weights, shift) result (counts)
       real(kind=c_float), dimension(:), intent(in) :: x, edges, weights
