@@ -290,15 +290,13 @@ contains
          mid = len / 2
          print *, '[FORTRAN] splitting the data into two halves @', mid
 
-         !$omp parallel private(thread_edges)
+         !$omp parallel shared(edges, unique, weights) private(thread_edges)
          !$omp single
          !$omp task
          thread_edges = bayesian_binning(unique(1:mid), weights(1:mid))
 
          !$omp critical
          if(.not. allocated(edges)) then
-            allocate(edges(size(thread_edges-1)))
-            ! skip the first element
             edges = thread_edges(2:size(thread_edges)-1)
          else
             edges = (/edges, thread_edges(2:size(thread_edges-1))/)
@@ -312,8 +310,6 @@ contains
 
          !$omp critical
          if(.not. allocated(edges)) then
-            allocate(edges(size(thread_edges-1)))
-            ! skip the first element
             edges = thread_edges(2:size(thread_edges)-1)
          else
             edges = (/edges, thread_edges(2:size(thread_edges-1))/)
