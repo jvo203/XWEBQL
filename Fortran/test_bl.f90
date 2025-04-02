@@ -35,7 +35,7 @@ program test
    print *, 'data:', data(M-10:M)
 
    !call fast_bayesian_binning(data, NOSAMPLES)
-   histogram = fast_bayesian_binning(data, M, 512)
+   histogram = parallel_bayesian_binning(data, M, 512)
 
    ! release the memory
    call delete_blocks(histogram)
@@ -123,6 +123,66 @@ contains
       blocks => build_blocks(unique, change_points, weights)
       fast_bayesian_binning = c_loc(blocks)
    end function fast_bayesian_binning
+
+   type(c_ptr) function parallel_bayesian_binning(x, n, resolution) bind(C)
+      implicit none
+
+      integer(kind=c_int64_t), intent(in) :: n
+      real(kind=c_float), intent(inout) :: x(n)
+      integer(kind=c_int), intent(in), optional :: resolution
+
+      real(kind=c_float), dimension(:), allocatable :: unique, weights
+      real(kind=c_float) :: extent, dt
+      integer :: i, L
+
+      type(BayesHistogram), pointer :: blocks
+
+      if(n .eq. 0) then
+         allocate(blocks)
+         blocks = BayesHistogram(c_null_ptr, c_null_ptr, c_null_ptr, c_null_ptr, 0)
+         parallel_bayesian_binning = c_loc(blocks)
+         return
+      end if
+
+      ! sort the data
+      call quicksort(x, 1, size(x))
+
+      allocate(unique(size(x)))
+      allocate(weights(size(x)))
+
+      L = 1
+      unique(1) = x(1)
+      weights(1) = 1
+
+      do i = 2, size(x)
+         if(x(i) .eq. x(i-1)) then
+            weights(L) = weights(L) + 1
+         else
+            L = L + 1
+            unique(L) = x(i)
+            weights(L) = 1
+         end if
+      end do
+
+      ! truncate the outputs
+      unique = unique(1:L)
+      weights = weights(1:L)
+
+      extent = unique(L) - unique(1)
+
+      if(present(resolution)) then
+         dt = abs(extent / resolution)
+      else
+         dt = 0.0 ! by default the resolution is infinite
+      end if
+
+      print *, '[FORTRAN] no. points:', n, 'unique samples:', L, 'dt:', dt
+
+      ! a placeholder for the time being
+      allocate(blocks)
+      blocks = BayesHistogram(c_null_ptr, c_null_ptr, c_null_ptr, c_null_ptr, 0)
+      parallel_bayesian_binning = c_loc(blocks)
+   end function parallel_bayesian_binning
 
    function build_blocks(x, change_points, weights) result(blocks)
       real(kind=c_float), dimension(:), intent(in) :: x, change_points, weights
