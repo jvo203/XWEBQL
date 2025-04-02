@@ -381,7 +381,22 @@ contains
 
       deallocate(wh_in_edge)
 
-      change_points = edges
+      ! pre-allocate change_points
+      allocate(change_points(L+1))
+      i = 1
+
+! iteratively peel off the last block (this works fine)
+      L = L + 1
+      do while (L .gt. 0)
+         change_points(i) = edges(L)
+         i = i + 1
+
+         if (L .eq. 1) exit
+         L = best_idx(L-1)
+      end do
+
+! in-place reverse the change_points between 1 and i-1
+      change_points = change_points( i-1:1:-1 )
    end function conquer_bayesian_binning
 
    function count_between_edges(x, edges, weights, shift) result (counts)
