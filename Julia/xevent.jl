@@ -305,8 +305,7 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     println("x: ($xmin, $xmax); y: ($ymin, $ymax)")
     println("min_count = $min_count, max_count = ", max_count)
 
-    # the spectrum
-    #(spectrum, E_min, E_max) = getSpectrum(xobject, getNumChannels(xobject.header))
+    # the spectrum    
     (spectrum, E_min, E_max, num_channels) = getBayesSpectrum(xobject, getNumChannels(xobject.header))
     println("E_min = ", E_min)
     println("E_max = ", E_max)
@@ -440,32 +439,6 @@ function getBayesSpectrum(xobject::XDataSet, dx::Integer)
     return (spectrum, E_min, E_max, len)
 end
 
-function getSpectrum(xobject::XDataSet, dx::Integer)
-    energy = xobject.energy
-
-    (E_min, E_max) = ThreadsX.extrema(energy)
-    E_max = min(E_max, log(MAXIMUM_ENERGY)) # log eV
-
-    if E_min == E_max
-        E_min *= 0.9
-        E_max *= 1.1
-    end
-
-    ΔE = (E_max - E_min) / dx
-
-    @time h = Hist1D(energy; binedges=E_min:ΔE:E_max, overflow=false)
-    spectrum = bincounts(h)
-
-    # get the bin centers
-    centers = bincenters(h)
-
-    # get the E_min and E_max from the bin centers
-    E_min = Float32(minimum(centers)) # log eV
-    E_max = Float32(maximum(centers)) # log eV
-
-    return (spectrum, E_min, E_max)
-end
-
 function getViewport(x, y, energy, xmin::Integer, xmax::Integer, ymin::Integer, ymax::Integer, emin::Float32, emax::Float32)
     # find E indices between emin and emax    
     # e_indices = findall(x -> x1 <= energy <= x2, energy)    
@@ -502,9 +475,6 @@ function getSquareSpectrum(x, y, energy, E_min::Float32, E_max::Float32, x1::Int
     # find points within a square    
     mask = [(x1 <= x <= x2 && y1 <= y <= y2) for (x, y) in zip(x, y)]
 
-    #h = Hist1D(energy[mask]; binedges=E_min:ΔE:E_max, overflow=false)
-    #spectrum = Float32.(bincounts(h))
-
     packed = energy[mask]
     @time blocks = FastBayesianBinningEnergyRange(packed, length(packed), E_min, E_max, 5 * dx)
 
@@ -540,9 +510,6 @@ function getCircleSpectrum(x, y, energy, E_min::Float32, E_max::Float32, cx::Int
 
     # find points within a circle    
     mask = [(x - cx)^2 + (y - cy)^2 <= r2 for (x, y) in zip(x, y)]
-
-    #h = Hist1D(energy[mask]; binedges=E_min:ΔE:E_max, overflow=false)
-    #spectrum = Float32.(bincounts(h))
 
     packed = energy[mask]
     @time blocks = FastBayesianBinningEnergyRange(packed, length(packed), E_min, E_max, 5 * dx)
