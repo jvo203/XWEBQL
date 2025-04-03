@@ -119,7 +119,7 @@ contains
 
       ! in-place reverse the change_points between 1 and i-1
       change_points = change_points( i-1:1:-1 )
-      print *, '[FORTRAN] change_points:', change_points, 'length:', size(change_points)
+      !print *, '[FORTRAN] change_points:', change_points, 'length:', size(change_points)
 
       blocks => build_blocks(unique, change_points, weights)
       fast_bayesian_binning = c_loc(blocks)
@@ -168,8 +168,9 @@ contains
       ! truncate the outputs
       unique = unique(1:L)
       weights = weights(1:L)
+
       ! print the first and last unique samples
-      print *, 'unique:', unique(1), unique(L)
+      !print *, 'unique:', unique(1), unique(L)
 
       extent = unique(L) - unique(1)
 
@@ -192,7 +193,7 @@ contains
 
       ! prepend the first element and append the last element
       !change_points = [unique(1), change_points, unique(L)]
-      print *, '[FORTRAN] change_points:', change_points, 'length:', size(change_points)
+      !print *, '[FORTRAN] change_points:', change_points, 'length:', size(change_points)
 
       ! a placeholder for the time being
       allocate(blocks)
@@ -325,7 +326,7 @@ contains
       if(L .gt. WORKSIZE) then
          ! split the data into two overlapping halves, launch two OpenMP tasks and merge the results
          mid = L / 2
-         print *, '[FORTRAN] splitting the data into two halves@', mid
+         !print *, '[FORTRAN] splitting the data into two halves@', mid
 
          ! the middle point will be counted twice, halve its weight
          weights(mid) = weights(mid) / 2
@@ -359,12 +360,13 @@ contains
 
          !$omp end single
          !$omp end parallel
-         print *, '[FORTRAN] merging the results@', mid
+
+         !print *, '[FORTRAN] merging the results@', mid
          ! restore the weight of the middle point
          weights(mid) = weights(mid) * 2
       else
          ! base case: the input is small enough
-         print *, '[FORTRAN] base case:', L
+         !print *, '[FORTRAN] base case:', L
 
          change_points = conquer_bayesian_binning(unique, weights, dt)
       end if
