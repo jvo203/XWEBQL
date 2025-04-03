@@ -30,6 +30,12 @@ function FastBayesianBinning(x::Vector{Float32}, n::Integer, resolution::Integer
         x, Int64(n), Int32(resolution))
 end
 
+function ParallelBayesianBinning(x::Vector{Float32}, n::Integer, resolution::Integer=512)
+    return ccall(parallel_bayesian_binning_fptr, Ptr{FastBayesHistogram},
+        (Ref{Float32}, Ref{Clonglong}, Ref{Cint}),
+        x, Int64(n), Int32(resolution))
+end
+
 function FastBayesianBinningEnergyRange(x::Vector{Float32}, n::Integer, emin::Float32, emax::Float32, resolution::Integer=512)
     return ccall(fast_bayesian_binning_energy_range_fptr, Ptr{FastBayesHistogram},
         (Ref{Float32}, Ref{Clonglong}, Ref{Cfloat}, Ref{Cfloat}, Ref{Cint}),
@@ -407,7 +413,7 @@ function getBayesSpectrum(xobject::XDataSet, dx::Integer)
 
     # cap the energy at E_max    
     energy = energy[(energy.<=E_max)]
-    @time blocks = FastBayesianBinning(energy, length(energy), 5 * dx)
+    @time blocks = ParallelBayesianBinning(energy, length(energy), 5 * dx)
     hist = FastBayesHistogram(blocks)
     len = hist.n
 
