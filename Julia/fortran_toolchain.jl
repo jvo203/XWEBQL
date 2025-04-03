@@ -3,11 +3,11 @@ gfortran = strip(read(`which gfortran`, String))
 gfortran == "" && error("gfortran is required")
 
 @static if Sys.isapple()
-    link(objfile, libfile) = run(`$gfortran -dynamiclib -o "$libfile" "$objfile"`)
+    link(objfile, libfile) = run(`$gfortran -fopenmp -dynamiclib -o "$libfile" "$objfile"`)
 end
 
 @static if Sys.islinux()
-    link(objfile, libfile) = run(`$gfortran -shared -Wl,-export-dynamic "$objfile" -o "$libfile"`)
+    link(objfile, libfile) = run(`$gfortran -fopenmp -shared -Wl,-export-dynamic "$objfile" -o "$libfile"`)
 end
 
 @static if Sys.iswindows()
