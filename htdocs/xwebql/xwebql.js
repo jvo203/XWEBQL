@@ -3873,7 +3873,7 @@ function plot_spectrum(spectrum) {
     dmin = Math.log(dmin);
     dmax = Math.log(dmax);
 
-    var xR = d3.scaleLog()
+    var xR = d3.scaleLinear()
         .range([range.xMin, range.xMax])
         .domain([Math.log(1000 * data_band_lo), Math.log(1000 * data_band_hi)]);
 
