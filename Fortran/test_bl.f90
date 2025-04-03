@@ -293,7 +293,7 @@ contains
          print *, '[FORTRAN] splitting the data into two halves@', mid
 
          ! the middle point will be counted twice, halve its weight
-         weights(mid) = weights(mid) / 2.0
+         weights(mid) = weights(mid) / 2
 
          !$omp parallel shared(change_points, unique, weights) private(thread_change_points)
          !$omp single
@@ -326,7 +326,7 @@ contains
          !$omp end parallel
          print *, '[FORTRAN] merging the results@', mid
          ! restore the weight of the middle point
-         weights(mid) = weights(mid) * 2.0
+         weights(mid) = weights(mid) * 2
       else
          ! base case: the input is small enough
          print *, '[FORTRAN] base case:', L
