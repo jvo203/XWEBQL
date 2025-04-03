@@ -276,11 +276,11 @@ contains
       edges = (/unique(1), 0.5 * (unique(1:tail-1) + unique(2:tail)), unique(tail)/)
    end function partition
 
-   recursive function divide_bayesian_binning(unique, weights, dt) result(edges)
+   recursive function divide_bayesian_binning(unique, weights, dt) result(change_points)
       real(kind=c_float), dimension(:), intent(in) :: unique
       real(kind=c_float), dimension(:), intent(inout) :: weights
       real(kind=c_float), intent(in) :: dt
-      real(kind=c_float), dimension(:), allocatable :: edges, thread_edges
+      real(kind=c_float), dimension(:), allocatable :: change_points, thread_change_points
 
       integer :: L, mid
 
@@ -295,29 +295,29 @@ contains
          ! the middle point will be counted twice, halve its weight
          weights(mid) = weights(mid) / 2.0
 
-         !$omp parallel shared(edges, unique, weights) private(thread_edges)
+         !$omp parallel shared(change_points, unique, weights) private(thread_change_points)
          !$omp single
          !$omp task
-         thread_edges = divide_bayesian_binning(unique(1:mid), weights(1:mid), dt)
+         thread_change_points = divide_bayesian_binning(unique(1:mid), weights(1:mid), dt)
 
          !$omp critical
-         if(.not. allocated(edges)) then
-            edges = thread_edges(2:size(thread_edges)-1)
+         if(.not. allocated(change_points)) then
+            change_points = thread_change_points
          else
-            edges = (/edges, thread_edges(2:size(thread_edges-1))/)
+            change_points = (/change_points, thread_change_points/)
          end if
          !$omp end critical
          !$omp end task
 
          !$omp task
          ! there is a deliberate overlap between the two halves
-         edges = divide_bayesian_binning(unique(mid:L), weights(mid:L), dt)
+         thread_change_points = divide_bayesian_binning(unique(mid:L), weights(mid:L), dt)
 
          !$omp critical
-         if(.not. allocated(edges)) then
-            edges = thread_edges(2:size(thread_edges)-1)
+         if(.not. allocated(change_points)) then
+            change_points = thread_change_points
          else
-            edges = (/edges, thread_edges(2:size(thread_edges-1))/)
+            change_points = (/change_points, thread_change_points/)
          end if
          !$omp end critical
          !$omp end task
@@ -331,7 +331,7 @@ contains
          ! base case: the input is small enough
          print *, '[FORTRAN] base case:', L
 
-         edges = conquer_bayesian_binning(unique, weights, dt)
+         change_points = conquer_bayesian_binning(unique, weights, dt)
       end if
 
    end function divide_bayesian_binning
@@ -385,7 +385,7 @@ contains
       allocate(change_points(L+1))
       i = 1
 
-! iteratively peel off the last block (this works fine)
+      ! iteratively peel off the last block (this works fine)
       L = L + 1
       do while (L .gt. 0)
          change_points(i) = edges(L)
@@ -395,8 +395,11 @@ contains
          L = best_idx(L-1)
       end do
 
-! in-place reverse the change_points between 1 and i-1
+      ! in-place reverse the change_points between 1 and i-1
       change_points = change_points( i-1:1:-1 )
+
+      ! finally skip the first item
+      change_points = change_points(2:L+1)
    end function conquer_bayesian_binning
 
    function count_between_edges(x, edges, weights, shift) result (counts)
