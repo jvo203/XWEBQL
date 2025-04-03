@@ -3922,6 +3922,8 @@ function plot_spectrum(spectrum) {
         let x1 = xR(center - width / 2);
         let x2 = xR(center + width / 2);
 
+        console.log("bin:", i, "center:", Math.exp(center), "left:", Math.exp(center - width / 2), "right:", Math.exp(center + width / 2));
+
         // skip for the first bin
         if (i > 0) {
             // link the previous bin to the current bin
@@ -7416,11 +7418,13 @@ function x_axis_mouseenter(offset) {
         var width = Math.round(rect.width - 20);
         var height = Math.round(rect.height - 20);
 
+        // get the band limits
+        var band = get_mouse_band(Math.log(1000 * data_band), fitsData.spectrum, fitsData.CDELT3);
 
         var request = {
             type: "init_video",
-            frame_start: Math.log(1000 * data_band) - 0.5 * fitsData.CDELT3,
-            frame_end: Math.log(1000 * data_band) + 0.5 * fitsData.CDELT3,
+            frame_start: band.frame_start,
+            frame_end: band.frame_end,
             fps: vidFPS,
             seq_id: sent_vid_id,
             bitrate: Math.round(target_bitrate),
@@ -7675,10 +7679,14 @@ function x_axis_move(offset) {
                 else
                     fill = 255;
 
+                // get the band limits                
+                var band = get_mouse_band(Math.log(1000 * data_band), fitsData.spectrum, fitsData.CDELT3);
+                console.log("band:", band);
+
                 var request = {
                     type: "video",
-                    frame_start: Math.log(1000 * data_band) - 0.5 * fitsData.CDELT3,
-                    frame_end: Math.log(1000 * data_band) + 0.5 * fitsData.CDELT3,
+                    frame_start: band.frame_start,
+                    frame_end: band.frame_end,
                     key: false,
                     fill: fill,
                     fps: vidFPS,
@@ -7716,10 +7724,13 @@ function videoTimeout(data_band) {
     else
         fill = 255;
 
+    // get the band limits
+    var band = get_mouse_band(Math.log(1000 * data_band), fitsData.spectrum, fitsData.CDELT3);
+
     var request = {
         type: "video",
-        frame_start: Math.log(1000 * data_band) - 0.5 * fitsData.CDELT3,
-        frame_end: Math.log(1000 * data_band) + 0.5 * fitsData.CDELT3,
+        frame_start: band.frame_start,
+        frame_end: band.frame_end,
         key: true,
         fill: fill,
         fps: vidFPS,
@@ -7747,6 +7758,24 @@ function get_mouse_energy(offset) {
 
     return band;
 };
+
+function get_mouse_band(x, spectrum, cdelt3) {
+    // go through the variable-width  histogram bins, find out which bin x is in
+    // and return the bin edges    
+
+    for (let i = 0; i < spectrum.length; i++) {
+        let centre = spectrum[i].center;
+        let width = spectrum[i].width;
+
+        if (x >= centre - 0.5 * width && x <= centre + 0.5 * width) {
+            console.log("x:", x, "found in bin: ", i, "centre: ", centre, "width: ", width);
+            return { frame_start: centre - 0.5 * width, frame_end: centre + 0.5 * width };
+        }
+    }
+
+    // if we get here, x is outside the histogram range
+    return { frame_start: x - 0.5 * cdelt3, frame_end: x + 0.5 * cdelt3 };
+}
 
 function zoom_lines(ene) {
     if (fitsData == null)
