@@ -1191,11 +1191,8 @@ function getVideoFrame(
     if max_count > 0
         pixels = round.(UInt8, clamp.(frame_pixels ./ max_count .* 255, 0, 255))
     else
-        pixels .= 0
+        pixels = zeros(UInt8, size(frame_pixels))
         pixels[frame_mask] .= UInt8(255)
-
-        println("mask range:", ThreadsX.extrema(frame_mask))
-        println("pixels range:", ThreadsX.extrema(pixels))
     end
 
     # fill pixels with the fill colour where mask is false
