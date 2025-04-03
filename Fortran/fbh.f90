@@ -1,11 +1,20 @@
 module fbh
    use iso_c_binding
+   use omp_lib
    implicit none
+
+   integer, parameter :: WORKSIZE = 1024 ! up to 1K per thread
 
    type, bind(c) :: BayesHistogram
       type(c_ptr) :: edges, centers, widths, heights
       integer(kind=c_int) :: n
    end type BayesHistogram
+
+   ! the only public methods: fast_bayesian_binning_energy_range, fast_bayesian_binning, parallel_bayesian_binning and delete_blocks
+   ! all the rest should be private by default
+   public :: fast_bayesian_binning_energy_range, fast_bayesian_binning, parallel_bayesian_binning, delete_blocks
+   private :: build_blocks, partition, deduplicate, divide_bayesian_binning, conquer_bayesian_binning
+   private :: count_between_edges, cumsum, quicksort
 
 contains
    type(c_ptr) function fast_bayesian_binning_energy_range(x, n, emin, emax, resolution) bind(C)
@@ -43,9 +52,9 @@ contains
       end if
 
       if(present(resolution)) then
-         fast_bayesian_binning_energy_range = fast_bayesian_binning(energy, len, resolution)
+         fast_bayesian_binning_energy_range = parallel_bayesian_binning(energy, len, resolution)
       else
-         fast_bayesian_binning_energy_range = fast_bayesian_binning(energy, len)
+         fast_bayesian_binning_energy_range = parallel_bayesian_binning(energy, len)
       end if
 
       deallocate(energy)
@@ -137,6 +146,82 @@ contains
       fast_bayesian_binning = c_loc(blocks)
    end function fast_bayesian_binning
 
+   type(c_ptr) function parallel_bayesian_binning(x, n, resolution) bind(C)
+      implicit none
+
+      integer(kind=c_int64_t), intent(in) :: n
+      real(kind=c_float), intent(inout) :: x(n)
+      integer(kind=c_int), intent(in), optional :: resolution
+
+      real(kind=c_float), dimension(:), allocatable :: unique, weights, change_points
+      real(kind=c_float) :: extent, dt
+      integer :: i, L
+
+      type(BayesHistogram), pointer :: blocks
+
+      if(n .eq. 0) then
+         allocate(blocks)
+         blocks = BayesHistogram(c_null_ptr, c_null_ptr, c_null_ptr, c_null_ptr, 0)
+         parallel_bayesian_binning = c_loc(blocks)
+         return
+      end if
+
+      ! sort the data
+      call quicksort(x, 1, size(x))
+
+      allocate(unique(size(x)))
+      allocate(weights(size(x)))
+
+      L = 1
+      unique(1) = x(1)
+      weights(1) = 1
+
+      do i = 2, size(x)
+         if(x(i) .eq. x(i-1)) then
+            weights(L) = weights(L) + 1
+         else
+            L = L + 1
+            unique(L) = x(i)
+            weights(L) = 1
+         end if
+      end do
+
+      ! truncate the outputs
+      unique = unique(1:L)
+      weights = weights(1:L)
+
+      ! print the first and last unique samples
+      !print *, 'unique:', unique(1), unique(L)
+
+      extent = unique(L) - unique(1)
+
+      if(present(resolution)) then
+         dt = abs(extent / resolution)
+      else
+         dt = 0.0 ! by default the resolution is infinite
+      end if
+
+      print *, '[FORTRAN] no. points:', n, 'unique samples:', L, 'dt:', dt
+
+      print *, '[FORTRAN] omp max threads:', omp_get_max_threads()
+      change_points = divide_bayesian_binning(unique, weights, dt)
+
+      ! in-place sort the change_points
+      call quicksort(change_points, 1, size(change_points))
+
+      ! remove duplicates
+      change_points = deduplicate(change_points)
+
+      ! prepend the first element and append the last element
+      !change_points = [unique(1), change_points, unique(L)]
+      !print *, '[FORTRAN] change_points:', change_points, 'length:', size(change_points)
+
+      ! a placeholder for the time being
+      allocate(blocks)
+      blocks => build_blocks(unique, change_points, weights)
+      parallel_bayesian_binning = c_loc(blocks)
+   end function parallel_bayesian_binning
+
    function build_blocks(x, change_points, weights) result(blocks)
       real(kind=c_float), dimension(:), intent(in) :: x, change_points, weights
       type(BayesHistogram), pointer :: blocks
@@ -224,6 +309,156 @@ contains
 ! auto-allocate and fill-in the edges
       edges = (/unique(1), 0.5 * (unique(1:tail-1) + unique(2:tail)), unique(tail)/)
    end function partition
+
+   function deduplicate(x) result (unique)
+      real(kind=c_float), dimension(:), intent(in) :: x
+      real(kind=c_float), dimension(:), allocatable :: unique
+      integer :: i, tail
+
+      allocate(unique(size(x)))
+
+      tail = 1
+      unique(1) = x(1)
+
+      do i = 2, size(x)
+         if(x(i) .eq. x(i-1)) then
+            ! do nothing
+         else
+            tail = tail + 1
+            unique(tail) = x(i)
+         end if
+      end do
+
+      ! truncate the outputs
+      unique = unique(1:tail)
+   end function deduplicate
+
+   recursive function divide_bayesian_binning(unique, weights, dt) result(change_points)
+      real(kind=c_float), dimension(:), intent(in) :: unique
+      real(kind=c_float), dimension(:), intent(inout) :: weights
+      real(kind=c_float), intent(in) :: dt
+      real(kind=c_float), dimension(:), allocatable :: change_points, thread_change_points
+
+      integer :: L, mid
+
+      L = size(unique)
+
+      ! check the length of the input
+      if(L .gt. WORKSIZE) then
+         ! split the data into two overlapping halves, launch two OpenMP tasks and merge the results
+         mid = L / 2
+         !print *, '[FORTRAN] splitting the data into two halves@', mid
+
+         ! the middle point will be counted twice, halve its weight
+         weights(mid) = weights(mid) / 2
+
+         !$omp parallel shared(change_points, unique, weights) private(thread_change_points)
+         !$omp single
+         !$omp task
+         thread_change_points = divide_bayesian_binning(unique(1:mid), weights(1:mid), dt)
+
+         !$omp critical
+         if(.not. allocated(change_points)) then
+            change_points = thread_change_points
+         else
+            change_points = (/change_points, thread_change_points/)
+         end if
+         !$omp end critical
+         !$omp end task
+
+         !$omp task
+         ! there is a deliberate overlap between the two halves
+         thread_change_points = divide_bayesian_binning(unique(mid:L), weights(mid:L), dt)
+
+         !$omp critical
+         if(.not. allocated(change_points)) then
+            change_points = thread_change_points
+         else
+            change_points = (/change_points, thread_change_points/)
+         end if
+         !$omp end critical
+         !$omp end task
+
+         !$omp end single
+         !$omp end parallel
+
+         !print *, '[FORTRAN] merging the results@', mid
+         ! restore the weight of the middle point
+         weights(mid) = weights(mid) * 2
+      else
+         ! base case: the input is small enough
+         !print *, '[FORTRAN] base case:', L
+
+         change_points = conquer_bayesian_binning(unique, weights, dt)
+      end if
+
+   end function divide_bayesian_binning
+
+   function conquer_bayesian_binning(unique, weights, dt) result(change_points)
+      real(kind=c_float), dimension(:), intent(in) :: unique, weights
+      real(kind=c_float), intent(in) :: dt
+
+      real(kind=c_float), dimension(:), allocatable :: edges, change_points
+      real(kind=c_float), dimension(:), pointer :: wh_in_edge
+      real(kind=c_float), dimension(:), allocatable :: best
+      integer, dimension(:), allocatable :: best_idx
+      real(kind=c_float) :: width, fit_max, cnt_in_range, fitness
+      integer :: i, Q, L, i_max
+
+      L = size(unique)
+
+      ! auto-allocate and fill-in the edges
+      edges = (/unique(1), 0.5 * (unique(1:L-1) + unique(2:L)), unique(L)/)
+
+      wh_in_edge => count_between_edges(unique, edges, weights, 1)
+      call cumsum(wh_in_edge)
+
+      allocate(best(L), best_idx(L))
+
+      do Q = 1, L
+         fit_max = -1.0e38 ! -Inf
+         i_max = 0
+
+         do i = 1,Q
+            cnt_in_range = wh_in_edge(Q+1) - wh_in_edge(i)
+            width = edges(Q+1) - edges(i)
+            if (width .le. dt) exit
+
+            fitness = cnt_in_range * log(cnt_in_range / width) - log(wh_in_edge(size(wh_in_edge)))
+            if (i.gt. 1) fitness = fitness + best(i-1)
+
+            if (fitness .gt. fit_max) then
+               fit_max = fitness
+               i_max = i
+            end if
+         end do
+
+         best(Q) = fit_max
+         best_idx(Q) = i_max
+      end do
+
+      deallocate(wh_in_edge)
+
+      ! pre-allocate change_points
+      allocate(change_points(L+1))
+      i = 1
+
+      ! iteratively peel off the last block (this works fine)
+      L = L + 1
+      do while (L .gt. 0)
+         change_points(i) = edges(L)
+         i = i + 1
+
+         if (L .eq. 1) exit
+         L = best_idx(L-1)
+      end do
+
+      ! in-place reverse the change_points between 1 and i-1
+      change_points = change_points( i-1:1:-1 )
+
+      ! finally skip the first item
+      !change_points = change_points(2:L+1)
+   end function conquer_bayesian_binning
 
    function count_between_edges(x, edges, weights, shift) result (counts)
       real(kind=c_float), dimension(:), intent(in) :: x, edges, weights
