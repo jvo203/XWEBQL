@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-04-01.0";
+    return "JS2025-04-02.0";
 }
 
 function uuidv4() {
@@ -3929,8 +3929,8 @@ function plot_spectrum(spectrum) {
         };
 
         // make a cross at the centre of the bin
-        ctx.moveTo(x0, range.yMax - y - emFontSize / 5);
-        ctx.lineTo(x0, range.yMax - y + emFontSize / 5);
+        /*ctx.moveTo(x0, range.yMax - y - emFontSize / 5);
+        ctx.lineTo(x0, range.yMax - y + emFontSize / 5);*/
 
         // make a line from x1, y to x2, y
         ctx.moveTo(x1, range.yMax - y);
