@@ -32,8 +32,6 @@ program test
    end do
 
    print *, 'M:', M
-   ! print the last 10 elements
-   print *, 'data:', data(M-10:M)
 
    !call fast_bayesian_binning(data, NOSAMPLES)
    histogram = parallel_bayesian_binning(data, M, 512)
@@ -65,6 +63,7 @@ contains
       end if
 
       L = partition(x, unique, weights, edges)
+      print *, 'unique:', unique(1), unique(L)
       extent = unique(L) - unique(1)
 
       if(present(resolution)) then
@@ -104,11 +103,11 @@ contains
 
       deallocate(wh_in_edge)
 
-! pre-allocate change_points
+      ! pre-allocate change_points
       allocate(change_points(L+1))
       i = 1
 
-! iteratively peel off the last block (this works fine)
+      ! iteratively peel off the last block (this works fine)
       L = L + 1
       do while (L .gt. 0)
          change_points(i) = edges(L)
@@ -118,8 +117,9 @@ contains
          L = best_idx(L-1)
       end do
 
-! in-place reverse the change_points between 1 and i-1
+      ! in-place reverse the change_points between 1 and i-1
       change_points = change_points( i-1:1:-1 )
+      print *, '[FORTRAN] change_points:', change_points, 'length:', size(change_points)
 
       blocks => build_blocks(unique, change_points, weights)
       fast_bayesian_binning = c_loc(blocks)
@@ -168,6 +168,8 @@ contains
       ! truncate the outputs
       unique = unique(1:L)
       weights = weights(1:L)
+      ! print the first and last unique samples
+      print *, 'unique:', unique(1), unique(L)
 
       extent = unique(L) - unique(1)
 
@@ -182,9 +184,19 @@ contains
       print *, '[FORTRAN] omp max threads:', omp_get_max_threads()
       change_points = divide_bayesian_binning(unique, weights, dt)
 
+      ! in-place sort the change_points
+      call quicksort(change_points, 1, size(change_points))
+
+      ! remove duplicates
+      change_points = deduplicate(change_points)
+
+      ! prepend the first element and append the last element
+      !change_points = [unique(1), change_points, unique(L)]
+      print *, '[FORTRAN] change_points:', change_points, 'length:', size(change_points)
+
       ! a placeholder for the time being
       allocate(blocks)
-      blocks = BayesHistogram(c_null_ptr, c_null_ptr, c_null_ptr, c_null_ptr, 0)
+      blocks => build_blocks(unique, change_points, weights)
       parallel_bayesian_binning = c_loc(blocks)
    end function parallel_bayesian_binning
 
@@ -275,6 +287,29 @@ contains
       ! auto-allocate and fill-in the edges
       edges = (/unique(1), 0.5 * (unique(1:tail-1) + unique(2:tail)), unique(tail)/)
    end function partition
+
+   function deduplicate(x) result (unique)
+      real(kind=c_float), dimension(:), intent(in) :: x
+      real(kind=c_float), dimension(:), allocatable :: unique
+      integer :: i, tail
+
+      allocate(unique(size(x)))
+
+      tail = 1
+      unique(1) = x(1)
+
+      do i = 2, size(x)
+         if(x(i) .eq. x(i-1)) then
+            ! do nothing
+         else
+            tail = tail + 1
+            unique(tail) = x(i)
+         end if
+      end do
+
+      ! truncate the outputs
+      unique = unique(1:tail)
+   end function deduplicate
 
    recursive function divide_bayesian_binning(unique, weights, dt) result(change_points)
       real(kind=c_float), dimension(:), intent(in) :: unique
@@ -399,7 +434,7 @@ contains
       change_points = change_points( i-1:1:-1 )
 
       ! finally skip the first item
-      change_points = change_points(2:L+1)
+      !change_points = change_points(2:L+1)
    end function conquer_bayesian_binning
 
    function count_between_edges(x, edges, weights, shift) result (counts)
