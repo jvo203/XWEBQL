@@ -26,9 +26,6 @@ static size_t pixelLength = 0;
 static unsigned char *alphaBuffer = NULL;
 static size_t alphaLength = 0;
 
-static float *spectrumBuffer = NULL;
-static size_t spectrumLength = 0;
-
 #include <iostream>
 #include <algorithm>
 #include <cstdint>
@@ -138,85 +135,6 @@ struct buffer
     /*val js_pixels = val::global("Float32Array").new_(pixelLength);
     js_pixels.call<void>("set", val(typed_memory_view((int)pixelLength, (float *)pixelBuffer)));
     return js_pixels;*/
-}
-
-/*val*/ buffer decompressZFPspectrum(int length, std::string const &bytes)
-{
-    buffer wasmBuffer = {0, 0};
-
-    // std::cout << "[decompressZFP1D] " << bytes.size() << " bytes." << std::endl;
-
-    if (spectrumBuffer != NULL && spectrumLength != length)
-    {
-        free(spectrumBuffer);
-
-        spectrumBuffer = NULL;
-        spectrumLength = 0;
-    }
-
-    if (spectrumBuffer == NULL)
-    {
-        spectrumLength = length;
-        spectrumBuffer = (float *)calloc(spectrumLength, sizeof(float));
-    }
-
-    if (spectrumBuffer == NULL)
-    {
-        spectrumLength = 0;
-        // return val(typed_memory_view(spectrumLength, spectrumBuffer));
-        return wasmBuffer;
-    }
-
-    // ZFP variables
-    zfp_type data_type = zfp_type_float;
-    zfp_field *field = NULL;
-    zfp_stream *zfp = NULL;
-    size_t bufsize = 0;
-    bitstream *stream = NULL;
-    size_t zfpsize = 0;
-    uint nx = length;
-
-    // decompress spectrum with ZFP
-    field = zfp_field_1d((void *)spectrumBuffer, data_type, nx);
-
-    // allocate metadata for a compressed stream
-    zfp = zfp_stream_open(NULL);
-
-    // associate bit stream with allocated buffer
-    bufsize = bytes.size();
-    stream = stream_open((void *)bytes.data(), bufsize);
-
-    if (stream != NULL)
-    {
-        zfp_stream_set_bit_stream(zfp, stream);
-
-        zfp_read_header(zfp, field, ZFP_HEADER_FULL);
-
-        // decompress entire array
-        zfpsize = zfp_decompress(zfp, field);
-
-        if (zfpsize == 0)
-            printf("ZFP decompression failed!\n");
-        /*else
-          printf("decompressed %zu spectrum bytes.\n", zfpsize);*/
-
-        stream_close(stream);
-    }
-
-    // clean up
-    zfp_field_free(field);
-    zfp_stream_close(zfp);
-
-    /*for (size_t i = 0; i < spectrumLength; i++)
-      printf("%zu:%f|", i, spectrumBuffer[i]);
-    printf("\n");
-    printf("spectrumLength: %zu, buffer:%p\n", spectrumLength, spectrumBuffer);*/
-
-    wasmBuffer.ptr = (unsigned int)spectrumBuffer;
-    wasmBuffer.size = (unsigned int)spectrumLength;
-    return wasmBuffer;
-
-    // return val(typed_memory_view(spectrumLength, spectrumBuffer));
 }
 
 std::vector<unsigned char> decompressLZ4(int img_width, int img_height, std::string const &bytes)
@@ -356,7 +274,6 @@ EMSCRIPTEN_BINDINGS(Wrapper)
         .element(&buffer::ptr)
         .element(&buffer::size);
     function("decompressZFPimage", &decompressZFPimage);
-    function("decompressZFPspectrum", &decompressZFPspectrum);
     function("decompressLZ4", &decompressLZ4);
     function("decompressLZ4mask", &decompressLZ4mask);
     function("hevc_init_frame", &hevc_init_frame);

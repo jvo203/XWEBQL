@@ -59,7 +59,11 @@ end
 @static if !Sys.iswindows()
     # version v4.1.0 changed the API yet again
     if parse(Int32, x265_apiver()) < 215
-        error("x265 API version " * x265_apiver() * " used by Julia is too old, make sure Julia x265_jll package is v4.1.0 or higher.")
+        error(
+            "x265 API version " *
+            x265_apiver() *
+            " used by Julia is too old, make sure Julia x265_jll package is v4.1.0 or higher.",
+        )
     end
 end
 
@@ -110,7 +114,7 @@ const SERVER_STRING =
     "." *
     string(VERSION_SUB)
 
-const WASM_VERSION = "25.04.01.0"
+const WASM_VERSION = "25.04.04.0"
 const VERSION_STRING = "J/SV2025-04-04.0-BETA"
 
 const ZFP_HIGH_PRECISION = 16
@@ -272,7 +276,7 @@ function streamDirectory(http::HTTP.Streams.Stream)
 
     println("Scanning $dir ...")
 
-    resp = chop(JSON.json(Dict("location" => dir)), tail=1) * ", \"contents\":["
+    resp = chop(JSON.json(Dict("location" => dir)), tail = 1) * ", \"contents\":["
 
     elements = false
 
@@ -320,7 +324,7 @@ function streamDirectory(http::HTTP.Streams.Stream)
     end
 
     if elements
-        resp = chop(resp, tail=1) * "]}"
+        resp = chop(resp, tail = 1) * "]}"
     else
         resp *= "]}"
     end
@@ -344,7 +348,7 @@ function streamDirectory(http::HTTP.Streams.Stream)
     return nothing
 end
 
-function exitFunc(exception=false)
+function exitFunc(exception = false)
     global ws_server, gc_task, running
 
     running = false
@@ -454,7 +458,7 @@ end
 function remove_symlinks()
     # scan HT_DOCS for any symlinks and remove them
 
-    foreach(readdir(HT_DOCS, join=true)) do f
+    foreach(readdir(HT_DOCS, join = true)) do f
 
         # is it a symbolic link ?
         if islink(f)
@@ -685,11 +689,17 @@ function streamXEvents(http::HTTP.Streams.Stream)
     if LOCAL_VERSION
         write(html, "<script src=\"bzip2.js\"></script>\n")
     else
-        write(html, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/bzip2.min.js\"></script>\n")
+        write(
+            html,
+            "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/bzip2.min.js\"></script>\n",
+        )
     end
 
     # scrollIntoView with ZenScroll (the original one does not work in Safari)
-    write(html, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/zenscroll-min.js\" defer></script>\n")
+    write(
+        html,
+        "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/zenscroll-min.js\" defer></script>\n",
+    )
     # write(html, "<script type=\"module\" src=\"zenscroll5.js\"></script>\n")
 
     # Bootstrap viewport
@@ -805,15 +815,27 @@ function streamXEvents(http::HTTP.Streams.Stream)
         write(html, "<script src=\"xwebql.js\"></script>\n")
         write(html, "<link rel=\"stylesheet\" href=\"xwebql.css\"/>\n")
     else
-        write(html, "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/xwebql.min.js\"></script>\n")
-        write(html, "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/xwebql.min.css\"/>\n")
+        write(
+            html,
+            "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/xwebql.min.js\"></script>\n",
+        )
+        write(
+            html,
+            "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/xwebql.min.css\"/>\n",
+        )
     end
 
     # Asynchronous WebAssembly
     if LOCAL_VERSION
-        write(html, "<script async type=\"text/javascript\" src=\"client.$WASM_VERSION.js\"></script>\n")
+        write(
+            html,
+            "<script async type=\"text/javascript\" src=\"client.$WASM_VERSION.js\"></script>\n",
+        )
     else
-        write(html, "<script async type=\"text/javascript\" src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/client.$WASM_VERSION.min.js\"></script>\n")
+        write(
+            html,
+            "<script async type=\"text/javascript\" src=\"https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@$VERSION_MAJOR.$VERSION_MINOR.$VERSION_SUB/htdocs/xwebql/client.$WASM_VERSION.min.js\"></script>\n",
+        )
     end
 
     # HTML content    
@@ -993,7 +1015,7 @@ function streamSpectralLines(http::HTTP.Streams.Stream)
         json = "{\"lines\" : []}"
     else
         # remove the last character (comma) from json, end an array
-        json = chop(json, tail=1) * "]}"
+        json = chop(json, tail = 1) * "]}"
     end
 
     # compress with bzip2 (more efficient than LZ4HC)
@@ -1081,7 +1103,8 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
         return nothing
     end
 
-    @time (pixels, mask, spectrum, header, json, min_count, max_count) = getImageSpectrum(xobject, width, height)
+    @time (pixels, mask, spectrum, header, json, min_count, max_count) =
+        getImageSpectrum(xobject, width, height)
 
     try
         HTTP.setstatus(http, 200)
@@ -1119,7 +1142,7 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
         end
 
         println("typeof(pixels) = ", typeof(pixels))
-        compressed_pixels = zfp_compress(pixels, precision=prec)
+        compressed_pixels = zfp_compress(pixels, precision = prec)
         write(http, Int32(length(compressed_pixels)))
         write(http, compressed_pixels)
 
@@ -1334,8 +1357,13 @@ function ws_coroutine(ws, ids)
                 energy = xobject.energy
             end
 
-            elapsed =
-                @elapsed viewport, spectrum = getViewportSpectrum(x, y, energy, req, getNumChannels(xobject.header))
+            elapsed = @elapsed viewport, spectrum = getViewportSpectrum(
+                x,
+                y,
+                energy,
+                req,
+                getNumChannels(xobject.header),
+            )
             elapsed *= 1000.0 # [ms]
 
             println("[getViewportSpectrum] elapsed: $elapsed [ms]")
@@ -1686,8 +1714,13 @@ function ws_coroutine(ws, ids)
                 req["y1"] = offsety
                 req["y2"] = offsety + inner_height - 1
 
-                elapsed =
-                    @elapsed image, spectrum = getViewportSpectrum(x, y, energy, req, getNumChannels(xobject.header))
+                elapsed = @elapsed image, spectrum = getViewportSpectrum(
+                    x,
+                    y,
+                    energy,
+                    req,
+                    getNumChannels(xobject.header),
+                )
                 elapsed *= 1000.0 # [ms]
 
                 println("[getViewportSpectrum] elapsed: $elapsed [ms]")
@@ -2064,7 +2097,7 @@ Threads.@spawn :interactive WebSockets.serve(ws_server, host, WS_PORT)
 global gc_task = @async garbage_collector(XOBJECTS, XLOCK, TIMEOUT)
 
 try
-    HTTP.serve(XROUTER, host, UInt16(HTTP_PORT), stream=true)
+    HTTP.serve(XROUTER, host, UInt16(HTTP_PORT), stream = true)
 catch e
     @warn(e)
     typeof(e) == InterruptException && rethrow(e)
