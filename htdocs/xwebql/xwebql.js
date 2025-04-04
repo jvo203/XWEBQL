@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-04-02.0";
+    return "JS2025-04-04.0";
 }
 
 function uuidv4() {
@@ -3877,24 +3877,6 @@ function plot_spectrum(spectrum) {
         .range([range.xMin, range.xMax])
         .domain([Math.log(1000 * data_band_lo), Math.log(1000 * data_band_hi)]);
 
-    // xmin = take the first bin center and subtract half of the bin width
-    // xmax = take the last bin center and add half of the bin width
-    /*var xmin = spectrum[0].center - spectrum[0].width / 2;
-    var xmax = spectrum[spectrum.length - 1].center + spectrum[spectrum.length - 1].width / 2;
-
-    //get display direction
-    var reverse = get_spectrum_direction(fitsData);
-
-    if (reverse) {
-        var xR = d3.scaleLog()
-            .range([range.xMax, range.xMin])
-            .domain([xmax, xmin]);
-    } else {
-        var xR = d3.scaleLog()
-            .range([range.xMin, range.xMax])
-            .domain([xmin, xmax]);
-    }*/
-
     ctx.clearRect(0, 0, width, height);
     ctx.save();
     ctx.beginPath();
@@ -3921,8 +3903,6 @@ function plot_spectrum(spectrum) {
         let x0 = xR(center);
         let x1 = xR(center - width / 2);
         let x2 = xR(center + width / 2);
-
-        console.log("bin:", i, "center:", Math.exp(center), "left:", Math.exp(center - width / 2), "right:", Math.exp(center + width / 2));
 
         // skip for the first bin
         if (i > 0) {
@@ -6728,14 +6708,6 @@ async function open_websocket_connection(_datasetId, index) {
                         // console.log("computed:", computed, "spectrum length:", spectrum_len, "frame.length:", frame.length);
 
                         {
-                            // ZFP decoder part				                            
-                            /*let start = performance.now();
-                            var res = WASM.decompressZFPspectrum(spectrum_len, frame);
-                            const spectrum = WASM.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
-                            let elapsed = Math.round(performance.now() - start);*/
-
-                            // console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
-
                             try {
                                 // bzip2 decoder
                                 let uncompressed = bzip2.simple(bzip2.array(frame));
@@ -6972,11 +6944,10 @@ async function open_websocket_connection(_datasetId, index) {
 
                         {
                             // ZFP decoder part				                            
-                            let start = performance.now();
+                            /*let start = performance.now();
                             var res = WASM.decompressZFPspectrum(spectrum_len, frame);
                             const spectrum = WASM.HEAPF32.slice(res[0] / 4, res[0] / 4 + res[1]);
-                            let elapsed = Math.round(performance.now() - start);
-
+                            let elapsed = Math.round(performance.now() - start);*/
                             // console.log("spectrum size: ", spectrum.length, "elapsed: ", elapsed, "[ms]");
 
                             if (spectrum.length > 0) {
@@ -7681,7 +7652,6 @@ function x_axis_move(offset) {
 
                 // get the band limits                
                 var band = get_mouse_band(Math.log(1000 * data_band), fitsData.spectrum, fitsData.CDELT3);
-                console.log("band:", band);
 
                 var request = {
                     type: "video",
@@ -7754,26 +7724,21 @@ function get_mouse_energy(offset) {
         .range([offsetx, offsetx + dx])
         .domain([data_band_lo, data_band_hi]);
 
-    var band = xR.invert(offset[0]);
-
-    return band;
+    return xR.invert(offset[0]);
 };
 
 function get_mouse_band(x, spectrum, cdelt3) {
-    // go through the variable-width  histogram bins, find out which bin x is in
-    // and return the bin edges    
-
+    // go through the variable-width histogram bins, find out which bin x is located in and return the bin edges    
     for (let i = 0; i < spectrum.length; i++) {
         let centre = spectrum[i].center;
         let width = spectrum[i].width;
 
         if (x >= centre - 0.5 * width && x <= centre + 0.5 * width) {
-            console.log("x:", x, "found in bin: ", i, "centre: ", centre, "width: ", width);
             return { frame_start: centre - 0.5 * width, frame_end: centre + 0.5 * width };
         }
     }
 
-    // if we get here, x is outside the histogram range
+    // if we got here, x must have been outside the histogram range, fall back on a deprecated method
     return { frame_start: x - 0.5 * cdelt3, frame_end: x + 0.5 * cdelt3 };
 }
 
