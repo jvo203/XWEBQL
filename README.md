@@ -1,6 +1,8 @@
 # XWEBQL
 
-## status: _*ALPHA*_, leaning towards _*BETA*_
+X-ray events FITS files Web Quick Look coded mostly in Julia. **Bayesian Blocks** Histogram Binning has been accelerated and made parallel in Fortran (_*divide-and-conquer*_ OpenMP tasks) for a 30x speed-up over a pure Julia [BayesHistogram.jl](https://github.com/francescoalemanno/BayesHistogram.jl) . The Fortran code is compiled to a shared library and called from Julia.
+
+## status: _*BETA*_
 
 ## try it online at the Japanese Virtual Observatory (JVO): [HITOMI Demo](http://jvo.nao.ac.jp/portal/xwebql.do)
 
