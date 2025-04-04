@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := wasm
-VERSION = 25.04.04.0
+VERSION = 25.04.04.1
 
 ZFP = zfp-1.0.0
 ZFP_SRC := $(wildcard $(ZFP)/src/*.c)
@@ -7,11 +7,13 @@ ZFP_SRC := $(wildcard $(ZFP)/src/*.c)
 LZ4 = lz4
 LZ4_SRC := $(wildcard $(LZ4)/*.c)
 
-SRC := $(ZFP_SRC) $(LZ4_SRC)
+SRC := $(ZFP_SRC)
+# $(LZ4_SRC)
 OBJ := $(SRC:.cpp=.o)
 OBJ := $(OBJ:.c=.o)
 
-INCLUDE = -I./ -I./$(ZFP)/include -I./$(ZFP)/src -I./$(LZ4)
+INCLUDE = -I./ -I./$(ZFP)/include -I./$(ZFP)/src
+#-I./$(LZ4)
 LIBRARY=
 CXXFLAGS=-std=c++11 -Oz
 LDFLAGS=-lz --llvm-lto 1

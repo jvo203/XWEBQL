@@ -114,7 +114,7 @@ const SERVER_STRING =
     "." *
     string(VERSION_SUB)
 
-const WASM_VERSION = "25.04.04.0"
+const WASM_VERSION = "25.04.04.1"
 const VERSION_STRING = "J/SV2025-04-04.0-BETA"
 
 const ZFP_HIGH_PRECISION = 16
@@ -1146,7 +1146,6 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
         write(http, Int32(length(compressed_pixels)))
         write(http, compressed_pixels)
 
-        println("typeof(mask) = ", typeof(mask))
         compressed_mask = transcode(Bzip2Compressor, collect(flatten(UInt8.(mask))))
         write(http, Int32(length(compressed_mask)))
         write(http, compressed_mask)

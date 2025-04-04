@@ -1257,7 +1257,7 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
         write(view_resp, Int32(length(compressed_pixels)))
         write(view_resp, compressed_pixels)
 
-        compressed_mask = lz4_hc_compress(collect(flatten(UInt8.(mask))))
+        compressed_mask = transcode(Bzip2Compressor, collect(flatten(UInt8.(mask))))
         write(view_resp, Int32(length(compressed_mask)))
         write(view_resp, compressed_mask)
 
