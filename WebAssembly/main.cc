@@ -27,9 +27,6 @@ static size_t pixelLength = 0;
 
 using namespace emscripten;
 
-typedef std::vector<float> Float;
-typedef std::vector<unsigned char> UChar;
-
 struct buffer
 {
     unsigned int ptr;
@@ -118,14 +115,6 @@ struct buffer
     wasmBuffer.ptr = (unsigned int)pixelBuffer;
     wasmBuffer.size = (unsigned int)pixelLength;
     return wasmBuffer;
-
-    // return val(typed_memory_view(pixelLength, pixelBuffer));
-    // return val(memory_view<unsigned char>(img_width * img_height * sizeof(float), (unsigned char *)pixelBuffer));
-
-    // another try - create an array in JavaScript
-    /*val js_pixels = val::global("Float32Array").new_(pixelLength);
-    js_pixels.call<void>("set", val(typed_memory_view((int)pixelLength, (float *)pixelBuffer)));
-    return js_pixels;*/
 }
 
 void hevc_init_frame(int va_count, int width, int height)
@@ -197,8 +186,6 @@ void hevc_destroy_frame(int va_count)
 
 EMSCRIPTEN_BINDINGS(Wrapper)
 {
-    register_vector<float>("Float");
-    register_vector<unsigned char>("UChar");
     value_array<buffer>("buffer")
         .element(&buffer::ptr)
         .element(&buffer::size);

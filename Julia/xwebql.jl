@@ -114,7 +114,7 @@ const SERVER_STRING =
     "." *
     string(VERSION_SUB)
 
-const WASM_VERSION = "25.04.04.1"
+const WASM_VERSION = "25.04.04.2"
 const VERSION_STRING = "J/SV2025-04-04.0-BETA"
 
 const ZFP_HIGH_PRECISION = 16
