@@ -24,28 +24,49 @@ end
 
 FastBayesHistogram(hist::Ptr{FastBayesHistogram}) = unsafe_load(hist)
 
-function FastBayesianBinning(x::Vector{Float32}, n::Integer, resolution::Integer=512)
-    return ccall(fast_bayesian_binning_fptr, Ptr{FastBayesHistogram},
+function FastBayesianBinning(x::Vector{Float32}, n::Integer, resolution::Integer = 512)
+    return ccall(
+        fast_bayesian_binning_fptr,
+        Ptr{FastBayesHistogram},
         (Ref{Float32}, Ref{Clonglong}, Ref{Cint}),
-        x, Int64(n), Int32(resolution))
+        x,
+        Int64(n),
+        Int32(resolution),
+    )
 end
 
-function ParallelBayesianBinning(x::Vector{Float32}, n::Integer, resolution::Integer=512)
-    return ccall(parallel_bayesian_binning_fptr, Ptr{FastBayesHistogram},
+function ParallelBayesianBinning(x::Vector{Float32}, n::Integer, resolution::Integer = 512)
+    return ccall(
+        parallel_bayesian_binning_fptr,
+        Ptr{FastBayesHistogram},
         (Ref{Float32}, Ref{Clonglong}, Ref{Cint}),
-        x, Int64(n), Int32(resolution))
+        x,
+        Int64(n),
+        Int32(resolution),
+    )
 end
 
-function FastBayesianBinningEnergyRange(x::Vector{Float32}, n::Integer, emin::Float32, emax::Float32, resolution::Integer=512)
-    return ccall(fast_bayesian_binning_energy_range_fptr, Ptr{FastBayesHistogram},
+function FastBayesianBinningEnergyRange(
+    x::Vector{Float32},
+    n::Integer,
+    emin::Float32,
+    emax::Float32,
+    resolution::Integer = 512,
+)
+    return ccall(
+        fast_bayesian_binning_energy_range_fptr,
+        Ptr{FastBayesHistogram},
         (Ref{Float32}, Ref{Clonglong}, Ref{Cfloat}, Ref{Cfloat}, Ref{Cint}),
-        x, Int64(n), emin, emax, Int32(resolution))
+        x,
+        Int64(n),
+        emin,
+        emax,
+        Int32(resolution),
+    )
 end
 
 function DeleteBlocks(ptr::Ptr{FastBayesHistogram})
-    return ccall(delete_blocks_fptr, Nothing,
-        (Ref{FastBayesHistogram},),
-        ptr)
+    return ccall(delete_blocks_fptr, Nothing, (Ref{FastBayesHistogram},), ptr)
 end
 
 const HITOMI_SXS_PI2eV = 0.5f0
@@ -86,11 +107,41 @@ mutable struct XDataSet
     elapsed::Threads.Atomic{Float64}
 
     function XDataSet()
-        new("", "", 0, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(datetime2unix(now())), Threads.Atomic{Float64}(0.0), Threads.Atomic{Int}(0), Threads.Atomic{Int}(0), Threads.Atomic{Float64}(0.0))
+        new(
+            "",
+            "",
+            0,
+            Nothing,
+            Nothing,
+            Nothing,
+            Nothing,
+            Threads.Atomic{Bool}(false),
+            Threads.Atomic{Bool}(false),
+            Threads.Atomic{Float64}(datetime2unix(now())),
+            Threads.Atomic{Float64}(0.0),
+            Threads.Atomic{Int}(0),
+            Threads.Atomic{Int}(0),
+            Threads.Atomic{Float64}(0.0),
+        )
     end
 
     function XDataSet(id::String, uri::String)
-        new(id, uri, 0, Nothing, Nothing, Nothing, Nothing, Threads.Atomic{Bool}(false), Threads.Atomic{Bool}(false), Threads.Atomic{Float64}(datetime2unix(now())), Threads.Atomic{Float64}(datetime2unix(now())), Threads.Atomic{Int}(0), Threads.Atomic{Int}(0), Threads.Atomic{Float64}(0.0))
+        new(
+            id,
+            uri,
+            0,
+            Nothing,
+            Nothing,
+            Nothing,
+            Nothing,
+            Threads.Atomic{Bool}(false),
+            Threads.Atomic{Bool}(false),
+            Threads.Atomic{Float64}(datetime2unix(now())),
+            Threads.Atomic{Float64}(datetime2unix(now())),
+            Threads.Atomic{Int}(0),
+            Threads.Atomic{Int}(0),
+            Threads.Atomic{Float64}(0.0),
+        )
     end
 end
 
@@ -240,7 +291,7 @@ function load_events(xdataset::XDataSet, uri::String)
                 end
             end
 
-            f = FITS(Downloads.download(uri, progress=download_progress))
+            f = FITS(Downloads.download(uri, progress = download_progress))
         catch e
             println("Failed to download events: $e")
             xdataset.has_error[] = true
@@ -306,13 +357,15 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     println("min_count = $min_count, max_count = ", max_count)
 
     # the spectrum    
-    (spectrum, E_min, E_max, num_channels) = getBayesSpectrum(xobject, getNumChannels(xobject.header))
+    (spectrum, E_min, E_max, num_channels) =
+        getBayesSpectrum(xobject, getNumChannels(xobject.header))
     println("E_min = ", E_min)
     println("E_max = ", E_max)
     println("energy spectrum #bins: ", num_channels)
 
     # JSON + HEADER
-    (header, json) = getHeader(xobject, pixels, xmin, xmax, ymin, ymax, E_min, E_max, num_channels)
+    (header, json) =
+        getHeader(xobject, pixels, xmin, xmax, ymin, ymax, E_min, E_max, num_channels)
     println(header)
     println(json)
 
@@ -342,14 +395,7 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     if bDownsize
         try
             pixels = imresize(pixels, (image_width, image_height))
-            mask =
-                Bool.(
-                    imresize(
-                        mask,
-                        (image_width, image_height),
-                        method=Constant(),
-                    ),
-                ) # use Nearest-Neighbours for the mask
+            mask = Bool.(imresize(mask, (image_width, image_height), method = Constant()),) # use Nearest-Neighbours for the mask
         catch e
             println(e)
         end
@@ -376,9 +422,10 @@ function getImage(xobject::XDataSet)
     ymax = maximum(y)
 
     # make a mask
-    mask = [energy[i] <= MAXIMUM_ENERGY for i in 1:length(x)]
+    mask = [energy[i] <= MAXIMUM_ENERGY for i = 1:length(x)]
 
-    @time h = Hist2D((x[mask], y[mask]); binedges=(xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5))
+    @time h =
+        Hist2D((x[mask], y[mask]); binedges = (xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5))
     pixels = bincounts(h)
 
     # make a mask for the pixels
@@ -432,21 +479,38 @@ function getBayesSpectrum(xobject::XDataSet, dx::Integer)
     E_max = Float32(edges[end]) # log eV
 
     # spectrum = JSON object, zip through centers, heights and widths
-    spectrum = JSON.json([Dict("center" => c, "height" => h, "width" => w) for (c, h, w) in zip(centers, heights, widths)])
+    spectrum = JSON.json([
+        Dict("center" => c, "height" => h, "width" => w) for
+        (c, h, w) in zip(centers, heights, widths)
+    ])
 
     DeleteBlocks(blocks)
 
     return (spectrum, E_min, E_max, len)
 end
 
-function getViewport(x, y, energy, xmin::Integer, xmax::Integer, ymin::Integer, ymax::Integer, emin::Float32, emax::Float32)
-    # find E indices between emin and emax    
-    # e_indices = findall(x -> x1 <= energy <= x2, energy)    
+function getViewport(
+    x,
+    y,
+    energy,
+    xmin::Integer,
+    xmax::Integer,
+    ymin::Integer,
+    ymax::Integer,
+    emin::Float32,
+    emax::Float32,
+)
+    # make a mask
+    mask = [
+        (xmin <= x <= xmax && ymin <= y <= ymax && emin <= e <= emax) for
+        (x, y, e) in zip(x, y, energy)
+    ]
 
-    # make a mask    
-    mask = [(xmin <= x <= xmax && ymin <= y <= ymax && emin <= e <= emax) for (x, y, e) in zip(x, y, energy)]
-
-    h = Hist2D((x[mask], y[mask]); binedges=(xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5), overflow=false)
+    h = Hist2D(
+        (x[mask], y[mask]);
+        binedges = (xmin-0.5:1:xmax+0.5, ymin-0.5:1:ymax+0.5),
+        overflow = false,
+    )
     pixels = bincounts(h)
 
     # make a mask for the pixels
@@ -465,7 +529,18 @@ function getViewport(x, y, energy, xmin::Integer, xmax::Integer, ymin::Integer, 
     return (pixels, mask, min_count, max_count)
 end
 
-function getSquareSpectrum(x, y, energy, E_min::Float32, E_max::Float32, x1::Integer, x2::Integer, y1::Integer, y2::Integer, dx::Integer)
+function getSquareSpectrum(
+    x,
+    y,
+    energy,
+    E_min::Float32,
+    E_max::Float32,
+    x1::Integer,
+    x2::Integer,
+    y1::Integer,
+    y2::Integer,
+    dx::Integer,
+)
     ΔE = (E_max - E_min) / dx
 
     println("E_min = ", E_min)
@@ -476,7 +551,8 @@ function getSquareSpectrum(x, y, energy, E_min::Float32, E_max::Float32, x1::Int
     mask = [(x1 <= x <= x2 && y1 <= y <= y2) for (x, y) in zip(x, y)]
 
     packed = energy[mask]
-    @time blocks = FastBayesianBinningEnergyRange(packed, length(packed), E_min, E_max, 5 * dx)
+    @time blocks =
+        FastBayesianBinningEnergyRange(packed, length(packed), E_min, E_max, 5 * dx)
 
     hist = FastBayesHistogram(blocks)
     len = hist.n
@@ -492,7 +568,10 @@ function getSquareSpectrum(x, y, energy, E_min::Float32, E_max::Float32, x1::Int
     heights = unsafe_wrap(Array, hist.heights, len)
 
     # spectrum = JSON object, zip through centers, heights and widths
-    spectrum = JSON.json([Dict("center" => c, "height" => h, "width" => w) for (c, h, w) in zip(centers, heights, widths)])
+    spectrum = JSON.json([
+        Dict("center" => c, "height" => h, "width" => w) for
+        (c, h, w) in zip(centers, heights, widths)
+    ])
     println("getSquareSpectrum::#bins: ", hist.n)
 
     DeleteBlocks(blocks)
@@ -500,7 +579,17 @@ function getSquareSpectrum(x, y, energy, E_min::Float32, E_max::Float32, x1::Int
     return spectrum
 end
 
-function getCircleSpectrum(x, y, energy, E_min::Float32, E_max::Float32, cx::Integer, cy::Integer, r2::Integer, dx::Integer)
+function getCircleSpectrum(
+    x,
+    y,
+    energy,
+    E_min::Float32,
+    E_max::Float32,
+    cx::Integer,
+    cy::Integer,
+    r2::Integer,
+    dx::Integer,
+)
     ΔE = (E_max - E_min) / dx
 
     println("E_min = ", E_min)
@@ -512,7 +601,8 @@ function getCircleSpectrum(x, y, energy, E_min::Float32, E_max::Float32, cx::Int
     mask = [(x - cx)^2 + (y - cy)^2 <= r2 for (x, y) in zip(x, y)]
 
     packed = energy[mask]
-    @time blocks = FastBayesianBinningEnergyRange(packed, length(packed), E_min, E_max, 5 * dx)
+    @time blocks =
+        FastBayesianBinningEnergyRange(packed, length(packed), E_min, E_max, 5 * dx)
 
     hist = FastBayesHistogram(blocks)
     len = hist.n
@@ -528,7 +618,10 @@ function getCircleSpectrum(x, y, energy, E_min::Float32, E_max::Float32, cx::Int
     heights = unsafe_wrap(Array, hist.heights, len)
 
     # spectrum = JSON object, zip through centers, heights and widths
-    spectrum = JSON.json([Dict("center" => c, "height" => h, "width" => w) for (c, h, w) in zip(centers, heights, widths)])
+    spectrum = JSON.json([
+        Dict("center" => c, "height" => h, "width" => w) for
+        (c, h, w) in zip(centers, heights, widths)
+    ])
     println("getCircleSpectrum::#bins: ", hist.n)
 
     DeleteBlocks(blocks)
@@ -578,7 +671,9 @@ function getEnergyConversionFactor(header::FITSHeader)::Float32
     end
 
     # throw an exception    
-    throw("getEnergyConversionFactor: unsupported 'TELESCOP'($TELESCOP) or 'INSTRUME'($INSTRUME)")
+    throw(
+        "getEnergyConversionFactor: unsupported 'TELESCOP'($TELESCOP) or 'INSTRUME'($INSTRUME)",
+    )
 end
 
 function getNumChannels(header::FITSHeader)
@@ -615,7 +710,17 @@ function getNumChannels(header::FITSHeader)
     return 128
 end
 
-function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::Integer, y1::Integer, y2::Integer, E1::Float32, E2::Float32, NAXIS3::Integer)
+function getHeader(
+    xobject::XDataSet,
+    pixels::AbstractArray,
+    x1::Integer,
+    x2::Integer,
+    y1::Integer,
+    y2::Integer,
+    E1::Float32,
+    E2::Float32,
+    NAXIS3::Integer,
+)
     global SERVER_STRING
 
     local CRVAL1, CDELT1, CRPIX1, CUNIT1, CTYPE1
@@ -665,7 +770,9 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     BUNIT = "counts"
     BTYPE = "COUNT DENSITY"
 
-    println("TELESCOP = $TELESCOP, INSTRUME = $INSTRUME, OBSERVER = $OBSERVER, EQUINOX = $EQUINOX, RADECSYS = $RADECSYS")
+    println(
+        "TELESCOP = $TELESCOP, INSTRUME = $INSTRUME, OBSERVER = $OBSERVER, EQUINOX = $EQUINOX, RADECSYS = $RADECSYS",
+    )
 
     try
         CRPIX1 = getKeyValueByComment(xobject.header, "X image ref. pixel")
@@ -697,7 +804,9 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
         CTYPE1 = NaN
     end
 
-    println("CRVAL1 = $CRVAL1, CDELT1 = $CDELT1, CRPIX1 = $CRPIX1, CUNIT1 = $CUNIT1, CTYPE1 = $CTYPE1")
+    println(
+        "CRVAL1 = $CRVAL1, CDELT1 = $CDELT1, CRPIX1 = $CRPIX1, CUNIT1 = $CUNIT1, CTYPE1 = $CTYPE1",
+    )
 
     try
         CRPIX2 = getKeyValueByComment(xobject.header, "Y image ref. pixel")
@@ -729,7 +838,9 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
         CTYPE2 = NaN
     end
 
-    println("CRVAL2 = $CRVAL2, CDELT2 = $CDELT2, CRPIX2 = $CRPIX2, CUNIT2 = $CUNIT2, CTYPE2 = $CTYPE2")
+    println(
+        "CRVAL2 = $CRVAL2, CDELT2 = $CDELT2, CRPIX2 = $CRPIX2, CUNIT2 = $CUNIT2, CTYPE2 = $CTYPE2",
+    )
 
     # adjust the CRPIX1 and CRPIX2
     # CRPIX1 = CRPIX1 - x1 + 1
@@ -762,9 +873,15 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
     CUNIT3 = "eV"
     CTYPE3 = "LOG(ENERGY)"
 
-    println("CRVAL1 = $CRVAL1, CDELT1 = $CDELT1, CRPIX1 = $CRPIX1, CUNIT1 = $CUNIT1, CTYPE1 = $CTYPE1")
-    println("CRVAL2 = $CRVAL2, CDELT2 = $CDELT2, CRPIX2 = $CRPIX2, CUNIT2 = $CUNIT2, CTYPE2 = $CTYPE2")
-    println("CRVAL3 = $CRVAL3, CDELT3 = $CDELT3, CRPIX3 = $CRPIX3, CUNIT3 = $CUNIT3, CTYPE3 = $CTYPE3")
+    println(
+        "CRVAL1 = $CRVAL1, CDELT1 = $CDELT1, CRPIX1 = $CRPIX1, CUNIT1 = $CUNIT1, CTYPE1 = $CTYPE1",
+    )
+    println(
+        "CRVAL2 = $CRVAL2, CDELT2 = $CDELT2, CRPIX2 = $CRPIX2, CUNIT2 = $CUNIT2, CTYPE2 = $CTYPE2",
+    )
+    println(
+        "CRVAL3 = $CRVAL3, CDELT3 = $CDELT3, CRPIX3 = $CRPIX3, CUNIT3 = $CUNIT3, CTYPE3 = $CTYPE3",
+    )
 
     # RA_OBJ
     try
@@ -801,7 +918,9 @@ function getHeader(xobject::XDataSet, pixels::AbstractArray, x1::Integer, x2::In
         TIMESYS = "UNKNOWN"
     end
 
-    println("OBJECT = $OBJECT, RA_OBJ = $RA_OBJ, DEC_OBJ = $DEC_OBJ, DATEOBS = $DATEOBS, TIMESYS = $TIMESYS")
+    println(
+        "OBJECT = $OBJECT, RA_OBJ = $RA_OBJ, DEC_OBJ = $DEC_OBJ, DATEOBS = $DATEOBS, TIMESYS = $TIMESYS",
+    )
 
     # make a new header from pixels
     new_header = default_header(pixels)
@@ -1075,16 +1194,46 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
 
     # get the image
     if image
-        pixels, mask, min_count, max_count = getViewport(x, y, energy, x1, x2, y1, y2, energy_start, energy_end)
-
-        println("pixels: ", size(pixels), " mask: ", size(mask), " min_count: ", min_count, " max_count: ", max_count)
+        pixels, mask, min_count, max_count =
+            getViewport(x, y, energy, x1, x2, y1, y2, energy_start, energy_end)
+        println(
+            "pixels: ",
+            size(pixels),
+            " mask: ",
+            size(mask),
+            " min_count: ",
+            min_count,
+            " max_count: ",
+            max_count,
+        )
     end
 
     # get the spectrum
     if beam == CIRCLE
-        spectrum = getCircleSpectrum(x, y, energy, energy_start, energy_end, cx, cy, r2, num_channels)
+        spectrum = getCircleSpectrum(
+            x,
+            y,
+            energy,
+            energy_start,
+            energy_end,
+            cx,
+            cy,
+            r2,
+            num_channels,
+        )
     elseif beam == SQUARE
-        spectrum = getSquareSpectrum(x, y, energy, energy_start, energy_end, x1, x2, y1, y2, num_channels)
+        spectrum = getSquareSpectrum(
+            x,
+            y,
+            energy,
+            energy_start,
+            energy_end,
+            x1,
+            x2,
+            y1,
+            y2,
+            num_channels,
+        )
     end
 
     if image
@@ -1104,7 +1253,7 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
             prec = ZFP_LOW_PRECISION
         end
 
-        compressed_pixels = zfp_compress(pixels, precision=prec)
+        compressed_pixels = zfp_compress(pixels, precision = prec)
         write(view_resp, Int32(length(compressed_pixels)))
         write(view_resp, compressed_pixels)
 
@@ -1125,7 +1274,7 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
         level = 9
     end
 
-    compressed_spectrum = transcode(Bzip2Compressor(blocksize100k=level), spectrum) # do it fast (in real-time)
+    compressed_spectrum = transcode(Bzip2Compressor(blocksize100k = level), spectrum) # do it fast (in real-time)
     write(spec_resp, compressed_spectrum)
 
     return (view_resp, spec_resp)
@@ -1155,14 +1304,25 @@ function getVideoFrame(
     y1 = offsety
     y2 = offsety + inner_height - 1
 
-    frame_pixels, frame_mask, _, _ = getViewport(x, y, energy, x1, x2, y1, y2, Float32(energy_start), Float32(energy_end))
+    frame_pixels, frame_mask, _, _ = getViewport(
+        x,
+        y,
+        energy,
+        x1,
+        x2,
+        y1,
+        y2,
+        Float32(energy_start),
+        Float32(energy_end),
+    )
     max_count = ThreadsX.maximum(frame_pixels)
 
     if bDownsize
         dstWidth = image_width
         dstHeight = image_height
 
-        task = Threads.@spawn frame_mask = Bool.(imresize(frame_mask, (dstWidth, dstHeight), method=Constant())) # use Nearest-Neighbours for the mask
+        task = Threads.@spawn frame_mask =
+            Bool.(imresize(frame_mask, (dstWidth, dstHeight), method = Constant())) # use Nearest-Neighbours for the mask
         frame_pixels = imresize(frame_pixels, (dstWidth, dstHeight))
         max_count = ThreadsX.maximum(frame_pixels)
 
