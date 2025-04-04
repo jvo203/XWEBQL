@@ -381,8 +381,8 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     end
 
     if scale < 1.0
-        image_width = round(Integer, scale * inner_width)
-        image_height = round(Integer, scale * inner_height)
+        image_width = floor(Integer, scale * inner_width)
+        image_height = floor(Integer, scale * inner_height)
         bDownsize = true
     else
         image_width = inner_width

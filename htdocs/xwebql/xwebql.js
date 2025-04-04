@@ -4515,7 +4515,6 @@ function createProgram(gl, vertexShaderCode, fragmentShaderCode) {
 function webgl_image_renderer(gl, width, height) {
     var image = imageContainer;
 
-    console.log("webgl_image_renderer: ", image.width, image.height, width, height);
     var scale = get_image_scale(width, height, image.image_bounding_dims.width, image.image_bounding_dims.height);
     var img_width = Math.floor(scale * image.image_bounding_dims.width);
     var img_height = Math.floor(scale * image.image_bounding_dims.height);

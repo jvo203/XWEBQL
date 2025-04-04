@@ -1141,7 +1141,6 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
             prec = ZFP_LOW_PRECISION
         end
 
-        println("typeof(pixels) = ", typeof(pixels))
         compressed_pixels = zfp_compress(pixels, precision = prec)
         write(http, Int32(length(compressed_pixels)))
         write(http, compressed_pixels)
@@ -1799,8 +1798,8 @@ function ws_coroutine(ws, ids)
                 end
 
                 if scale < 1.0
-                    image_width = round(Integer, scale * inner_width)
-                    image_height = round(Integer, scale * inner_height)
+                    image_width = floor(Integer, scale * inner_width)
+                    image_height = floor(Integer, scale * inner_height)
                     bDownsize = true
                 else
                     image_width = inner_width
