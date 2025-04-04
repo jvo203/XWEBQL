@@ -1138,7 +1138,7 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
             write(http, Int32(compressed_len))
             write(http, compressed_json)
 
-            # FITS HEADER            
+            # FITS HEADER
             header_len = length(header)
             compressed_header = lz4_hc_compress(Vector{UInt8}(header))
             compressed_len = length(compressed_header)
