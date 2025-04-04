@@ -1087,12 +1087,6 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
         spectrum = getSquareSpectrum(x, y, energy, energy_start, energy_end, x1, x2, y1, y2, num_channels)
     end
 
-    # optionally downsample the spectrum
-    #if length(spectrum) > (dx >> 1)
-    #    println("downsampling spectrum from $(length(spectrum)) to $(dx >> 1)")
-    #    spectrum = imresize(spectrum, (dx >> 1,))
-    #end
-
     if image
         view_resp = IOBuffer()
 
@@ -1123,19 +1117,6 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
     end
 
     spec_resp = IOBuffer()
-    #=
-        # compress spectrum with ZFP
-        prec = SPECTRUM_MEDIUM_PRECISION        
-
-        if image
-            prec = SPECTRUM_HIGH_PRECISION
-            level = 9
-        end
-
-        compressed_spectrum = zfp_compress(spectrum, precision=prec)
-
-        write(spec_resp, Int32(length(spectrum)))
-        =#
 
     # compress with bzip2 (more efficient than LZ4HC)
     level = 1
