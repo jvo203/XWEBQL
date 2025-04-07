@@ -2051,9 +2051,6 @@ function display_menu() {
 
             if (displayContours) {
                 document.getElementById("ContourSVG").style.display = "block";
-                //elem.attr("opacity",1);
-
-                //if(document.getElementById('contourPlot') == null)
                 if (!has_contours)
                     update_contours();
             }
@@ -6923,6 +6920,15 @@ async function open_websocket_connection(_datasetId, index) {
                             } catch (err) {
                                 console.log("display_legend:", err);
                             }
+
+                            if (displayContours) {
+                                document.getElementById("ContourSVG").style.display = "block";
+                                if (!has_contours)
+                                    update_contours();
+                            }
+                            else {
+                                document.getElementById("ContourSVG").style.display = "none";
+                            }
                         }
                     }
 
@@ -8366,6 +8372,7 @@ function cube_refresh() {
 
     try {
         d3.selectAll('#contourPlot').remove();
+        has_contours = false;
     }
     catch (e) { };
 
