@@ -3,7 +3,7 @@ module fbh
    use omp_lib
    implicit none
 
-   integer, parameter :: WORKSIZE = 4096 ! up to 4K per thread
+   integer, parameter :: WORKSIZE = 2048 ! up to 2K per thread
 
    type, bind(c) :: BayesHistogram
       type(c_ptr) :: edges, centers, widths, heights
@@ -113,6 +113,7 @@ contains
             ! fitness = cnt_in_range * log(cnt_in_range / width) - log(wh_in_edge(size(wh_in_edge))) ! BIC
             ! fitness = cnt_in_range * log(cnt_in_range / width) - 2.0 ! AIC
             fitness = cnt_in_range * log(cnt_in_range / width) - 2.0 * log(log(wh_in_edge(size(wh_in_edge)))) ! HQIC
+            ! fitness = cnt_in_range * log(cnt_in_range / width) - log(0.2/0.8) ! Geometric(gamma)
 
             if (i.gt. 1) fitness = fitness + best(i-1)
 
@@ -430,6 +431,7 @@ contains
             ! fitness = cnt_in_range * log(cnt_in_range / width) - log(wh_in_edge(size(wh_in_edge))) ! BIC
             ! fitness = cnt_in_range * log(cnt_in_range / width) - 2.0 ! AIC
             fitness = cnt_in_range * log(cnt_in_range / width) - 2.0 * log(log(wh_in_edge(size(wh_in_edge)))) ! HQIC
+            ! fitness = cnt_in_range * log(cnt_in_range / width) - log(0.2/0.8) ! Geometric(gamma)
 
             if (i.gt. 1) fitness = fitness + best(i-1)
 
