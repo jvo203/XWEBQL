@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-04-07.0";
+    return "JS2025-04-07.1";
 }
 
 function uuidv4() {
@@ -7893,7 +7893,7 @@ function process_video() {
     let imageCanvas = videoFrame.canvas;
     var context = imageCanvas.getContext('2d');
     context.putImageData(imageData, 0, 0);
-    console.log("image_data:", imageData.width, imageData.height, imageData.data);
+    // console.log("image_data:", imageData.width, imageData.height, imageData.data);
 
     //next display the video frame
     //place the image onto the main canvas
