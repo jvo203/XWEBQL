@@ -3,7 +3,7 @@ module fbh
    use omp_lib
    implicit none
 
-   integer, parameter :: WORKSIZE = 1024 ! up to 1K per thread
+   integer, parameter :: WORKSIZE = 4096 ! up to 4K per thread
 
    type, bind(c) :: BayesHistogram
       type(c_ptr) :: edges, centers, widths, heights
@@ -110,9 +110,9 @@ contains
             width = edges(Q+1) - edges(i)
             if (width .le. dt) exit
 
-            fitness = cnt_in_range * log(cnt_in_range / width) - log(wh_in_edge(size(wh_in_edge))) ! BIC
+            ! fitness = cnt_in_range * log(cnt_in_range / width) - log(wh_in_edge(size(wh_in_edge))) ! BIC
             ! fitness = cnt_in_range * log(cnt_in_range / width) - 2.0 ! AIC
-            ! fitness = cnt_in_range * log(cnt_in_range / width) - 2.0 * log(log(wh_in_edge(size(wh_in_edge)))) ! HQIC
+            fitness = cnt_in_range * log(cnt_in_range / width) - 2.0 * log(log(wh_in_edge(size(wh_in_edge)))) ! HQIC
 
             if (i.gt. 1) fitness = fitness + best(i-1)
 
@@ -427,9 +427,9 @@ contains
             width = edges(Q+1) - edges(i)
             if (width .le. dt) exit
 
-            fitness = cnt_in_range * log(cnt_in_range / width) - log(wh_in_edge(size(wh_in_edge))) ! BIC
+            ! fitness = cnt_in_range * log(cnt_in_range / width) - log(wh_in_edge(size(wh_in_edge))) ! BIC
             ! fitness = cnt_in_range * log(cnt_in_range / width) - 2.0 ! AIC
-            ! fitness = cnt_in_range * log(cnt_in_range / width) - 2.0 * log(log(wh_in_edge(size(wh_in_edge)))) ! HQIC
+            fitness = cnt_in_range * log(cnt_in_range / width) - 2.0 * log(log(wh_in_edge(size(wh_in_edge)))) ! HQIC
 
             if (i.gt. 1) fitness = fitness + best(i-1)
 
