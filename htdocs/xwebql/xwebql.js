@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-04-04.2";
+    return "JS2025-04-07.0";
 }
 
 function uuidv4() {
@@ -5718,8 +5718,8 @@ function setup_image_selection() {
                             y1: fitsData.OFFSETY + y1 + 1,
                             x2: fitsData.OFFSETX + x2 + 1,
                             y2: fitsData.OFFSETY + y2 + 1,
-                            width: _width,
-                            height: _height,
+                            width: 0,//_width,
+                            height: 0,//_height,
                             beam: zoom_shape,
                             frame_start: Math.log(1000 * data_band_lo),
                             frame_end: Math.log(1000 * data_band_hi),
@@ -6568,8 +6568,8 @@ function imageTimeout() {
             y1: fitsData.OFFSETY + y1 + 1,
             x2: fitsData.OFFSETX + x2 + 1,
             y2: fitsData.OFFSETY + y2 + 1,
-            width: _width,
-            height: _height,
+            width: 0,//_width,
+            height: 0,//_height,
             beam: zoom_shape,
             frame_start: Math.log(1000 * data_band_lo),
             frame_end: Math.log(1000 * data_band_hi),
