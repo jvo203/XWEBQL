@@ -21,6 +21,10 @@ function get_root(suffix::String)
     # for each href try to download a clean event file
     for href in hrefs
         try
+            # HITOMI SXI
+            get_directory(url * href * "sxi/event_cl")
+
+            # HITOMI SXS
             get_directory(url * href * "sxs/event_cl")
         catch _
         end
