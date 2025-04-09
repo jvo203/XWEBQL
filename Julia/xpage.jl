@@ -1,5 +1,7 @@
 using CSV
 using DataFrames
+using HTTP
+using JSON
 using Images
 using Plots
 
@@ -11,9 +13,9 @@ function get_download_url(filename::String)::String
     # extract the first 3 characters
     prefix = filename[1:3]
 
-    # extract the string between "ah" and "sxs"    
+    # extract the string between "ah" and "sxi/sxs"
     number = split(filename, "ah")[2]
-    number = split(number, "sxs")[1]
+    number = split(number, "sx")[1]
 
     url = "https://data.darts.isas.jaxa.jp/pub/hitomi/obs/"
 
@@ -26,29 +28,46 @@ function get_download_url(filename::String)::String
         url *= "1/"
     end
 
-    url *= number * "/sxs/event_cl/" * filename
+    # check if the filename contains "sxi" or "sxs"
+    if contains(filename, "sxi")
+        url *= number * "/sxi/event_cl/" * filename
+    elseif contains(filename, "sxs")
+        url *= number * "/sxs/event_cl/" * filename
+    end
 
     return url
 end
 
 function get_xwebql_url(filename::String)::String
-    return "http://zodiac.mtk.nao.ac.jp:$PORT/xwebql/events.html?mission=" * lowercase(mission) * "&dataset=" * filename
+    return "http://$HOST:$PORT/xwebql/events.html?mission=" * lowercase(mission) * "&dataset=" * filename
 end
 
-dir = "/Volumes/OWC/JAXA/"
+function get_darts_xwebql(url::String)::String
+    # HTML-encode the URL    
+    return "http://$HOST:$PORT/xwebql/events.html?url=" * HTTP.escape(url)
+end
+
+#dir = "/Volumes/OWC/JAXA/"
+dir = homedir() * "/NAO/JAXA/"
 mission = "HITOMI"
 SERVER_STRING = "xpage.jl"
-PORT = 10000
+
+#HOST = "zodiac.mtk.nao.ac.jp"
+#PORT = 10000
+
+HOST = "localhost"
+PORT = 8080
 
 # first get all files in dir
-files = readdir("/Volumes/OWC/JAXA/" * mission)
+files = readdir(homedir() * "/NAO/JAXA/" * mission)
+println("files: ", files)
 
 html = IOBuffer()
 write(html, "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n")
 write(html, "<title>" * mission * "</title>\n</head>\n<body>\n")
 
 # HTML h1
-write(html, "<h1>" * mission * " X-ray SXS Event Files</h1>\n")
+write(html, "<h1>" * mission * " X-ray SXI / SXS Event Files</h1>\n")
 
 # append HTML table header
 write(html, "<table><tr><th>#</th><th>Dataset</th><th>Object</th><th>Ra [deg]</th><th>Dec [deg]</th><th>QL image</th><th>QL spectrum</th><th>XWEBQL Preview</th><th>Event File Download</th></tr>\n")
@@ -66,11 +85,13 @@ count = 1
 for entry in files
     global count
 
-    uri = "/Volumes/OWC/JAXA/" * mission * "/" * entry
+    #uri = "/Volumes/OWC/JAXA/" * mission * "/" * entry
+    uri = homedir() * "/NAO/JAXA/" * mission * "/" * entry
     dataset = entry
 
     download_url = get_download_url(dataset)
-    xwebql_url = get_xwebql_url(dataset)
+    #xwebql_url = get_xwebql_url(dataset)
+    xwebql_url = get_darts_xwebql(download_url)
 
     println(count, " ", dataset, " ", download_url, " ", xwebql_url)
 
@@ -156,4 +177,6 @@ open(dir * "DEMO/index.html", "w") do f
 end
 
 # write the DataFrame to CSV
-CSV.write(dir * "DEMO/" * lowercase(mission) * ".csv", df)
+#CSV.write(dir * "DEMO/" * lowercase(mission) * ".csv", df)
+CSV.write(csv, df)
+close(csv)
