@@ -9,6 +9,22 @@ pyplot()
 
 include("xevent.jl")
 
+function to_pdf(edges, heights; lb=minimum(heights) / 3)
+    X = Float32[]
+    Y = Float32[]
+    push!(X, edges[begin])
+    push!(Y, lb)
+    for i in eachindex(heights)
+        push!(X, edges[i])
+        push!(X, edges[i+1])
+        push!(Y, heights[i])
+        push!(Y, heights[i])
+    end
+    push!(X, edges[end])
+    push!(Y, lb)
+    return X, Y
+end
+
 function get_download_url(filename::String)::String
     # extract the first 3 characters
     prefix = filename[1:3]
@@ -84,6 +100,7 @@ df = DataFrame(index=Integer[], dataset=String[], object=String[], ra=Float64[],
 count = 1
 for entry in files
     global count
+    local pixels, mask, spectrum, header, json, min_count, max_count
 
     #uri = "/Volumes/OWC/JAXA/" * mission * "/" * entry
     uri = homedir() * "/NAO/JAXA/" * mission * "/" * entry
@@ -101,7 +118,13 @@ for entry in files
     width = 128
     height = 128
 
-    @time (pixels, mask, spectrum, header, json, min_count, max_count) = getImageSpectrum(xdataset, width, height)
+    try
+        (pixels, mask, spectrum, header, json, min_count, max_count) = getImageSpectrum(xdataset, width, height)
+    catch e
+        println("Error: ", e)
+        continue
+    end
+
     max_count = ThreadsX.maximum(pixels)
 
     # convert pixels/mask to RGB
@@ -139,7 +162,31 @@ for entry in files
 
     # plot the spectrum as PNG
     println(spectrum)
-    plot_ref = Plots.plot(spectrum, legend=false, border=true, grid=false, axis=([], false), color=:black, linewidth=4)
+
+    # parse the spectrum JSON array "{"height":0.27966323,"center":5.432244,"width":0.17027283}",
+    # extract height, center and width Float32 arrays
+    bins = JSON.parse(spectrum)
+
+    heights = Float32[]
+    edges = Float32[]
+    # iterate through the bins dictionary
+    for i in 1:length(bins)
+        bin = bins[i]
+        bheight = Float32(bin["height"])
+        bcenter = Float32(bin["center"])
+        bwidth = Float32(bin["width"])
+        push!(heights, bheight)
+        push!(edges, bcenter - bwidth / 2)
+    end
+    push!(edges, Float32(bins[end]["center"]) + Float32(bins[end]["width"]) / 2)
+
+    println("heights: ", heights)
+    println("edges: ", edges)
+
+    # convert to PDF 
+    support, density = to_pdf(edges, heights)
+
+    plot_ref = Plots.plot(support, log.(density); legend=false, border=true, grid=false, axis=([], false), color=:black, linewidth=4)
     Plots.savefig(plot_ref, dir * "DEMO/images/" * entry * "_spectrum.png")
 
     # parse the JSON to a dictionary
