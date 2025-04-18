@@ -189,7 +189,7 @@ const switchColourScheme = (isDarkMode) => {
         colourmap = "rainbow";
     }
 
-    localStorage.setItem("ui_theme", theme);
+    localStorage.setItem("xui_theme", theme);
     localStorage.setItem("xcolourmap", colourmap);
 
     location.reload();
@@ -778,7 +778,7 @@ async function mainRenderer() {
     endianness = getEndianness();
     console.log('endianness: ', endianness);
 
-    if (localStorage.getItem("ui_theme") === null) {
+    if (localStorage.getItem("xui_theme") === null) {
         theme = getOStheme();
 
         if (theme == 'light')
@@ -786,11 +786,11 @@ async function mainRenderer() {
         else
             colourmap = "green";
 
-        localStorage.setItem("ui_theme", theme);
+        localStorage.setItem("xui_theme", theme);
         localStorage.setItem("xcolourmap", colourmap);
     }
     else {
-        theme = localStorage.getItem("ui_theme");
+        theme = localStorage.getItem("xui_theme");
     }
 
     if (theme == 'light') {
@@ -2894,7 +2894,7 @@ function display_preferences() {
         d3.select('#video_fps_control_li').style("display", "none");
     }
 
-    //ui_theme
+    //xui_theme
     {
         tmpA = prefDropdown.append("li")
             //.style("background-color", "#FFF")	
@@ -2903,17 +2903,17 @@ function display_preferences() {
             .attr("class", "form-horizontal");
 
         tmpA.append("label")
-            .attr("for", "ui_theme")
+            .attr("for", "xui_theme")
             .attr("class", "control-label")
             .html("ui theme:&nbsp; ");
 
         tmpA.append("select")
             //.attr("class", "form-control")            
-            .attr("id", "ui_theme")
+            .attr("id", "xui_theme")
             .attr("onchange", "javascript:change_ui_theme();")
             .html("<option>dark</option><option>light</option>");
 
-        document.getElementById('ui_theme').value = theme;
+        document.getElementById('xui_theme').value = theme;
     }
 
     //colourmap
@@ -8204,8 +8204,8 @@ function change_coords_fmt() {
 }
 
 function change_ui_theme() {
-    theme = document.getElementById('ui_theme').value;
-    localStorage.setItem("ui_theme", theme);
+    theme = document.getElementById('xui_theme').value;
+    localStorage.setItem("xui_theme", theme);
 
     if (theme == 'light')
         colourmap = "rainbow";

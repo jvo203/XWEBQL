@@ -161,10 +161,10 @@ function escapeRegExp(str) {
 function main() {
     filelist = null;
 
-    if (localStorage.getItem("ui_theme") === null)
+    if (localStorage.getItem("xui_theme") === null)
         theme = "dark";//default theme, needs to be aligned with the main FITSWebQL;  "dark" or "light"
     else
-        theme = localStorage.getItem("ui_theme");
+        theme = localStorage.getItem("xui_theme");
 
     if (theme == 'light') {
         $("body").css('background-color', 'white');
