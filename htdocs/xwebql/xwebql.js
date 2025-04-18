@@ -181,23 +181,19 @@ function getOStheme() {
 }
 
 const switchColourScheme = (isDarkMode) => {
+    // prepare the theme for the next page load
     if (isDarkMode) {
-        theme = 'dark';
-        colourmap = "green";
+        localStorage.setItem("xui_theme", 'dark');
+        localStorage.setItem("xcolourmap", 'green');
     } else {
-        theme = 'light';
-        colourmap = "rainbow";
+        localStorage.setItem("xui_theme", 'light');
+        localStorage.setItem("xcolourmap", 'rainbow');
     }
-
-    localStorage.setItem("xui_theme", theme);
-    localStorage.setItem("xcolourmap", colourmap);
-
-    location.reload();
 };
 
-window
+/*window
     .matchMedia("(prefers-color-scheme: dark)")
-    .addEventListener("change", (event) => switchColourScheme(event.matches));
+    .addEventListener("change", (event) => switchColourScheme(event.matches));*/
 
 function resizeMe() {
     clearTimeout(idleResize);
