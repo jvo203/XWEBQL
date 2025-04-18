@@ -180,7 +180,7 @@ function getOStheme() {
     }
 }
 
-const switchColourScheme = (isDarkMode) => {
+/*const switchColourScheme = (isDarkMode) => {
     // prepare the theme for the next page load
     if (isDarkMode) {
         localStorage.setItem("xui_theme", 'dark');
@@ -191,7 +191,7 @@ const switchColourScheme = (isDarkMode) => {
     }
 };
 
-/*window
+window
     .matchMedia("(prefers-color-scheme: dark)")
     .addEventListener("change", (event) => switchColourScheme(event.matches));*/
 
