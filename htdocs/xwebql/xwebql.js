@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-04-18.0";
+    return "JS2025-04-18.1";
 }
 
 function uuidv4() {
@@ -167,6 +167,37 @@ function getUint64(dataview, byteOffset, littleEndian) {
 
     return combined;
 }
+
+function getOStheme() {
+    // Detect the user's OS theme preference
+    const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
+
+    // Check if the user has set a preference for dark mode
+    if (prefersDarkScheme.matches) {
+        return "dark";
+    } else {
+        return "light";
+    }
+}
+
+const switchColourScheme = (isDarkMode) => {
+    if (isDarkMode) {
+        theme = 'dark';
+        colourmap = "green";
+    } else {
+        theme = 'light';
+        colourmap = "rainbow";
+    }
+
+    localStorage.setItem("ui_theme", theme);
+    localStorage.setItem("xcolourmap", colourmap);
+
+    location.reload();
+};
+
+window
+    .matchMedia("(prefers-color-scheme: dark)")
+    .addEventListener("change", (event) => switchColourScheme(event.matches));
 
 function resizeMe() {
     clearTimeout(idleResize);
@@ -748,20 +779,25 @@ async function mainRenderer() {
     console.log('endianness: ', endianness);
 
     if (localStorage.getItem("ui_theme") === null) {
-        theme = "dark";
-        colourmap = "green";
-        axisColour = "rgba(255,204,0,0.8)";
+        theme = getOStheme();
+
+        if (theme == 'light')
+            colourmap = "rainbow";
+        else
+            colourmap = "green";
 
         localStorage.setItem("ui_theme", theme);
         localStorage.setItem("xcolourmap", colourmap);
     }
     else {
         theme = localStorage.getItem("ui_theme");
+    }
 
-        if (theme == 'light')
-            axisColour = "#000000";
-        else
-            axisColour = "rgba(255,204,0,0.8)"; // axisColour
+    if (theme == 'light') {
+        axisColour = "#000000";
+    }
+    else {
+        axisColour = "rgba(255,204,0,0.8)"; // axisColour
     }
 
     if (localStorage.getItem("zoom_shape") === null) {
