@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-04-07.1";
+    return "JS2025-04-18.0";
 }
 
 function uuidv4() {
@@ -556,7 +556,7 @@ function show_welcome() {
 
     let textColour = 'yellow';
 
-    if (theme == 'bright')
+    if (theme == 'light')
         textColour = 'red';
 
     if (!wasm_supported) {
@@ -606,7 +606,7 @@ function show_heartbeat() {
 
     let fillColour = 'yellow';
 
-    if (theme == 'bright')
+    if (theme == 'light')
         fillColour = 'black';
 
     let bottomY = svgHeight - offset / 4;
@@ -758,7 +758,7 @@ async function mainRenderer() {
     else {
         theme = localStorage.getItem("ui_theme");
 
-        if (theme == 'bright')
+        if (theme == 'light')
             axisColour = "#000000";
         else
             axisColour = "rgba(255,204,0,0.8)"; // axisColour
@@ -772,7 +772,7 @@ async function mainRenderer() {
         zoom_shape = localStorage.getItem("zoom_shape");
 
     if (localStorage.getItem("xcolourmap") === null) {
-        if (theme == 'bright')
+        if (theme == 'light')
             colourmap = "rainbow";
         else
             colourmap = "green";
@@ -802,7 +802,7 @@ async function mainRenderer() {
     if (firstTime) {
         console.log("theme:", theme);
 
-        if (theme == 'bright') {
+        if (theme == 'light') {
             d3.select("body")
                 .style('background-color', 'white')
                 .style('color', 'black');
@@ -1022,7 +1022,7 @@ async function mainRenderer() {
         //spectrum
         var blend = '';
 
-        if (theme == 'bright')
+        if (theme == 'light')
             blend = 'mix-blend-mode: darken; '; // difference, staturation, darken
 
         d3.select("#mainDiv").append("canvas")
@@ -2460,7 +2460,7 @@ function display_dataset_info() {
 
     let strokeColour = 'white';
 
-    if (theme == 'bright')
+    if (theme == 'light')
         strokeColour = 'black';
 
     //add a menu activation area
@@ -2686,7 +2686,7 @@ function display_preferences() {
 
     let fillColour = 'yellow';
 
-    if (theme == 'bright')
+    if (theme == 'light')
         fillColour = 'black';
 
     let bottomY = svgHeight - offset / 4;
@@ -2875,7 +2875,7 @@ function display_preferences() {
             //.attr("class", "form-control")            
             .attr("id", "ui_theme")
             .attr("onchange", "javascript:change_ui_theme();")
-            .html("<option>dark</option><option>bright</option>");
+            .html("<option>dark</option><option>light</option>");
 
         document.getElementById('ui_theme').value = theme;
     }
@@ -3537,7 +3537,7 @@ function setup_axes() {
 
             let fillColour = 'white';
 
-            if (theme == 'bright')
+            if (theme == 'light')
                 fillColour = 'black';
 
             d3.select("#yaxis")
@@ -4089,7 +4089,7 @@ function get_spectrum_direction(fitsData) {
 }
 
 function getShadowStyle() {
-    if (theme == 'bright')
+    if (theme == 'light')
         return "black";// purple
     else
         //return "yellow";//was red
@@ -4103,7 +4103,7 @@ function getStrokeStyle() {
     style = "rgba(255,255,255,1.0)";//white
     //style = "rgba(153, 102, 153, 0.9)" ;//violet
 
-    if (theme == 'bright') {
+    if (theme == 'light') {
         style = "rgba(0,0,0,1.0)";//black
         // style = "rgba(127,127,127,1.0)";// grey
 
@@ -4744,7 +4744,7 @@ function display_gridlines() {
     let fillColour = 'white';
     let strokeColour = 'white';
 
-    if (theme == 'bright') {
+    if (theme == 'light') {
         fillColour = 'gray';
         strokeColour = 'gray';
     }
@@ -5045,7 +5045,7 @@ function setup_image_selection() {
 
     let fillColour = 'white';
 
-    if (theme == 'bright')
+    if (theme == 'light')
         fillColour = 'black';
 
     //sub-region selection rectangle
@@ -5368,7 +5368,7 @@ function setup_image_selection() {
 
                 let fillColour = 'white';
 
-                if (theme == 'bright')
+                if (theme == 'light')
                     fillColour = 'black';
 
                 d3.select("#yaxis")
@@ -7425,7 +7425,7 @@ function x_axis_mouseenter(offset) {
 
     let fillColour = 'white';
 
-    if (theme == 'bright')
+    if (theme == 'light')
         fillColour = 'black';
 
     d3.select("#xaxis")
@@ -7436,7 +7436,7 @@ function x_axis_mouseenter(offset) {
     fillColour = 'white';
     let strokeColour = 'black';
 
-    if (theme == 'bright') {
+    if (theme == 'light') {
         fillColour = 'black';
         strokeColour = 'white';
     }
@@ -7584,7 +7584,7 @@ function x_axis_move(offset) {
 
     let strokeColour = 'white';
 
-    if (theme == 'bright')
+    if (theme == 'light')
         strokeColour = 'black';
 
     d3.select("#ene_bar")
@@ -8024,7 +8024,7 @@ function display_lines() {
     var fontStyle = Math.round(0.67 * emFontSize) + "px";// Helvetica";
     var strokeStyle = "#FFCC00";
 
-    if (theme == 'bright')
+    if (theme == 'light')
         strokeStyle = 'black';
 
     /*if(colourmap == "rainbow" || colourmap == "hot")
@@ -8171,7 +8171,7 @@ function change_ui_theme() {
     theme = document.getElementById('ui_theme').value;
     localStorage.setItem("ui_theme", theme);
 
-    if (theme == 'bright')
+    if (theme == 'light')
         colourmap = "rainbow";
     else
         colourmap = "green";
