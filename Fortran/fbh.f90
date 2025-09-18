@@ -112,10 +112,10 @@ contains
             width = edges(Q+1) - edges(i)
             if (width .le. dt) exit
 
-            ! fitness = cnt_in_range * log(cnt_in_range / width) - log(wh_in_edge(size(wh_in_edge))) ! BIC
+            fitness = cnt_in_range * log(cnt_in_range / width) - log(wh_in_edge(size(wh_in_edge))) ! BIC
             ! fitness = cnt_in_range * log(cnt_in_range / width) - 2.0 ! AIC
             ! fitness = cnt_in_range * log(cnt_in_range / width) - 2.0 * log(log(wh_in_edge(size(wh_in_edge)))) ! HQIC
-            fitness = cnt_in_range * log(cnt_in_range / width) - log(0.8/0.2) ! Geometric(gamma)
+            !fitness = cnt_in_range * log(cnt_in_range / width) - log(0.8/0.2) ! Geometric(gamma)
 
             if (i.gt. 1) fitness = fitness + best(i-1)
 
@@ -431,10 +431,10 @@ contains
             width = edges(Q+1) - edges(i)
             if (width .le. dt) exit
 
-            ! fitness = cnt_in_range * log(cnt_in_range / width) - log(wh_in_edge(size(wh_in_edge))) ! BIC
+            fitness = cnt_in_range * log(cnt_in_range / width) - log(wh_in_edge(size(wh_in_edge))) ! BIC
             ! fitness = cnt_in_range * log(cnt_in_range / width) - 2.0 ! AIC
             ! fitness = cnt_in_range * log(cnt_in_range / width) - 2.0 * log(log(wh_in_edge(size(wh_in_edge)))) ! HQIC
-            fitness = cnt_in_range * log(cnt_in_range / width) - log(0.8/0.2) ! Geometric(gamma)
+            !fitness = cnt_in_range * log(cnt_in_range / width) - log(0.8/0.2) ! Geometric(gamma)
 
             if (i.gt. 1) fitness = fitness + best(i-1)
 
