@@ -327,6 +327,7 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
 
 pub fn main() !void {
     const event_filename = "../../../NAO/JAXA/ah100040060sxs_p0px1010_cl.evt";
+    //const event_filename = "/tmp/xa300018010xtd_p0300000a0_cl.evt";
     print("event_filename = {s}\n", .{event_filename});
 
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
