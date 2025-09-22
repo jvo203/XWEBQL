@@ -43,14 +43,15 @@ fn hdr_get_int_value(comptime T: type, line: []const u8) !T {
 fn hdr_get_string_value(line: []const u8) ?[]const u8 {
     const str = line[10..FITS_LINE_LENGTH];
 
-    // find the enclosing '' in str
+    // find the first enclosing '' in str
     const pos1 = std.mem.indexOf(u8, str, "'");
 
     if (pos1) |p1| {
-        const pos2 = std.mem.lastIndexOf(u8, str, "'");
+        // find the next enclosing ' in str
+        const pos2 = std.mem.indexOf(u8, str[p1 + 1 ..], "'");
 
         if (pos2) |p2| {
-            return std.mem.trim(u8, str[p1 + 1 .. p2], " \r\n\t");
+            return std.mem.trim(u8, str[p1 + 1 .. p1 + p2], " \r\n\t");
         } else {
             return null;
         }
