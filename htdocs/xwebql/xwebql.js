@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-04-18.1";
+    return "JS2025-09-22.0";
 }
 
 function uuidv4() {
@@ -780,7 +780,7 @@ async function mainRenderer() {
         if (theme == 'light')
             colourmap = "rainbow";
         else
-            colourmap = "green";
+            colourmap = "parula";
 
         localStorage.setItem("xui_theme", theme);
         localStorage.setItem("xcolourmap", colourmap);
@@ -807,7 +807,7 @@ async function mainRenderer() {
         if (theme == 'light')
             colourmap = "rainbow";
         else
-            colourmap = "green";
+            colourmap = "parula";
 
         localStorage.setItem("xcolourmap", colourmap);
     }
@@ -815,7 +815,7 @@ async function mainRenderer() {
         colourmap = localStorage.getItem("xcolourmap");
 
     if (colourmap === null)
-        colourmap = "green";
+        colourmap = "parula";
 
     if (localStorage.getItem("image_quality") === null) {
         image_quality = "medium";
@@ -8206,7 +8206,7 @@ function change_ui_theme() {
     if (theme == 'light')
         colourmap = "rainbow";
     else
-        colourmap = "green";
+        colourmap = "parula";
 
     localStorage.setItem("xcolourmap", colourmap);
 
