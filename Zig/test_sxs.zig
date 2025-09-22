@@ -30,7 +30,13 @@ fn getNumCores() usize {
 }
 
 fn hdr_get_int_value(comptime T: type, line: []const u8) !T {
-    const str = std.mem.trim(u8, line[10..FITS_LINE_LENGTH], " \r\n\t");
+    // truncate str at the first "/"
+    const pos = std.mem.indexOf(u8, line, "/");
+    var str = if (pos) |p| line[10..p] else line[10..FITS_LINE_LENGTH];
+
+    // trim leading and trailing spaces
+    str = std.mem.trim(u8, str, " \r\n\t");
+
     return try std.fmt.parseInt(T, str, 10);
 }
 
@@ -326,8 +332,8 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
 }
 
 pub fn main() !void {
-    const event_filename = "../../../NAO/JAXA/ah100040060sxs_p0px1010_cl.evt";
-    //const event_filename = "/tmp/xa300018010xtd_p0300000a0_cl.evt";
+    //const event_filename = "../../../NAO/JAXA/ah100040060sxs_p0px1010_cl.evt";
+    const event_filename = "/tmp/xa300018010xtd_p0300000a0_cl.evt";
     print("event_filename = {s}\n", .{event_filename});
 
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
