@@ -43,7 +43,7 @@ fn hdr_get_int_value(comptime T: type, line: []const u8) !T {
 fn hdr_get_string_value(line: []const u8) ?[]const u8 {
     const str = line[10..FITS_LINE_LENGTH];
 
-    // find the first enclosing '' in str
+    // find the first enclosing ' in str
     const pos1 = std.mem.indexOf(u8, str, "'");
 
     if (pos1) |p1| {
