@@ -11,7 +11,7 @@ const XMeta = struct {
     TFIELDS: usize,
     ix: i32,
     iy: i32,
-    iupi: i32,
+    ipi: i32,
     columns: []i32,
 };
 
@@ -158,13 +158,13 @@ fn scan_table_header(header: []const u8, events: *XMeta, allocator: Allocator) !
                 const value = hdr_get_string_value(line);
 
                 if (value) |column| {
-                    // test column for "X", "Y" and "UPI"
+                    // test column for "X", "Y" and "PI"
                     if (std.mem.eql(u8, column, "X")) {
                         events.ix = index;
                     } else if (std.mem.eql(u8, column, "Y")) {
                         events.iy = index;
-                    } else if (std.mem.eql(u8, column, "UPI")) {
-                        events.iupi = index;
+                    } else if (std.mem.eql(u8, column, "PI")) {
+                        events.ipi = index;
                     }
                 }
             }
@@ -206,14 +206,14 @@ fn get_column_offset(columns: []i32, index: i32) usize {
     return @as(usize, @intCast(offset));
 }
 
-fn read_sxs_threaded(data: []const u8, x: []i16, y: []i16, upi: []f32, size: usize, x_offset: usize, y_offset: usize, upi_offset: usize, stride: usize) void {
+fn read_sxs_threaded(data: []const u8, x: []i16, y: []i16, pi: []f32, size: usize, x_offset: usize, y_offset: usize, pi_offset: usize, stride: usize) void {
     var offset: usize = 0;
     var i: usize = 0;
 
     while (i < size) {
         x[i] = std.mem.readInt(i16, data[offset + x_offset ..][0..2], .big);
         y[i] = std.mem.readInt(i16, data[offset + y_offset ..][0..2], .big);
-        upi[i] = @as(f32, @bitCast(std.mem.readInt(i32, data[offset + upi_offset ..][0..4], .big)));
+        pi[i] = @as(f32, @bitCast(std.mem.readInt(i32, data[offset + pi_offset ..][0..4], .big)));
 
         i += 1;
         offset += stride;
@@ -262,7 +262,7 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
         return error.Oops;
     }
 
-    var meta = XMeta{ .NAXIS1 = undefined, .NAXIS2 = undefined, .TFIELDS = undefined, .ix = undefined, .iy = undefined, .iupi = undefined, .columns = undefined };
+    var meta = XMeta{ .NAXIS1 = undefined, .NAXIS2 = undefined, .TFIELDS = undefined, .ix = undefined, .iy = undefined, .ipi = undefined, .columns = undefined };
 
     // scan the table header
     while (sxs_offset < stats.size) {
@@ -278,7 +278,7 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
     print("NAXIS1 = {d}\n", .{meta.NAXIS1});
     print("NAXIS2 = {d}\n", .{meta.NAXIS2});
     print("TFIELDS = {d}\n", .{meta.TFIELDS});
-    print("ix:{d}, iy:{d}, iupi:{d}\n", .{ meta.ix, meta.iy, meta.iupi });
+    print("ix:{d}, iy:{d}, ipi:{d}\n", .{ meta.ix, meta.iy, meta.ipi });
 
     // sum the events.columns array
     var bytes_per_row: i32 = 0;
@@ -293,14 +293,14 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
 
     const x_offset = get_column_offset(meta.columns, meta.ix - 1);
     const y_offset = get_column_offset(meta.columns, meta.iy - 1);
-    const upi_offset = get_column_offset(meta.columns, meta.iupi - 1);
+    const pi_offset = get_column_offset(meta.columns, meta.ipi - 1);
 
-    print("x_offset = {d}, y_offset = {d}, upi_offset = {d}\n", .{ x_offset, y_offset, upi_offset });
+    print("x_offset = {d}, y_offset = {d}, pi_offset = {d}\n", .{ x_offset, y_offset, pi_offset });
 
     // allocate the arrays
     const x = try allocator.alloc(i16, meta.NAXIS2);
     const y = try allocator.alloc(i16, meta.NAXIS2);
-    const upi = try allocator.alloc(f32, meta.NAXIS2);
+    const pi = try allocator.alloc(f32, meta.NAXIS2);
 
     // sxs_offset now points to the start of the binary data
     const data = sxs[sxs_offset .. sxs_offset + meta.NAXIS2 * meta.NAXIS1];
@@ -319,8 +319,8 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
         const offset = i * work_size;
         const size = if (i == num_threads - 1) (meta.NAXIS2 - offset) else work_size;
 
-        //read_sxs_threaded(data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], upi[offset..], size, x_offset, y_offset, upi_offset, meta.NAXIS1);
-        handles[i] = try Thread.spawn(.{}, read_sxs_threaded, .{ data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], upi[offset..], size, x_offset, y_offset, upi_offset, meta.NAXIS1 });
+        //read_sxs_threaded(data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], pi[offset..], size, x_offset, y_offset, pi_offset, meta.NAXIS1);
+        handles[i] = try Thread.spawn(.{}, read_sxs_threaded, .{ data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], pi[offset..], size, x_offset, y_offset, pi_offset, meta.NAXIS1 });
         i += 1;
     }
 
@@ -328,7 +328,7 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
         handle.join();
     }
 
-    return XEvents{ .num_events = meta.NAXIS2, .x = x, .y = y, .energy = upi };
+    return XEvents{ .num_events = meta.NAXIS2, .x = x, .y = y, .energy = pi };
 }
 
 pub fn main() !void {
