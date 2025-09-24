@@ -50,7 +50,7 @@ function get_directory(dir)
     println(hrefs)
     return
 
-    # for each href try to download a clean event file
+    # iterate through sub-directories
     for href in hrefs
         try
             get_file(dir, href)
