@@ -15,11 +15,8 @@ function get_table(pub)
 end
 
 function get_root(root::String)
-    url = root
-    println(url)
-
     # download the HTML, parse the table    
-    req = HTTP.get(url)
+    req = HTTP.get(root)
     html = parsehtml(String(req.body))
 
     # get all href elements
@@ -28,7 +25,39 @@ function get_root(root::String)
     # get all href attributes
     hrefs = map(x -> x.attributes["href"], hrefs)
     println(hrefs)
+
+    # for each href call get_directory
+    for href in hrefs
+        try
+            get_directory(root * href)
+        catch e
+            println(e)
+        end
+    end
 end
 
-get_table(pub)
+function get_directory(dir)
+    println(dir)
+
+    req = HTTP.get(dir)
+    html = parsehtml(String(req.body))
+
+    # get all href elements
+    hrefs = eachmatch(sel"a", html.root)
+
+    # get all href attributes
+    hrefs = map(x -> x.attributes["href"], hrefs)
+    println(hrefs)
+    return
+
+    # for each href try to download a clean event file
+    for href in hrefs
+        try
+            get_file(dir, href)
+        catch _
+        end
+    end
+end
+
+#get_table(pub)
 get_root(root)
