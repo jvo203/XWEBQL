@@ -48,15 +48,51 @@ function get_directory(dir)
     # get all href attributes
     hrefs = map(x -> x.attributes["href"], hrefs)
     println(hrefs)
-    return
 
     # iterate through sub-directories
     for href in hrefs
         try
-            get_file(dir, href)
+            # Xtend
+            list_directory(dir * href, "xtend")
+        catch _
+        end
+
+        try
+            # Resolve
+            list_directory(dir * href, "resolve")
         catch _
         end
     end
+end
+
+function list_directory(dir, instrument)
+    url = dir * instrument * "/event_cl/"
+    println(url)
+
+    req = HTTP.get(url)
+    html = parsehtml(String(req.body))
+
+    # get all href elements
+    hrefs = eachmatch(sel"a", html.root)
+
+    # get all href attributes
+    hrefs = map(x -> x.attributes["href"], hrefs)
+    println(hrefs)
+end
+
+
+function get_file(dir, file)
+    # check if the file ends with "_cl.evt.gz"
+    if !endswith(file, "_cl.evt.gz")
+        return
+    end
+
+    println("downloading $file...")
+
+    # download the file
+    #_url = dir * "/" * file
+    #_target = homedir() * "/NAO/JAXA/HITOMI/" * file
+    #Downloads.download(_url, _target)
 end
 
 #get_table(pub)
