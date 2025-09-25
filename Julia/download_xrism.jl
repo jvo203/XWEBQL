@@ -104,6 +104,9 @@ function get_file(url, instrument, file)
     _url = url * file
     _target = homedir() * "/NAO/JAXA/XRISM/" * uppercase(instrument) * "/" * file
     Downloads.download(_url, _target)
+
+    # gunzip the _target file
+    run(`gunzip $_target`)
 end
 
 #get_table(pub)
