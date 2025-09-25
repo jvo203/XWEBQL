@@ -77,11 +77,22 @@ function list_directory(dir, instrument)
 
     # get all href attributes
     hrefs = map(x -> x.attributes["href"], hrefs)
-    println(hrefs)
+    #println(hrefs)
+
+    # for each href try to download a clean event file
+    for href in hrefs
+        try
+            get_file(url, instrument, href)
+        catch e
+            println(e)
+        end
+    end
 end
 
-
-function get_file(dir, file)
+# this function assumes that the user has created the directory structure as per below:
+# ~/NAO/JAXA/XRISM/XTEND
+# ~/NAO/JAXA/XRISM/RESOLVE
+function get_file(url, instrument, file)
     # check if the file ends with "_cl.evt.gz"
     if !endswith(file, "_cl.evt.gz")
         return
@@ -90,9 +101,9 @@ function get_file(dir, file)
     println("downloading $file...")
 
     # download the file
-    #_url = dir * "/" * file
-    #_target = homedir() * "/NAO/JAXA/HITOMI/" * file
-    #Downloads.download(_url, _target)
+    _url = url * file
+    _target = homedir() * "/NAO/JAXA/XRISM/" * uppercase(instrument) * "/" * file
+    Downloads.download(_url, _target)
 end
 
 #get_table(pub)
