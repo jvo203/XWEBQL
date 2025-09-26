@@ -98,11 +98,14 @@ function get_file(url, instrument, file)
         return
     end
 
-    println("downloading $file...")
+    #_home = homedir() * "/NAO/JAXA/XRISM/" # a local filesystem
+    _home = "/Volumes/OWC/JAXA/XRISM/" # an SSD RAID Volume on zodiac
+
+    println("downloading $file to $_home...")
 
     # download the file
     _url = url * file
-    _target = homedir() * "/NAO/JAXA/XRISM/" * uppercase(instrument) * "/" * file
+    _target = _home * uppercase(instrument) * "/" * file
     Downloads.download(_url, _target)
 
     # gunzip the _target file
