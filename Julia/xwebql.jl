@@ -115,7 +115,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "25.09.22.0"
-const VERSION_STRING = "J/SV2025-09-22.0-BETA"
+const VERSION_STRING = "J/SV2025-09-26.0-BETA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -527,7 +527,7 @@ function streamProgress(http::HTTP.Streams.Stream)
 end
 
 function streamXEvents(http::HTTP.Streams.Stream)
-    global LOCAL_VERSION, XOBJECTS, XLOCK, XHOME
+    global XOBJECTS, XLOCK
 
     request::HTTP.Request = http.message
 

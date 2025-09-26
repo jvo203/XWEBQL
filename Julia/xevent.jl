@@ -6,7 +6,9 @@ using FHist
 using ImageTransformations, Interpolations
 using JSON
 using Printf
+using Serialization
 using ThreadsX
+using UUIDs
 
 # using a local custom (faster) version of BayesHistogram.jl
 #include("BayesHistogram.jl")
@@ -78,6 +80,23 @@ const XRISM_XTEND_PI2eV = 6.0f0
 @enum Beam CIRCLE SQUARE # "square" is a reserved Julia function
 
 finale(x) = @async begin
+    global XCACHE
+
+    if (has_events(x) && !has_error(x))
+        # turn x.uri into a uuid string
+        uuid = UUIDs.UUID(x.uri)
+        filename = XCACHE * "/" * string(uuid) * ".jls"
+
+        try
+            serialize(filename, x)
+            println("Serialized $(x.id) :: $(x.uri) to $filename")
+        catch e
+            println("Failed to serialize a dataset: $e")
+            # remove the file if it exists
+            rm(filename, force = true)
+        end
+    end
+
     println("Finalized $(x.id) :: $(x.uri)")
 end
 
