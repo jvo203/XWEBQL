@@ -81,13 +81,19 @@ const XRISM_XTEND_PI2eV = 6.0f0
 
 function serialize_dataset(x)
     global XCACHE
+    local filename
 
     println("Finalizing $(x.id) :: $(x.uri)...")
 
     if (has_events(x) && !has_error(x))
         # turn x.uri into a uuid string
-        uuid = UUIDs.UUID(x.uri)
-        filename = XCACHE * "/" * string(uuid) * ".jls"
+        try
+            uuid = UUIDs.UUID(x.uri)
+            filename = XCACHE * "/" * string(uuid) * ".jls"
+        catch e
+            println("Failed to create a UUID from $(x.uri): $e")
+            return
+        end
 
         try
             serialize(filename, x)
