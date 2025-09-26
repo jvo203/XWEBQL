@@ -79,8 +79,10 @@ const XRISM_XTEND_PI2eV = 6.0f0
 @enum Quality low medium high
 @enum Beam CIRCLE SQUARE # "square" is a reserved Julia function
 
-finale(x) = @async begin
+function serialize_dataset(x)
     global XCACHE
+
+    println("Finalizing $(x.id) :: $(x.uri)...")
 
     if (has_events(x) && !has_error(x))
         # turn x.uri into a uuid string
@@ -97,8 +99,10 @@ finale(x) = @async begin
         end
     end
 
-    println("Finalized $(x.id) :: $(x.uri)")
+    println("Finalized $(x.id) :: $(x.uri).")
 end
+
+finale(x) = @async serialize_dataset(x)
 
 # energy cap
 #const MAXIMUM_ENERGY = Float32(30000.0) # eV
