@@ -98,8 +98,11 @@ function serialize_dataset(x)
         end
 
         try
-            serialize(filename, x)
-            println("Serialized $(x.id) :: $(x.uri) to $filename")
+            # only serialise if the cache file does not exist
+            if !isfile(filename)
+                serialize(filename, x)
+                println("Serialized $(x.id) :: $(x.uri) to $filename")
+            end
         catch e
             println("Failed to serialize a dataset: $e")
             # remove the file if it exists
