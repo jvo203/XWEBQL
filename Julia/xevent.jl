@@ -86,6 +86,8 @@ function serialize_dataset(x)
     println("Finalizing $(x.id) :: $(x.uri)...")
 
     if (has_events(x) && !has_error(x))
+        println("Serializing $(x.id) :: $(x.uri)...")
+
         # turn x.uri into a uuid string
         try
             uuid = UUIDs.UUID(x.uri)
