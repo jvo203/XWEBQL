@@ -115,7 +115,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "25.09.22.0"
-const VERSION_STRING = "J/SV2025-09-26.1-BETA"
+const VERSION_STRING = "J/SV2025-09-29.0-BETA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -624,7 +624,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
         insert_dataset(xdataset, XOBJECTS, XLOCK)
 
         # start a new event processing thread
-        Threads.@spawn load_events(xdataset, uri)
+        Threads.@spawn load_events(xdataset)
     else
         # update_timestamp and data_has_events
         xdataset = get_dataset(dataset, XOBJECTS, XLOCK)
