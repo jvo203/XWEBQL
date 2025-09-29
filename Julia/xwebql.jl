@@ -528,6 +528,7 @@ end
 
 function streamXEvents(http::HTTP.Streams.Stream)
     global XOBJECTS, XLOCK
+    local xdataset
 
     request::HTTP.Request = http.message
 
@@ -616,15 +617,31 @@ function streamXEvents(http::HTTP.Streams.Stream)
             data_has_events = false
         end
 
-        # create a new dataset
-        xdataset = XDataSet(dataset, uri)
-        finalizer(finale, xdataset)
+        # try to restore a dataset from the cache, create a new dataset upon any failure
+        try
+            # create a v5 UUID from the uri
+            uuid = uuid5(UUIDs.namespace_url, uri)
+            filename = XCACHE * "/" * string(uuid) * ".jls"
+            xdataset = deserialize(filename)
+            update_timestamp(xdataset)
+            data_has_events = has_events(xdataset)
+            println("Restored $dataset from cache.")
+        catch e
+            println("Failed to deserialize $dataset: $e")
+            # create a new dataset from scratch
+            xdataset = XDataSet(dataset, uri)
+        finally
+            # attach a finalizer to clean up resources / serialize when the object is removed from XOBJECTS
+            finalizer(finale, xdataset)
+        end
 
         # insert the dataset into the global list
         insert_dataset(xdataset, XOBJECTS, XLOCK)
 
         # start a new event processing thread
-        Threads.@spawn load_events(xdataset)
+        if (!has_events(xdataset))
+            Threads.@spawn load_events(xdataset)
+        end
     else
         # update_timestamp and data_has_events
         xdataset = get_dataset(dataset, XOBJECTS, XLOCK)
