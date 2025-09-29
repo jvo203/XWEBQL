@@ -622,6 +622,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
             # create a v5 UUID from the uri
             uuid = uuid5(UUIDs.namespace_url, uri)
             filename = XCACHE * "/" * string(uuid) * ".jls"
+            # deserialize the dataset
             xdataset = deserialize(filename)
             update_timestamp(xdataset)
             data_has_events = has_events(xdataset)
