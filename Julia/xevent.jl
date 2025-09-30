@@ -1178,6 +1178,7 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
     local view_resp, spec_resp
     local image_width, image_height
     local dimx, dimy
+    local image_task
 
     bDownsize = false
 
@@ -1237,51 +1238,53 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
 
     # get the image
     if image
-        pixels, mask, min_count, max_count =
-            getViewport(x, y, energy, x1, x2, y1, y2, energy_start, energy_end)
-        println(
-            "pixels: ",
-            size(pixels),
-            " mask: ",
-            size(mask),
-            " min_count: ",
-            min_count,
-            " max_count: ",
-            max_count,
-        )
+        image_task = Threads.@spawn begin
+            pixels, mask, min_count, max_count =
+                getViewport(x, y, energy, x1, x2, y1, y2, energy_start, energy_end)
+            println(
+                "pixels: ",
+                size(pixels),
+                " mask: ",
+                size(mask),
+                " min_count: ",
+                min_count,
+                " max_count: ",
+                max_count,
+            )
 
-        # finally downsize the image (optional)
-        if width > 0 && height > 0
-            scale = get_image_scale(width, height, dimx, dimy)
-            println("scale: ", scale)
+            # finally downsize the image (optional)
+            if width > 0 && height > 0
+                scale = get_image_scale(width, height, dimx, dimy)
+                println("scale: ", scale)
 
-            if scale < 1.0
-                image_width = floor(Integer, scale * dimx)
-                image_height = floor(Integer, scale * dimy)
-                bDownsize = true
-            else
-                image_width = dimx
-                image_height = dimy
-            end
-
-            println("image: $image_width x $image_height, bDownsize: $bDownsize")
-
-            # downsize the pixels & mask    
-            if bDownsize
-                try
-                    task = Threads.@spawn pixels =
-                        imresize(pixels, (image_width, image_height))
-                    mask = Bool.(
-                        imresize(mask, (image_width, image_height), method=Constant()),
-                    ) # use Nearest-Neighbours for the mask
-                    wait(task)
-                catch e
-                    println(e)
+                if scale < 1.0
+                    image_width = floor(Integer, scale * dimx)
+                    image_height = floor(Integer, scale * dimy)
+                    bDownsize = true
+                else
+                    image_width = dimx
+                    image_height = dimy
                 end
-            end
 
-            dimx = size(pixels, 1)
-            dimy = size(pixels, 2)
+                println("image: $image_width x $image_height, bDownsize: $bDownsize")
+
+                # downsize the pixels & mask    
+                if bDownsize
+                    try
+                        task = Threads.@spawn pixels =
+                            imresize(pixels, (image_width, image_height))
+                        mask = Bool.(
+                            imresize(mask, (image_width, image_height), method=Constant()),
+                        ) # use Nearest-Neighbours for the mask
+                        wait(task)
+                    catch e
+                        println(e)
+                    end
+                end
+
+                dimx = size(pixels, 1)
+                dimy = size(pixels, 2)
+            end
         end
     end
 
@@ -1314,32 +1317,37 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
     end
 
     if image
-        view_resp = IOBuffer()
+        # wait for the previous image task to finish
+        wait(image_task)
 
-        write(view_resp, Int32(dimx))
-        write(view_resp, Int32(dimy))
+        image_task = Threads.@spawn begin
+            view_resp = IOBuffer()
 
-        # compress pixels with ZFP
-        prec = ZFP_MEDIUM_PRECISION
+            write(view_resp, Int32(dimx))
+            write(view_resp, Int32(dimy))
 
-        if quality == high
-            prec = ZFP_HIGH_PRECISION
-        elseif quality == medium
+            # compress pixels with ZFP
             prec = ZFP_MEDIUM_PRECISION
-        elseif quality == low
-            prec = ZFP_LOW_PRECISION
+
+            if quality == high
+                prec = ZFP_HIGH_PRECISION
+            elseif quality == medium
+                prec = ZFP_MEDIUM_PRECISION
+            elseif quality == low
+                prec = ZFP_LOW_PRECISION
+            end
+
+            compressed_pixels = zfp_compress(pixels, precision=prec)
+            write(view_resp, Int32(length(compressed_pixels)))
+            write(view_resp, compressed_pixels)
+
+            compressed_mask = transcode(Bzip2Compressor, collect(flatten(UInt8.(mask))))
+            write(view_resp, Int32(length(compressed_mask)))
+            write(view_resp, compressed_mask)
+
+            write(view_resp, UInt64(min_count))
+            write(view_resp, UInt64(max_count))
         end
-
-        compressed_pixels = zfp_compress(pixels, precision=prec)
-        write(view_resp, Int32(length(compressed_pixels)))
-        write(view_resp, compressed_pixels)
-
-        compressed_mask = transcode(Bzip2Compressor, collect(flatten(UInt8.(mask))))
-        write(view_resp, Int32(length(compressed_mask)))
-        write(view_resp, compressed_mask)
-
-        write(view_resp, UInt64(min_count))
-        write(view_resp, UInt64(max_count))
     end
 
     spec_resp = IOBuffer()
@@ -1351,8 +1359,12 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
         level = 9
     end
 
-    @time compressed_spectrum = transcode(Bzip2Compressor(blocksize100k=level), spectrum) # do it fast (in real-time)
+    @time compressed_spectrum = transcode(Bzip2Compressor(blocksize100k=level), spectrum) # do it fast (in real-time)    
     write(spec_resp, compressed_spectrum)
+
+    if image
+        wait(image_task)
+    end
 
     return (view_resp, spec_resp)
 end
