@@ -589,7 +589,6 @@ function getSquareSpectrum(
 
     # find points within a square    
     mask = [(x1 <= x <= x2 && y1 <= y <= y2) for (x, y) in zip(x, y)]
-
     packed = energy[mask]
     @time blocks =
         FastBayesianBinningEnergyRange(packed, length(packed), E_min, E_max, 5 * dx)
@@ -635,12 +634,12 @@ function getCircleSpectrum(
     println("E_min = ", E_min)
     println("E_max = ", E_max)
     println("ΔE = ", ΔE)
-    println(typeof(x), " ", typeof(y), " ", typeof(energy))
 
     # find points within a circle    
-    mask = [(x - cx)^2 + (y - cy)^2 <= r2 for (x, y) in zip(x, y)]
-
-    packed = energy[mask]
+    @time mask = [(x - cx)^2 + (y - cy)^2 <= r2 for (x, y) in zip(x, y)]
+    #@time mask2 = ThreadsX.map((xi, yi) -> (xi - cx)^2 + (yi - cy)^2 <= r2, x, y)
+    #println("mask == mask2: ", all(mask .== mask2))
+    @time packed = energy[mask]
     @time blocks =
         FastBayesianBinningEnergyRange(packed, length(packed), E_min, E_max, 5 * dx)
 
@@ -658,7 +657,7 @@ function getCircleSpectrum(
     heights = unsafe_wrap(Array, hist.heights, len)
 
     # spectrum = JSON object, zip through centers, heights and widths
-    spectrum = JSON.json([
+    @time spectrum = JSON.json([
         Dict("center" => c, "height" => h, "width" => w) for
         (c, h, w) in zip(centers, heights, widths)
     ])
@@ -1288,7 +1287,7 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
 
     # get the spectrum
     if beam == CIRCLE
-        spectrum = getCircleSpectrum(
+        @time spectrum = getCircleSpectrum(
             x,
             y,
             energy,
@@ -1300,7 +1299,7 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
             num_channels,
         )
     elseif beam == SQUARE
-        spectrum = getSquareSpectrum(
+        @time spectrum = getSquareSpectrum(
             x,
             y,
             energy,
@@ -1352,7 +1351,7 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
         level = 9
     end
 
-    compressed_spectrum = transcode(Bzip2Compressor(blocksize100k=level), spectrum) # do it fast (in real-time)
+    @time compressed_spectrum = transcode(Bzip2Compressor(blocksize100k=level), spectrum) # do it fast (in real-time)
     write(spec_resp, compressed_spectrum)
 
     return (view_resp, spec_resp)
