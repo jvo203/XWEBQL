@@ -165,6 +165,9 @@ contains
 
       type(BayesHistogram), pointer :: blocks
 
+      ! timing
+      real(kind=8) :: t1, t2
+
       if(n .eq. 0) then
          allocate(blocks)
          blocks = BayesHistogram(c_null_ptr, c_null_ptr, c_null_ptr, c_null_ptr, 0)
@@ -172,8 +175,19 @@ contains
          return
       end if
 
+      ! start the timer
+      t1 = omp_get_wtime()
+
       ! sort the data
       call quicksort(x, 1, size(x))
+
+      ! end the timer
+      t2 = omp_get_wtime()
+
+      print *, '[FORTRAN] sorting time (s):', t2 - t1
+
+      ! start the timer
+      t1 = omp_get_wtime()
 
       allocate(unique(size(x)))
       allocate(weights(size(x)))
@@ -226,6 +240,11 @@ contains
       allocate(blocks)
       blocks => build_blocks(unique, change_points, weights)
       parallel_bayesian_binning = c_loc(blocks)
+
+      ! end the timer
+      t2 = omp_get_wtime()
+
+      print *, '[FORTRAN] binning time (s):', t2 - t1
    end function parallel_bayesian_binning
 
    function build_blocks(x, change_points, weights) result(blocks)
