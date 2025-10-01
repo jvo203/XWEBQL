@@ -135,6 +135,7 @@ contains
       integer(kind=c_int), intent(in), optional :: resolution
 
       real(kind=c_float), dimension(:), allocatable :: unique, weights, change_points
+      integer, dimension(:), allocatable :: order
       real(kind=c_float) :: extent, dt
       integer :: i, L
 
@@ -153,8 +154,13 @@ contains
       ! start the timer
       t1 = omp_get_wtime()
 
+      allocate(order(size(x)))
+      call parallel_sort(x, order)
+      print *, '[FORTRAN] parallel sort done', x(order(1)), x(order(size(x)))
+
       ! sort the data
       call quicksort(x, 1, size(x))
+      print *, '[FORTRAN] serial sort done', x(1), x(size(x))
 
       ! end the timer
       t2 = omp_get_wtime()
