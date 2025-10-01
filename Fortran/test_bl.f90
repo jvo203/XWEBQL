@@ -154,9 +154,9 @@ contains
       ! start the timer
       t1 = omp_get_wtime()
 
-      allocate(order(size(x)))
-      call parallel_sort(x, order)
-      print *, '[FORTRAN] parallel sort done', x(order(1)), x(order(size(x)))
+      !allocate(order(size(x)))
+      !call parallel_sort(x, order)
+      !print *, '[FORTRAN] parallel sort done', x(order(1)), x(order(size(x)))
 
       ! sort the data
       call quicksort(x, 1, size(x))
