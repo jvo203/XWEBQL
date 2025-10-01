@@ -15,7 +15,7 @@ program test
    integer(kind=c_int64_t), parameter :: NOSAMPLES = 100 !200000
    integer, parameter :: WORKSIZE = 1024 ! up to 1K per thread
    real(kind=c_float), dimension(NOSAMPLES) :: data
-   integer(kind=c_int64_t) :: ios, M
+   integer(kind=c_int64_t) :: ios, M, i
 
    ! initialize x with random data
    !call random_number(data)
@@ -33,7 +33,11 @@ program test
       if (M >= NOSAMPLES) exit
    end do
 
+   close(10) ! close the file
    print *, 'M:', M
+
+   ! set the data to 1 .. M
+   !data = [(real(i, kind=c_float), i=1,M)]
 
    !histogram = fast_bayesian_binning(data, NOSAMPLES)
    histogram = parallel_bayesian_binning(data, M, 512)
@@ -131,7 +135,7 @@ contains
       implicit none
 
       integer(kind=c_int64_t), intent(in) :: n
-      real(kind=c_float), intent(in) :: x(n)
+      real(kind=c_float), intent(inout) :: x(n)
       integer(kind=c_int), intent(in), optional :: resolution
 
       real(kind=c_float), dimension(:), allocatable :: unique, weights, change_points
@@ -155,12 +159,14 @@ contains
       t1 = omp_get_wtime()
 
       allocate(order(size(x)))
-      call parallel_sort(x, order)
+      !call parallel_sort(x, order)
       !print *, '[FORTRAN] parallel sort done', x(order(1)), x(order(size(x)))
 
       ! sort the data
-      !call quicksort(x, 1, size(x))
-      !print *, '[FORTRAN] serial sort done', x(1), x(size(x))
+      call quicksort(x, 1, size(x))
+      ! set the order array to 1, 2, ..., size(x)
+      order = [(i, i=1,size(x))]
+      print *, '[FORTRAN] serial sort done', x(1), x(size(x))
 
       ! end the timer
       t2 = omp_get_wtime()
