@@ -215,8 +215,16 @@ contains
       !print *, '[FORTRAN] change_points:', change_points, 'length:', size(change_points)
 
       ! a placeholder for the time being
+      !allocate(blocks)
+      !blocks => build_blocks(unique, change_points, weights)
+      !parallel_bayesian_binning = c_loc(blocks)
+
+      deallocate(unique)
+      deallocate(weights)
+      deallocate(change_points)
+
       allocate(blocks)
-      blocks => build_blocks(unique, change_points, weights)
+      blocks = BayesHistogram(c_null_ptr, c_null_ptr, c_null_ptr, c_null_ptr, 0)
       parallel_bayesian_binning = c_loc(blocks)
    end function parallel_bayesian_binning
 
@@ -252,9 +260,13 @@ contains
 
       real(kind=c_float), dimension(:), pointer :: edges, centers, heights, widths
 
+      print *, '[FORTRAN] deleting blocks ...'
+
 ! convert a C pointer to a Fortran pointer
       if (.not. c_associated(ptr)) return
       call c_f_pointer(ptr, blocks)
+
+      print *, '[FORTRAN] number of blocks:', blocks%n
 
       if (blocks%n .le. 0) then
          deallocate(blocks)
