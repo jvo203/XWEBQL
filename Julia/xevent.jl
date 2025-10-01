@@ -1177,8 +1177,7 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
     local min_count, max_count
     local view_resp, spec_resp
     local image_width, image_height
-    local dimx, dimy
-    local image_task
+    local dimx, dimy, level, image_task
 
     bDownsize = false
 
@@ -1285,6 +1284,33 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
                 dimx = size(pixels, 1)
                 dimy = size(pixels, 2)
             end
+
+            view_resp = IOBuffer()
+
+            write(view_resp, Int32(dimx))
+            write(view_resp, Int32(dimy))
+
+            # compress pixels with ZFP
+            prec = ZFP_MEDIUM_PRECISION
+
+            if quality == high
+                prec = ZFP_HIGH_PRECISION
+            elseif quality == medium
+                prec = ZFP_MEDIUM_PRECISION
+            elseif quality == low
+                prec = ZFP_LOW_PRECISION
+            end
+
+            compressed_pixels = zfp_compress(pixels, precision=prec)
+            write(view_resp, Int32(length(compressed_pixels)))
+            write(view_resp, compressed_pixels)
+
+            compressed_mask = transcode(Bzip2Compressor, collect(flatten(UInt8.(mask))))
+            write(view_resp, Int32(length(compressed_mask)))
+            write(view_resp, compressed_mask)
+
+            write(view_resp, UInt64(min_count))
+            write(view_resp, UInt64(max_count))
         end
     end
 
@@ -1314,40 +1340,6 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
             y2,
             num_channels,
         )
-    end
-
-    if image
-        # wait for the previous image task to finish
-        wait(image_task)
-
-        image_task = Threads.@spawn begin
-            view_resp = IOBuffer()
-
-            write(view_resp, Int32(dimx))
-            write(view_resp, Int32(dimy))
-
-            # compress pixels with ZFP
-            prec = ZFP_MEDIUM_PRECISION
-
-            if quality == high
-                prec = ZFP_HIGH_PRECISION
-            elseif quality == medium
-                prec = ZFP_MEDIUM_PRECISION
-            elseif quality == low
-                prec = ZFP_LOW_PRECISION
-            end
-
-            compressed_pixels = zfp_compress(pixels, precision=prec)
-            write(view_resp, Int32(length(compressed_pixels)))
-            write(view_resp, compressed_pixels)
-
-            compressed_mask = transcode(Bzip2Compressor, collect(flatten(UInt8.(mask))))
-            write(view_resp, Int32(length(compressed_mask)))
-            write(view_resp, compressed_mask)
-
-            write(view_resp, UInt64(min_count))
-            write(view_resp, UInt64(max_count))
-        end
     end
 
     spec_resp = IOBuffer()
