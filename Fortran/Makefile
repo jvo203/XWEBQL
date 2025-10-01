@@ -37,7 +37,7 @@ for:
 	gfortran -march=native $(SHARED) -fPIC -mcmodel=small -Ofast -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=1 -funroll-loops -fmax-stack-var-size=32768 $(INC) -o $(DYNLIB) $(SRC).f90 $(LIBS)
 
 test:
-	gfortran -march=native -g -Ofast -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=1 -funroll-loops -fmax-stack-var-size=32768 $(INC) -o test_bl test_bl.f90 $(LIBS)
+	gfortran -march=native -g -Ofast -fopenmp -ftree-vectorize -ftree-vectorizer-verbose=1 -funroll-loops -fmax-stack-var-size=32768 $(INC) -o test_bl m_mrgrnk.f90 mod_sort.f90 test_bl.f90 $(LIBS)
 
 clean:
 	rm -rf *.o *.mod *.a *.so test_bl *.dylib *.dSYM

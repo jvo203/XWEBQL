@@ -1,6 +1,8 @@
 program test
    use iso_c_binding
    use omp_lib
+   use mod_sort
+   use m_mrgrnk
    implicit none
 
    type, bind(c) :: BayesHistogram
