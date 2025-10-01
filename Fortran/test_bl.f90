@@ -35,7 +35,7 @@ program test
 
    print *, 'M:', M
 
-   !call fast_bayesian_binning(data, NOSAMPLES)
+   ! call fast_bayesian_binning(data, NOSAMPLES)
    histogram = parallel_bayesian_binning(data, M, 512)
 
    ! release the memory
