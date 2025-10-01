@@ -12,7 +12,7 @@ program test
 
    type(c_ptr) :: histogram
 
-   integer(kind=c_int64_t), parameter :: NOSAMPLES = 100 !200000
+   integer(kind=c_int64_t), parameter :: NOSAMPLES = 200000
    integer, parameter :: WORKSIZE = 1024 ! up to 1K per thread
    real(kind=c_float), dimension(NOSAMPLES) :: data
    integer(kind=c_int64_t) :: ios, M, i
@@ -159,8 +159,8 @@ contains
       t1 = omp_get_wtime()
 
       allocate(order(size(x)))
-      !call parallel_sort(x, order)
-      !print *, '[FORTRAN] parallel sort done', x(order(1)), x(order(size(x)))
+      call parallel_sort(x, order)
+      print *, '[FORTRAN] parallel sort done', x(order(1)), x(order(size(x)))
 
       ! sort the data
       call quicksort(x, 1, size(x))
@@ -223,17 +223,17 @@ contains
       !print *, '[FORTRAN] change_points:', change_points, 'length:', size(change_points)
 
       ! a placeholder for the time being
-      !allocate(blocks)
-      !blocks => build_blocks(unique, change_points, weights)
-      !parallel_bayesian_binning = c_loc(blocks)
-
-      deallocate(unique)
-      deallocate(weights)
-      deallocate(change_points)
-
       allocate(blocks)
-      blocks = BayesHistogram(c_null_ptr, c_null_ptr, c_null_ptr, c_null_ptr, 0)
+      blocks => build_blocks(unique, change_points, weights)
       parallel_bayesian_binning = c_loc(blocks)
+
+      !deallocate(unique)
+      !deallocate(weights)
+      !deallocate(change_points)
+
+      !allocate(blocks)
+      !blocks = BayesHistogram(c_null_ptr, c_null_ptr, c_null_ptr, c_null_ptr, 0)
+      !parallel_bayesian_binning = c_loc(blocks)
    end function parallel_bayesian_binning
 
    function build_blocks(x, change_points, weights) result(blocks)
