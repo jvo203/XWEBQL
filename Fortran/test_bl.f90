@@ -238,6 +238,7 @@ contains
       counts => count_between_edges(x, change_points, weights, 0)
       total = sum(counts)
       heights = counts / (total * widths)
+      deallocate(counts)
 
       allocate(blocks)
       blocks = BayesHistogram(c_loc(edges), c_loc(centers), c_loc(widths), c_loc(heights), len-1)
