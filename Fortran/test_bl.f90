@@ -12,7 +12,7 @@ program test
 
    type(c_ptr) :: histogram
 
-   integer(kind=c_int64_t), parameter :: NOSAMPLES = 200000
+   integer(kind=c_int64_t), parameter :: NOSAMPLES = 100 !200000
    integer, parameter :: WORKSIZE = 1024 ! up to 1K per thread
    real(kind=c_float), dimension(NOSAMPLES) :: data
    integer(kind=c_int64_t) :: ios, M
@@ -35,7 +35,7 @@ program test
 
    print *, 'M:', M
 
-   ! call fast_bayesian_binning(data, NOSAMPLES)
+   !histogram = fast_bayesian_binning(data, NOSAMPLES)
    histogram = parallel_bayesian_binning(data, M, 512)
 
    ! release the memory
@@ -131,7 +131,7 @@ contains
       implicit none
 
       integer(kind=c_int64_t), intent(in) :: n
-      real(kind=c_float), intent(inout) :: x(n)
+      real(kind=c_float), intent(in) :: x(n)
       integer(kind=c_int), intent(in), optional :: resolution
 
       real(kind=c_float), dimension(:), allocatable :: unique, weights, change_points
@@ -154,13 +154,13 @@ contains
       ! start the timer
       t1 = omp_get_wtime()
 
-      !allocate(order(size(x)))
-      !call parallel_sort(x, order)
+      allocate(order(size(x)))
+      call parallel_sort(x, order)
       !print *, '[FORTRAN] parallel sort done', x(order(1)), x(order(size(x)))
 
       ! sort the data
-      call quicksort(x, 1, size(x))
-      print *, '[FORTRAN] serial sort done', x(1), x(size(x))
+      !call quicksort(x, 1, size(x))
+      !print *, '[FORTRAN] serial sort done', x(1), x(size(x))
 
       ! end the timer
       t2 = omp_get_wtime()
@@ -171,18 +171,20 @@ contains
       allocate(weights(size(x)))
 
       L = 1
-      unique(1) = x(1)
+      unique(1) = x(order(1))
       weights(1) = 1
 
       do i = 2, size(x)
-         if(x(i) .eq. x(i-1)) then
+         if(x(order(i)) .eq. x(order(i-1))) then
             weights(L) = weights(L) + 1
          else
             L = L + 1
-            unique(L) = x(i)
+            unique(L) = x(order(i))
             weights(L) = 1
          end if
       end do
+
+      deallocate(order)
 
       ! truncate the outputs
       unique = unique(1:L)
