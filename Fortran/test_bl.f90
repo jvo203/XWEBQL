@@ -138,6 +138,9 @@ contains
 
       type(BayesHistogram), pointer :: blocks
 
+      ! timing
+      real(kind=8) :: t1, t2
+
       if(n .eq. 0) then
          allocate(blocks)
          blocks = BayesHistogram(c_null_ptr, c_null_ptr, c_null_ptr, c_null_ptr, 0)
@@ -145,8 +148,16 @@ contains
          return
       end if
 
+      ! start the timer
+      t1 = omp_get_wtime()
+
       ! sort the data
       call quicksort(x, 1, size(x))
+
+      ! end the timer
+      t2 = omp_get_wtime()
+
+      print *, '[FORTRAN] sorting time (s):', t2 - t1
 
       allocate(unique(size(x)))
       allocate(weights(size(x)))
