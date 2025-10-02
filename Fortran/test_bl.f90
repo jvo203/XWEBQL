@@ -557,6 +557,12 @@ contains
       real(kind=c_float) :: x, t
       integer:: i, j
 
+      ! switch to a sequential sort for small arrays
+      if (last - first + 1 .le. WORKSIZE) then
+         call quicksort(a, first, last)
+         return
+      end if
+
       x = a( (first+last) / 2 )
       i = first
       j = last
