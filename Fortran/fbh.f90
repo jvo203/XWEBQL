@@ -1464,7 +1464,7 @@ contains
       implicit none
 
       integer(kind=c_int64_t), intent(in) :: n
-      real(kind=c_float), intent(in) :: x(n)
+      real(kind=c_float), intent(inout) :: x(n)
       integer(kind=c_int), intent(in), optional :: resolution
 
       real(kind=c_float), dimension(:), allocatable :: unique, weights, change_points
@@ -1489,10 +1489,20 @@ contains
 
       ! sort the data in parallel
       allocate(order(size(x)))
-      call parallel_sort(x, order)
+      !call parallel_sort(x, order)
 
       ! sort the data
       ! call quicksort(x, 1, size(x))
+
+      !$OMP PARALLEL
+      !$OMP SINGLE
+      !call quicksort_parallel(x, 1, size(x))
+      call quicksort_omp(x, 1, size(x))
+      !$OMP END SINGLE
+      !$OMP END PARALLEL
+
+      ! set the order array to 1, 2, ..., size(x)
+      order = [(i, i=1,size(x))]
 
       ! end the timer
       t2 = omp_get_wtime()
@@ -1866,4 +1876,47 @@ contains
       if (first < i-1) call quicksort(a, first, i-1)
       if (j+1 < last)  call quicksort(a, j+1, last)
    end subroutine quicksort
+
+   recursive subroutine quicksort_omp(a, first, last)
+      implicit none
+      real(kind=c_float), intent(inout) :: a(*)
+      integer, intent(in) :: first, last
+
+      real(kind=c_float) :: x, t
+      integer:: i, j
+
+      ! switch to a sequential sort for small arrays
+      if (last - first + 1 .le. WORKSIZE) then
+         call quicksort(a, first, last)
+         return
+      end if
+
+      ! print *, '[FORTRAN] quicksort_omp:', first, last, 'size:', last - first + 1
+
+      x = a( (first+last) / 2 )
+      i = first
+      j = last
+      do
+         do while (a(i) < x)
+            i=i+1
+         end do
+         do while (x < a(j))
+            j=j-1
+         end do
+         if (i >= j) exit
+         t = a(i);  a(i) = a(j);  a(j) = t
+         i=i+1
+         j=j-1
+      end do
+
+      !$OMP TASK SHARED(a, first, last, i, j)
+      if (first < i-1) call quicksort_omp(a, first, i-1)
+      !$OMP END TASK
+
+      !$OMP TASK SHARED(a, first, last, i, j)
+      if (j+1 < last)  call quicksort_omp(a, j+1, last)
+      !$OMP END TASK
+
+      !$OMP TASKWAIT ! Wait for the two sub-tasks to complete
+   end subroutine quicksort_omp
 end module fbh
