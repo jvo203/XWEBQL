@@ -530,6 +530,8 @@ contains
       real(kind=c_float) :: x, t
       integer:: i, j
 
+      ! print *, '[FORTRAN] quicksort:', first, last, 'size:', last - first + 1
+
       x = a( (first+last) / 2 )
       i = first
       j = last
@@ -563,6 +565,8 @@ contains
          return
       end if
 
+      ! print *, '[FORTRAN] quicksort_omp:', first, last, 'size:', last - first + 1
+
       x = a( (first+last) / 2 )
       i = first
       j = last
@@ -578,8 +582,16 @@ contains
          i=i+1
          j=j-1
       end do
+
+      !$OMP TASK SHARED(a, first, last, i, j)
       if (first < i-1) call quicksort_omp(a, first, i-1)
+      !$OMP END TASK
+
+      !$OMP TASK SHARED(a, first, last, i, j)
       if (j+1 < last)  call quicksort_omp(a, j+1, last)
+      !$OMP END TASK
+
+      !$OMP TASKWAIT ! Wait for the two sub-tasks to complete
    end subroutine quicksort_omp
 
    RECURSIVE SUBROUTINE quicksort_parallel(arr, low, high)
@@ -598,11 +610,11 @@ contains
             CALL quicksort_partition(arr, low, high, pivot_idx)
             print *, '[FORTRAN] pivot index:', pivot_idx, 'pivot value:', arr(pivot_idx)
 
-            !$OMP TASK SHARED(arr) PRIVATE(low, pivot_idx)
+            !$OMP TASK SHARED(arr, low, pivot_idx)
             CALL quicksort_parallel(arr, low, pivot_idx - 1)
             !$OMP END TASK
 
-            !$OMP TASK SHARED(arr) PRIVATE(high, pivot_idx)
+            !$OMP TASK SHARED(arr, pivot_idx, high)
             CALL quicksort_parallel(arr, pivot_idx + 1, high)
             !$OMP END TASK
 
