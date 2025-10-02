@@ -1468,7 +1468,6 @@ contains
       integer(kind=c_int), intent(in), optional :: resolution
 
       real(kind=c_float), dimension(:), allocatable :: unique, weights, change_points
-      integer, dimension(:), allocatable :: order
       real(kind=c_float) :: extent, dt
       integer :: i, L
 
@@ -1487,22 +1486,16 @@ contains
       ! start the timer
       t1 = omp_get_wtime()
 
-      ! sort the data in parallel
-      allocate(order(size(x)))
-      !call parallel_sort(x, order)
-
       ! sort the data
       ! call quicksort(x, 1, size(x))
 
       !$OMP PARALLEL
       !$OMP SINGLE
       !call quicksort_parallel(x, 1, size(x))
+      ! sort the data in parallel
       call quicksort_omp(x, 1, size(x))
       !$OMP END SINGLE
       !$OMP END PARALLEL
-
-      ! set the order array to 1, 2, ..., size(x)
-      order = [(i, i=1,size(x))]
 
       ! end the timer
       t2 = omp_get_wtime()
@@ -1516,20 +1509,18 @@ contains
       allocate(weights(size(x)))
 
       L = 1
-      unique(1) = x(order(1))
+      unique(1) = x(1)
       weights(1) = 1
 
       do i = 2, size(x)
-         if(x(order(i)) .eq. x(order(i-1))) then
+         if(x(i) .eq. x(i-1)) then
             weights(L) = weights(L) + 1
          else
             L = L + 1
-            unique(L) = x(order(i))
+            unique(L) = x(i)
             weights(L) = 1
          end if
       end do
-
-      deallocate(order)
 
       ! truncate the outputs
       unique = unique(1:L)
@@ -1890,8 +1881,6 @@ contains
          call quicksort(a, first, last)
          return
       end if
-
-      ! print *, '[FORTRAN] quicksort_omp:', first, last, 'size:', last - first + 1
 
       x = a( (first+last) / 2 )
       i = first
