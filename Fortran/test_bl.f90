@@ -540,51 +540,76 @@ contains
       if (j+1 < last)  call quicksort(a, j+1, last)
    end subroutine quicksort
 
-   RECURSIVE SUBROUTINE PARALLEL_QUICKSORT_OMP(ARRAY, LOW, HIGH)
+   RECURSIVE SUBROUTINE quicksort_parallel(arr, low, high)
       IMPLICIT NONE
-      REAL(KIND=C_FLOAT), INTENT(INOUT) :: ARRAY(:)
-      INTEGER, INTENT(IN)    :: LOW, HIGH
-      INTEGER                :: PIVOT_INDEX
+      REAL(KIND=C_FLOAT), INTENT(INOUT) :: arr(:)
+      INTEGER, INTENT(IN)    :: low, high
+      INTEGER                :: pivot_idx
+      INTEGER, PARAMETER     :: CUTOFF_SIZE = 1024 ! Example cutoff
 
-      IF (LOW < HIGH) THEN
-         ! Partition the array and get the pivot index
-         CALL PARTITION_QUICKSORT(ARRAY, LOW, HIGH, PIVOT_INDEX)
+      IF (low < high) THEN
+         IF (high - low + 1 < CUTOFF_SIZE) THEN
+            ! Perform sequential sort for small arrays
+            CALL quicksort_sequential(arr, low, high)
+         ELSE
+            CALL quicksort_partition(arr, low, high, pivot_idx)
 
-         ! Parallelize the recursive calls
-         !$OMP PARALLEL SECTIONS
-         !$OMP SECTION
-         CALL PARALLEL_QUICKSORT_OMP(ARRAY, LOW, PIVOT_INDEX - 1)
-         !$OMP SECTION
-         CALL PARALLEL_QUICKSORT_OMP(ARRAY, PIVOT_INDEX + 1, HIGH)
-         !$OMP END PARALLEL SECTIONS
-      END IF
-   END SUBROUTINE PARALLEL_QUICKSORT_OMP
+            !$OMP TASK SHARED(arr) PRIVATE(low, pivot_idx)
+            CALL quicksort_parallel(arr, low, pivot_idx - 1)
+            !$OMP END TASK
 
-   SUBROUTINE PARTITION_QUICKSORT(ARRAY, LOW, HIGH, PIVOT_INDEX)
-      IMPLICIT NONE
-      REAL(KIND=C_FLOAT), INTENT(INOUT) :: ARRAY(:)
-      INTEGER, INTENT(IN)    :: LOW, HIGH
-      INTEGER, INTENT(OUT)   :: PIVOT_INDEX
-      REAL(KIND=C_FLOAT)     :: PIVOT_VALUE
-      INTEGER                :: I, J
-      REAL(KIND=C_FLOAT)     :: TEMP
+            !$OMP TASK SHARED(arr) PRIVATE(high, pivot_idx)
+            CALL quicksort_parallel(arr, pivot_idx + 1, high)
+            !$OMP END TASK
 
-      PIVOT_VALUE = ARRAY(HIGH)
-      I = LOW - 1
-
-      DO J = LOW, HIGH - 1
-         IF (ARRAY(J) <= PIVOT_VALUE) THEN
-            I = I + 1
-            TEMP = ARRAY(I)
-            ARRAY(I) = ARRAY(J)
-            ARRAY(J) = TEMP
+            !$OMP TASKWAIT ! Wait for the two sub-tasks to complete
          END IF
+      END IF
+   END SUBROUTINE quicksort_parallel
+
+   RECURSIVE SUBROUTINE quicksort_sequential(arr, low, high)
+      IMPLICIT NONE
+      REAL(KIND=C_FLOAT), INTENT(INOUT) :: arr(:)
+      INTEGER, INTENT(IN)    :: low, high
+      INTEGER                :: pivot_idx
+
+      IF (low < high) THEN
+         CALL quicksortpartition(arr, low, high, pivot_idx)
+         CALL quicksort_sequential(arr, low, pivot_idx - 1)
+         CALL quicksort_sequential(arr, pivot_idx + 1, high)
+      END IF
+   END SUBROUTINE quicksort_sequential
+
+   SUBROUTINE quicksort_partition(arr, low, high, pivot_idx)
+      IMPLICIT NONE
+      REAL(KIND=C_FLOAT), INTENT(INOUT) :: arr(:)
+      INTEGER, INTENT(IN)    :: low, high
+      INTEGER, INTENT(OUT)   :: pivot_idx
+      REAL(KIND=C_FLOAT)     :: pivot
+      INTEGER                :: i, j
+      REAL(KIND=C_FLOAT)     :: temp
+
+      pivot = arr((low + high) / 2)
+      i = low
+      j = high
+
+      DO
+         DO WHILE (arr(i) < pivot)
+            i = i + 1
+         END DO
+         DO WHILE (pivot < arr(j))
+            j = j - 1
+         END DO
+         IF (i >= j) EXIT
+         ! Swap arr(i) and arr(j)
+         temp = arr(i)
+         arr(i) = arr(j)
+         arr(j) = temp
+         i = i + 1
+         j = j - 1
       END DO
 
-      TEMP = ARRAY(I + 1)
-      ARRAY(I + 1) = ARRAY(HIGH)
-      ARRAY(HIGH) = TEMP
-      PIVOT_INDEX = I + 1
-   END SUBROUTINE PARTITION_QUICKSORT
+      pivot_idx = j
+   END SUBROUTINE quicksort_partition
 
 end program test
