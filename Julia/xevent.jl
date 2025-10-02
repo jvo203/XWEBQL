@@ -26,7 +26,7 @@ end
 
 FastBayesHistogram(hist::Ptr{FastBayesHistogram}) = unsafe_load(hist)
 
-function FastBayesianBinning(x::Vector{Float32}, n::Integer, resolution::Integer=512)
+function FastBayesianBinning(x::Vector{Float32}, n::Integer, resolution::Integer = 512)
     return ccall(
         fast_bayesian_binning_fptr,
         Ptr{FastBayesHistogram},
@@ -37,7 +37,7 @@ function FastBayesianBinning(x::Vector{Float32}, n::Integer, resolution::Integer
     )
 end
 
-function ParallelBayesianBinning(x::Vector{Float32}, n::Integer, resolution::Integer=512)
+function ParallelBayesianBinning(x::Vector{Float32}, n::Integer, resolution::Integer = 512)
     return ccall(
         parallel_bayesian_binning_fptr,
         Ptr{FastBayesHistogram},
@@ -53,7 +53,7 @@ function FastBayesianBinningEnergyRange(
     n::Integer,
     emin::Float32,
     emax::Float32,
-    resolution::Integer=512,
+    resolution::Integer = 512,
 )
     return ccall(
         fast_bayesian_binning_energy_range_fptr,
@@ -105,7 +105,7 @@ function serialize_dataset(x)
             catch e
                 println("Failed to serialize a dataset: $e")
                 # remove the file if it exists
-                rm(filename, force=true)
+                rm(filename, force = true)
             end
         end
     end
@@ -328,7 +328,7 @@ function load_events(xdataset::XDataSet)
                 end
             end
 
-            f = FITS(Downloads.download(uri, progress=download_progress))
+            f = FITS(Downloads.download(uri, progress = download_progress))
         catch e
             println("Failed to download events: $e")
             xdataset.has_error[] = true
@@ -432,7 +432,7 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
     if bDownsize
         try
             task = Threads.@spawn pixels = imresize(pixels, (image_width, image_height))
-            mask = Bool.(imresize(mask, (image_width, image_height), method=Constant())) # use Nearest-Neighbours for the mask
+            mask = Bool.(imresize(mask, (image_width, image_height), method = Constant())) # use Nearest-Neighbours for the mask
             wait(task)
         catch e
             println(e)
@@ -464,7 +464,7 @@ function getImage(xobject::XDataSet)
 
     @time h = Hist2D(
         (x[mask], y[mask]);
-        binedges=((xmin-0.5):1:(xmax+0.5), (ymin-0.5):1:(ymax+0.5)),
+        binedges = ((xmin-0.5):1:(xmax+0.5), (ymin-0.5):1:(ymax+0.5)),
     )
     pixels = bincounts(h)
 
@@ -498,7 +498,7 @@ function getBayesSpectrum(xobject::XDataSet, dx::Integer)
         =#
 
     # cap the energy at E_max    
-    energy = energy[(energy.<=E_max)]
+    energy = energy[(energy .<= E_max)]
     @time blocks = ParallelBayesianBinning(energy, length(energy), 5 * dx)
     hist = FastBayesHistogram(blocks)
     len = hist.n
@@ -548,8 +548,8 @@ function getViewport(
 
     h = Hist2D(
         (x[mask], y[mask]);
-        binedges=((xmin-0.5):1:(xmax+0.5), (ymin-0.5):1:(ymax+0.5)),
-        overflow=false,
+        binedges = ((xmin-0.5):1:(xmax+0.5), (ymin-0.5):1:(ymax+0.5)),
+        overflow = false,
     )
     pixels = bincounts(h)
 
@@ -636,12 +636,11 @@ function getCircleSpectrum(
     println("ΔE = ", ΔE)
 
     # find points within a circle    
-    @time mask = [(x - cx)^2 + (y - cy)^2 <= r2 for (x, y) in zip(x, y)]
+    mask = [(x - cx)^2 + (y - cy)^2 <= r2 for (x, y) in zip(x, y)]
     #@time mask2 = ThreadsX.map((xi, yi) -> (xi - cx)^2 + (yi - cy)^2 <= r2, x, y)
     #println("mask == mask2: ", all(mask .== mask2))
-    @time packed = energy[mask]
-    @time blocks =
-        FastBayesianBinningEnergyRange(packed, length(packed), E_min, E_max, 5 * dx)
+    packed = energy[mask]
+    blocks = FastBayesianBinningEnergyRange(packed, length(packed), E_min, E_max, 5 * dx)
 
     hist = FastBayesHistogram(blocks)
     len = hist.n
@@ -657,7 +656,7 @@ function getCircleSpectrum(
     heights = unsafe_wrap(Array, hist.heights, len)
 
     # spectrum = JSON object, zip through centers, heights and widths
-    @time spectrum = JSON.json([
+    spectrum = JSON.json([
         Dict("center" => c, "height" => h, "width" => w) for
         (c, h, w) in zip(centers, heights, widths)
     ])
@@ -1166,7 +1165,7 @@ function write_html_header(io::IO, hdr::FITSHeader)
         end
 
         if length(hdr.comments[i]) > 0
-            @printf io " / %s" hdr.comments[i][1:min(rc - 3, end)]
+            @printf io " / %s" hdr.comments[i][1:min(rc-3, end)]
         end
         i != n && println(io, "<br/>") # HTML line break
     end
@@ -1273,7 +1272,11 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
                         task = Threads.@spawn pixels =
                             imresize(pixels, (image_width, image_height))
                         mask = Bool.(
-                            imresize(mask, (image_width, image_height), method=Constant()),
+                            imresize(
+                                mask,
+                                (image_width, image_height),
+                                method = Constant(),
+                            ),
                         ) # use Nearest-Neighbours for the mask
                         wait(task)
                     catch e
@@ -1301,7 +1304,7 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
                 prec = ZFP_LOW_PRECISION
             end
 
-            compressed_pixels = zfp_compress(pixels, precision=prec)
+            compressed_pixels = zfp_compress(pixels, precision = prec)
             write(view_resp, Int32(length(compressed_pixels)))
             write(view_resp, compressed_pixels)
 
@@ -1351,7 +1354,7 @@ function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::
         level = 9
     end
 
-    @time compressed_spectrum = transcode(Bzip2Compressor(blocksize100k=level), spectrum) # do it fast (in real-time)    
+    @time compressed_spectrum = transcode(Bzip2Compressor(blocksize100k = level), spectrum) # do it fast (in real-time)    
     write(spec_resp, compressed_spectrum)
 
     if image
@@ -1403,7 +1406,7 @@ function getVideoFrame(
         dstHeight = image_height
 
         task = Threads.@spawn frame_mask =
-            Bool.(imresize(frame_mask, (dstWidth, dstHeight), method=Constant())) # use Nearest-Neighbours for the mask
+            Bool.(imresize(frame_mask, (dstWidth, dstHeight), method = Constant())) # use Nearest-Neighbours for the mask
         frame_pixels = imresize(frame_pixels, (dstWidth, dstHeight))
         max_count = ThreadsX.maximum(frame_pixels)
 
