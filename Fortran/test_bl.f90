@@ -163,10 +163,18 @@ contains
       print *, '[FORTRAN] parallel sort done', x(order(1)), x(order(size(x)))
 
       ! sort the data
-      call quicksort(x, 1, size(x))
+      !call quicksort(x, 1, size(x))
+
+      !$OMP PARALLEL
+      !$OMP SINGLE
+      call quicksort_parallel(x, 1, size(x))
+      !$OMP END SINGLE
+      !$OMP END PARALLEL
+
+      print *, '[FORTRAN] quicksort done', x(1), x(size(x))
+
       ! set the order array to 1, 2, ..., size(x)
       order = [(i, i=1,size(x))]
-      print *, '[FORTRAN] serial sort done', x(1), x(size(x))
 
       ! end the timer
       t2 = omp_get_wtime()
@@ -574,7 +582,7 @@ contains
       INTEGER                :: pivot_idx
 
       IF (low < high) THEN
-         CALL quicksortpartition(arr, low, high, pivot_idx)
+         CALL quicksort_partition(arr, low, high, pivot_idx)
          CALL quicksort_sequential(arr, low, pivot_idx - 1)
          CALL quicksort_sequential(arr, pivot_idx + 1, high)
       END IF
