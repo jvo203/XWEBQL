@@ -15,7 +15,7 @@ program test
    integer(kind=c_int64_t), parameter :: NOSAMPLES = 200000
    integer, parameter :: WORKSIZE = 1024 ! up to 1K per thread
    real(kind=c_float), dimension(NOSAMPLES) :: data
-   integer(kind=c_int64_t) :: ios, M, i
+   integer(kind=c_int64_t) :: ios, M, IDX
 
    ! initialize x with random data
    !call random_number(data)
@@ -37,7 +37,7 @@ program test
    print *, 'M:', M
 
    ! set the data to 1 .. M
-   !data = [(real(i, kind=c_float), i=1,M)]
+   !data = [(real(IDX, kind=c_float), IDX=1,M)]
 
    !histogram = fast_bayesian_binning(data, NOSAMPLES)
    histogram = parallel_bayesian_binning(data, M, 512)
@@ -539,4 +539,52 @@ contains
       if (first < i-1) call quicksort(a, first, i-1)
       if (j+1 < last)  call quicksort(a, j+1, last)
    end subroutine quicksort
+
+   RECURSIVE SUBROUTINE PARALLEL_QUICKSORT_OMP(ARRAY, LOW, HIGH)
+      IMPLICIT NONE
+      REAL(KIND=C_FLOAT), INTENT(INOUT) :: ARRAY(:)
+      INTEGER, INTENT(IN)    :: LOW, HIGH
+      INTEGER                :: PIVOT_INDEX
+
+      IF (LOW < HIGH) THEN
+         ! Partition the array and get the pivot index
+         CALL PARTITION_QUICKSORT(ARRAY, LOW, HIGH, PIVOT_INDEX)
+
+         ! Parallelize the recursive calls
+         !$OMP PARALLEL SECTIONS
+         !$OMP SECTION
+         CALL PARALLEL_QUICKSORT_OMP(ARRAY, LOW, PIVOT_INDEX - 1)
+         !$OMP SECTION
+         CALL PARALLEL_QUICKSORT_OMP(ARRAY, PIVOT_INDEX + 1, HIGH)
+         !$OMP END PARALLEL SECTIONS
+      END IF
+   END SUBROUTINE PARALLEL_QUICKSORT_OMP
+
+   SUBROUTINE PARTITION_QUICKSORT(ARRAY, LOW, HIGH, PIVOT_INDEX)
+      IMPLICIT NONE
+      REAL(KIND=C_FLOAT), INTENT(INOUT) :: ARRAY(:)
+      INTEGER, INTENT(IN)    :: LOW, HIGH
+      INTEGER, INTENT(OUT)   :: PIVOT_INDEX
+      REAL(KIND=C_FLOAT)     :: PIVOT_VALUE
+      INTEGER                :: I, J
+      REAL(KIND=C_FLOAT)     :: TEMP
+
+      PIVOT_VALUE = ARRAY(HIGH)
+      I = LOW - 1
+
+      DO J = LOW, HIGH - 1
+         IF (ARRAY(J) <= PIVOT_VALUE) THEN
+            I = I + 1
+            TEMP = ARRAY(I)
+            ARRAY(I) = ARRAY(J)
+            ARRAY(J) = TEMP
+         END IF
+      END DO
+
+      TEMP = ARRAY(I + 1)
+      ARRAY(I + 1) = ARRAY(HIGH)
+      ARRAY(HIGH) = TEMP
+      PIVOT_INDEX = I + 1
+   END SUBROUTINE PARTITION_QUICKSORT
+
 end program test
