@@ -1902,7 +1902,7 @@ contains
       !$OMP END TASK
 
       !$OMP TASK SHARED(a, first, last, i, j)
-      if (j+1 < last)  call quicksort_omp(a, j+1, last)
+      if (j+1 < last) call quicksort_omp(a, j+1, last)
       !$OMP END TASK
 
       !$OMP TASKWAIT ! Wait for the two sub-tasks to complete
