@@ -167,7 +167,8 @@ contains
 
       !$OMP PARALLEL
       !$OMP SINGLE
-      call quicksort_parallel(x, 1, size(x))
+      !call quicksort_parallel(x, 1, size(x))
+      call quicksort_omp(x, 1, size(x))
       !$OMP END SINGLE
       !$OMP END PARALLEL
 
@@ -548,6 +549,33 @@ contains
       if (j+1 < last)  call quicksort(a, j+1, last)
    end subroutine quicksort
 
+   recursive subroutine quicksort_omp(a, first, last)
+      implicit none
+      real(kind=c_float), intent(inout) :: a(*)
+      integer, intent(in) :: first, last
+
+      real(kind=c_float) :: x, t
+      integer:: i, j
+
+      x = a( (first+last) / 2 )
+      i = first
+      j = last
+      do
+         do while (a(i) < x)
+            i=i+1
+         end do
+         do while (x < a(j))
+            j=j-1
+         end do
+         if (i >= j) exit
+         t = a(i);  a(i) = a(j);  a(j) = t
+         i=i+1
+         j=j-1
+      end do
+      if (first < i-1) call quicksort_omp(a, first, i-1)
+      if (j+1 < last)  call quicksort_omp(a, j+1, last)
+   end subroutine quicksort_omp
+
    RECURSIVE SUBROUTINE quicksort_parallel(arr, low, high)
       IMPLICIT NONE
       REAL(KIND=C_FLOAT), INTENT(INOUT) :: arr(:)
@@ -560,7 +588,9 @@ contains
             ! Perform sequential sort for small arrays
             CALL quicksort_sequential(arr, low, high)
          ELSE
+            print *, '[FORTRAN] quicksort_parallel:', low, high
             CALL quicksort_partition(arr, low, high, pivot_idx)
+            print *, '[FORTRAN] pivot index:', pivot_idx, 'pivot value:', arr(pivot_idx)
 
             !$OMP TASK SHARED(arr) PRIVATE(low, pivot_idx)
             CALL quicksort_parallel(arr, low, pivot_idx - 1)
@@ -593,10 +623,10 @@ contains
       REAL(KIND=C_FLOAT), INTENT(INOUT) :: arr(:)
       INTEGER, INTENT(IN)    :: low, high
       INTEGER, INTENT(OUT)   :: pivot_idx
-      REAL(KIND=C_FLOAT)     :: pivot
+      REAL(KIND=C_FLOAT)     :: pivot, tmp
       INTEGER                :: i, j
-      REAL(KIND=C_FLOAT)     :: temp
 
+      !print *, '[FORTRAN] quicksort_partition:', low, high, 'size:', high - low + 1, 'pivot:', arr((low + high) / 2)
       pivot = arr((low + high) / 2)
       i = low
       j = high
@@ -610,9 +640,9 @@ contains
          END DO
          IF (i >= j) EXIT
          ! Swap arr(i) and arr(j)
-         temp = arr(i)
+         tmp = arr(i)
          arr(i) = arr(j)
-         arr(j) = temp
+         arr(j) = tmp
          i = i + 1
          j = j - 1
       END DO
