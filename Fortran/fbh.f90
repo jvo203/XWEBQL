@@ -1489,10 +1489,9 @@ contains
       ! sort the data
       ! call quicksort(x, 1, size(x))
 
+      ! sort the data in parallel
       !$OMP PARALLEL
       !$OMP SINGLE
-      !call quicksort_parallel(x, 1, size(x))
-      ! sort the data in parallel
       call quicksort_omp(x, 1, size(x))
       !$OMP END SINGLE
       !$OMP END PARALLEL
