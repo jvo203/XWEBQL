@@ -207,14 +207,25 @@ fn get_column_offset(columns: []i32, index: i32) usize {
     return @as(usize, @intCast(offset));
 }
 
-fn read_events_threaded(data: []const u8, x: []i16, y: []i16, pi: []f32, size: usize, x_offset: usize, y_offset: usize, pi_offset: usize, stride: usize) void {
+fn read_events_threaded(data: []const u8, x: []i16, y: []i16, pi: []f32, size: usize, x_offset: usize, y_offset: usize, pi_offset: usize, pi_size: i32, stride: usize) void {
     var offset: usize = 0;
     var i: usize = 0;
 
     while (i < size) {
         x[i] = std.mem.readInt(i16, data[offset + x_offset ..][0..2], .big);
         y[i] = std.mem.readInt(i16, data[offset + y_offset ..][0..2], .big);
-        pi[i] = @as(f32, @bitCast(std.mem.readInt(i32, data[offset + pi_offset ..][0..4], .big)));
+
+        // was pi[i] = @as(f32, @bitCast(std.mem.readInt(i32, data[offset + pi_offset ..][0..4], .big)));
+        // "UPI" was a 32-bit float, "PI" is either a 16-bit or 32-bit integer
+
+        // for the energy column switch based on the size of the PI column
+        if (pi_size == 2) {
+            pi[i] = @floatFromInt(std.mem.readInt(i16, data[offset + pi_offset ..][0..2], .big));
+        } else if (pi_size == 4) {
+            pi[i] = @floatFromInt(std.mem.readInt(i32, data[offset + pi_offset ..][0..4], .big));
+        } else {
+            pi[i] = 0.0;
+        }
 
         i += 1;
         offset += stride;
@@ -295,8 +306,9 @@ fn read_events(filename: []const u8, allocator: Allocator) !XEvents {
     const x_offset = get_column_offset(meta.columns, meta.ix - 1);
     const y_offset = get_column_offset(meta.columns, meta.iy - 1);
     const pi_offset = get_column_offset(meta.columns, meta.ipi - 1);
+    const pi_size = meta.columns[@as(usize, @intCast(meta.ipi - 1))];
 
-    print("x_offset = {d}, y_offset = {d}, pi_offset = {d}\n", .{ x_offset, y_offset, pi_offset });
+    print("x_offset = {d}, y_offset = {d}, pi_offset = {d}, pi_size = {d}\n", .{ x_offset, y_offset, pi_offset, pi_size });
 
     // allocate the arrays
     const x = try allocator.alloc(i16, meta.NAXIS2);
@@ -321,7 +333,7 @@ fn read_events(filename: []const u8, allocator: Allocator) !XEvents {
         const size = if (i == num_threads - 1) (meta.NAXIS2 - offset) else work_size;
 
         //read_events_threaded(data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], pi[offset..], size, x_offset, y_offset, pi_offset, meta.NAXIS1);
-        handles[i] = try Thread.spawn(.{}, read_events_threaded, .{ data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], pi[offset..], size, x_offset, y_offset, pi_offset, meta.NAXIS1 });
+        handles[i] = try Thread.spawn(.{}, read_events_threaded, .{ data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], pi[offset..], size, x_offset, y_offset, pi_offset, pi_size, meta.NAXIS1 });
         i += 1;
     }
 
@@ -333,8 +345,8 @@ fn read_events(filename: []const u8, allocator: Allocator) !XEvents {
 }
 
 pub fn main() !void {
-    //const event_filename = "../../../NAO/JAXA/ah100040060sxs_p0px1010_cl.evt";
-    const event_filename = "../../../NAO/JAXA/XRISM/xa000129000xtd_p030000010_cl.evt";
+    //const event_filename = "../../../NAO/JAXA/ah100040060sxs_p0px1010_cl.evt"; // HITOMI
+    const event_filename = "../../../NAO/JAXA/XRISM/xa000129000xtd_p030000010_cl.evt"; // XRISM
     print("event_filename = {s}\n", .{event_filename});
 
     // choose between page_allocator and c_allocator
