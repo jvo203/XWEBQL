@@ -7,8 +7,8 @@
 int main()
 {
     // const char *event_filename = "../../../NAO/JAXA/ah100040060sxs_p0px1010_cl.evt"; // HITOMI
-    // const char *event_filename = "/tmp/xa300018010xtd_p0300000a0_cl.evt"; // XRISM
-    const char *event_filename = "../../../NAO/JAXA/XRISM/xa000129000xtd_p030000010_cl.evt"; // XRISM
+    const char *event_filename = "/tmp/xa300018010xtd_p0300000a0_cl.evt"; // XRISM
+    // const char *event_filename = "../../../NAO/JAXA/XRISM/xa000129000xtd_p030000010_cl.evt"; // XRISM
     printf("event_filename = %s\n", event_filename);
 
     int16_t *x = NULL;
