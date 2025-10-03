@@ -110,6 +110,7 @@ bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields, 
     for (size_t offset = 0; offset < FITS_CHUNK_LENGTH; offset += FITS_LINE_LENGTH)
     {
         char *line = (char *)sxs + offset;
+        // printf("LINE: %.80s\n", line);
 
         if (strncmp(line, "END       ", 10) == 0)
         {
@@ -310,6 +311,11 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
         goto cleanup;
     }
 
+    // print the column sizes
+    /*printf("column sizes:\n");
+    for (i = 0; i < TFIELDS; i++)
+        printf("%d\t%d\n", i, column_sizes[i]);*/
+
     // check if there is enough data in the file
     if (sxs_offset + (size_t)NAXIS2 * (size_t)NAXIS1 > filesize)
     {
@@ -335,19 +341,36 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
     int x_offset = get_column_offset(column_sizes, posx - 1);
     int y_offset = get_column_offset(column_sizes, posy - 1);
     int pi_offset = get_column_offset(column_sizes, pospi - 1);
+    int pi_size = column_sizes[pospi - 1];
 
     printf("x_offset = %d, y_offset = %d, pi_offset = %d\n", x_offset, y_offset, pi_offset);
 
 #pragma omp parallel for private(i)
     for (i = 0; i < NAXIS2; i++)
     {
-        int_float tmp;
+        // int_float tmp;
 
-        // read the selected columns only, swapping endianness along the way
-        x_ptr[i] = __builtin_bswap16(*(int16_t *)(sxs_char + sxs_offset + x_offset + i * NAXIS1));
-        y_ptr[i] = __builtin_bswap16(*(int16_t *)(sxs_char + sxs_offset + y_offset + i * NAXIS1));
-        tmp.i = __builtin_bswap32(*(int32_t *)(sxs_char + sxs_offset + pi_offset + i * NAXIS1));
-        energy_ptr[i] = tmp.f;
+        char *row = sxs_char + sxs_offset + i * NAXIS1;
+
+        // read the selected columns only from the row, swapping endianness along the way
+        // "UPI" was a 32-bit float, "PI" is either a 16-bit or 32-bit integer
+        x_ptr[i] = __builtin_bswap16(*(int16_t *)(row + x_offset));
+        y_ptr[i] = __builtin_bswap16(*(int16_t *)(row + y_offset));
+        // energy_ptr[i] = __builtin_bswap32(*(int32_t *)(row + pi_offset));
+
+        // for the energy column switch based on the size of the PI column
+        if (pi_size == 2)
+            energy_ptr[i] = (float)__builtin_bswap16(*(int16_t *)(row + pi_offset));
+        else if (pi_size == 4)
+            energy_ptr[i] = (float)__builtin_bswap32(*(int32_t *)(row + pi_offset));
+        else
+        {
+            printf("unsupported PI column size: %d\n", pi_size);
+            energy_ptr[i] = 0.0f;
+        }
+
+        /*tmp.i = __builtin_bswap32(*(int32_t *)(sxs_char + sxs_offset + pi_offset + i * NAXIS1));
+        energy_ptr[i] = tmp.f;*/
         // energy_ptr[i] = *(float *)&tmp; // this breaks aliasing rules
         // memcpy(&energy_ptr[i], &tmp, sizeof(float)); // this does not break aliasing
         // sxs_offset += NAXIS1;
