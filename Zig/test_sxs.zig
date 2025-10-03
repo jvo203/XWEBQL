@@ -207,7 +207,7 @@ fn get_column_offset(columns: []i32, index: i32) usize {
     return @as(usize, @intCast(offset));
 }
 
-fn read_sxs_threaded(data: []const u8, x: []i16, y: []i16, pi: []f32, size: usize, x_offset: usize, y_offset: usize, pi_offset: usize, stride: usize) void {
+fn read_events_threaded(data: []const u8, x: []i16, y: []i16, pi: []f32, size: usize, x_offset: usize, y_offset: usize, pi_offset: usize, stride: usize) void {
     var offset: usize = 0;
     var i: usize = 0;
 
@@ -221,7 +221,7 @@ fn read_sxs_threaded(data: []const u8, x: []i16, y: []i16, pi: []f32, size: usiz
     }
 }
 
-fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
+fn read_events(filename: []const u8, allocator: Allocator) !XEvents {
 
     // open the file, get a file descriptor
     const fd = try std.posix.open(filename, .{ .ACCMODE = .RDONLY }, 0);
@@ -320,8 +320,8 @@ fn read_sxs_events(filename: []const u8, allocator: Allocator) !XEvents {
         const offset = i * work_size;
         const size = if (i == num_threads - 1) (meta.NAXIS2 - offset) else work_size;
 
-        //read_sxs_threaded(data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], pi[offset..], size, x_offset, y_offset, pi_offset, meta.NAXIS1);
-        handles[i] = try Thread.spawn(.{}, read_sxs_threaded, .{ data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], pi[offset..], size, x_offset, y_offset, pi_offset, meta.NAXIS1 });
+        //read_events_threaded(data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], pi[offset..], size, x_offset, y_offset, pi_offset, meta.NAXIS1);
+        handles[i] = try Thread.spawn(.{}, read_events_threaded, .{ data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], pi[offset..], size, x_offset, y_offset, pi_offset, meta.NAXIS1 });
         i += 1;
     }
 
@@ -337,13 +337,17 @@ pub fn main() !void {
     const event_filename = "../../../NAO/JAXA/XRISM/xa000129000xtd_p030000010_cl.evt";
     print("event_filename = {s}\n", .{event_filename});
 
-    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    // choose between page_allocator and c_allocator
+    const memory = std.heap.page_allocator;
+    //const memory = std.heap.c_allocator;
+
+    var arena = std.heap.ArenaAllocator.init(memory);
     defer arena.deinit();
 
     const allocator = arena.allocator();
 
     const start = std.time.nanoTimestamp();
-    const events = try read_sxs_events(event_filename, allocator);
+    const events = try read_events(event_filename, allocator);
     var duration: f64 = @floatFromInt(std.time.nanoTimestamp() - start);
     duration /= 1_000_000;
 
