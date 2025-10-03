@@ -52,7 +52,8 @@ function get_spectrum(data::Vector{Float32}, E_min::Float32, E_max::Float32, ΔE
     return (new_spectrum, max_energy)
 end
 
-Xtend = "file://" * homedir() * "/NAO/JAXA/XRISM/MAXI_J1744-294/xa901002010xtd_p031300010_cl.evt.gz"
+#Xtend = "file://" * homedir() * "/NAO/JAXA/XRISM/MAXI_J1744-294/xa901002010xtd_p031300010_cl.evt.gz"
+Xtend = "file://" * homedir() * "/NAO/JAXA/XRISM/xa000129000xtd_p030000010_cl.evt"
 println(Xtend)
 f = FITS(Xtend)
 
@@ -66,11 +67,19 @@ println(FITSIO.colnames(f[2]))
 @time begin
     x = read(f[2], "X")
     y = read(f[2], "Y")
-    energy = read(f[2], "PI") .* XRISM_XTEND_Pi2evFactor
+    energy = read(f[2], "PI") * 1.0f0 # .* XRISM_XTEND_Pi2evFactor
 end
 
 nevents = length(x)
 println("nevents = ", nevents)
+
+# print the first and last values
+println("x[1] = ", x[1])
+println("y[1] = ", y[1])
+println("energy[1] = ", energy[1])
+println("x[$nevents] = ", x[nevents])
+println("y[$nevents] = ", y[nevents])
+println("energy[$nevents] = ", energy[nevents])
 
 # right now the high-level FITSIO does not support 'X' columns
 
