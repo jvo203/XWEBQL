@@ -232,7 +232,11 @@ contains
       print *, '[FORTRAN] no. points:', n, 'unique samples:', L, 'dt:', dt
 
       print *, '[FORTRAN] omp max threads:', omp_get_max_threads()
+      !$OMP PARALLEL
+      !$OMP SINGLE
       change_points = divide_bayesian_binning(unique, weights, dt)
+      !$OMP END SINGLE
+      !$OMP END PARALLEL
 
       ! in-place sort the change_points
       call quicksort(change_points, 1, size(change_points))
@@ -386,9 +390,7 @@ contains
          ! the middle point will be counted twice, halve its weight
          weights(mid) = weights(mid) / 2
 
-         !$omp parallel shared(change_points, unique, weights) private(thread_change_points)
-         !$omp single
-         !$omp task
+         !$omp task shared(change_points, unique, weights) private(thread_change_points)
          thread_change_points = divide_bayesian_binning(unique(1:mid), weights(1:mid), dt)
 
          !$omp critical
@@ -400,7 +402,7 @@ contains
          !$omp end critical
          !$omp end task
 
-         !$omp task
+         !$omp task shared(change_points, unique, weights) private(thread_change_points)
          ! there is a deliberate overlap between the two halves
          thread_change_points = divide_bayesian_binning(unique(mid:L), weights(mid:L), dt)
 
@@ -413,8 +415,7 @@ contains
          !$omp end critical
          !$omp end task
 
-         !$omp end single
-         !$omp end parallel
+         !$omp taskwait
 
          !print *, '[FORTRAN] merging the results@', mid
          ! restore the weight of the middle point
