@@ -104,7 +104,7 @@ bool has_table_extension(const char *sxs)
         return false;
 }
 
-bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields, int *posx, int *posy, int *posupi, int **columns)
+bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields, int *posx, int *posy, int *pospi, int **columns)
 {
     // process the header one line at a time
     for (size_t offset = 0; offset < FITS_CHUNK_LENGTH; offset += FITS_LINE_LENGTH)
@@ -143,13 +143,13 @@ bool scan_table_header(const char *sxs, int *naxis1, int *naxis2, int *tfields, 
 
                 if (name != NULL)
                 {
-                    // check if the name is "X", "Y" or "UPI"
+                    // check if the name is "X", "Y" or "PI"
                     if (strcmp(name, "X") == 0)
                         *posx = index;
                     else if (strcmp(name, "Y") == 0)
                         *posy = index;
-                    else if (strcmp(name, "UPI") == 0)
-                        *posupi = index;
+                    else if (strcmp(name, "PI") == 0)
+                        *pospi = index;
 
                     free(name);
                 }
@@ -277,11 +277,11 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
 
     int posx = 0;
     int posy = 0;
-    int posupi = 0;
+    int pospi = 0;
 
     while (sxs_offset + FITS_CHUNK_LENGTH <= filesize)
     {
-        if (scan_table_header(sxs_char + sxs_offset, &NAXIS1, &NAXIS2, &TFIELDS, &posx, &posy, &posupi, &column_sizes))
+        if (scan_table_header(sxs_char + sxs_offset, &NAXIS1, &NAXIS2, &TFIELDS, &posx, &posy, &pospi, &column_sizes))
         {
             printf("table header ends in hdu #%d\n", hdu);
             break;
@@ -295,7 +295,7 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
     sxs_offset += FITS_CHUNK_LENGTH;
 
     printf("NAXIS1 = %d, NAXIS2 = %d, TFIELDS = %d\n", NAXIS1, NAXIS2, TFIELDS);
-    printf("posx = %d, posy = %d, posupi = %d\n", posx, posy, posupi);
+    printf("posx = %d, posy = %d, pospi = %d\n", posx, posy, pospi);
 
     // sum the column sizes
     int i;
@@ -334,9 +334,9 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
 
     int x_offset = get_column_offset(column_sizes, posx - 1);
     int y_offset = get_column_offset(column_sizes, posy - 1);
-    int upi_offset = get_column_offset(column_sizes, posupi - 1);
+    int pi_offset = get_column_offset(column_sizes, pospi - 1);
 
-    printf("x_offset = %d, y_offset = %d, upi_offset = %d\n", x_offset, y_offset, upi_offset);
+    printf("x_offset = %d, y_offset = %d, pi_offset = %d\n", x_offset, y_offset, pi_offset);
 
 #pragma omp parallel for private(i)
     for (i = 0; i < NAXIS2; i++)
@@ -346,7 +346,7 @@ int read_sxs_events(const char *filename, int16_t **x, int16_t **y, float **ener
         // read the selected columns only, swapping endianness along the way
         x_ptr[i] = __builtin_bswap16(*(int16_t *)(sxs_char + sxs_offset + x_offset + i * NAXIS1));
         y_ptr[i] = __builtin_bswap16(*(int16_t *)(sxs_char + sxs_offset + y_offset + i * NAXIS1));
-        tmp.i = __builtin_bswap32(*(int32_t *)(sxs_char + sxs_offset + upi_offset + i * NAXIS1));
+        tmp.i = __builtin_bswap32(*(int32_t *)(sxs_char + sxs_offset + pi_offset + i * NAXIS1));
         energy_ptr[i] = tmp.f;
         // energy_ptr[i] = *(float *)&tmp; // this breaks aliasing rules
         // memcpy(&energy_ptr[i], &tmp, sizeof(float)); // this does not break aliasing
