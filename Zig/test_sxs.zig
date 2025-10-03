@@ -332,7 +332,7 @@ fn read_events(filename: []const u8, allocator: Allocator) !XEvents {
         const offset = i * work_size;
         const size = if (i == num_threads - 1) (meta.NAXIS2 - offset) else work_size;
 
-        //read_events_threaded(data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], pi[offset..], size, x_offset, y_offset, pi_offset, meta.NAXIS1);
+        //read_events_threaded(data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], pi[offset..], size, x_offset, y_offset, pi_offset, pi_size, meta.NAXIS1);
         handles[i] = try Thread.spawn(.{}, read_events_threaded, .{ data[offset * meta.NAXIS1 ..], x[offset..], y[offset..], pi[offset..], size, x_offset, y_offset, pi_offset, pi_size, meta.NAXIS1 });
         i += 1;
     }
