@@ -1,8 +1,6 @@
 program test
    use iso_c_binding
    use omp_lib
-   use mod_sort
-   use m_mrgrnk
    implicit none
 
    type, bind(c) :: BayesHistogram
@@ -139,7 +137,6 @@ contains
       integer(kind=c_int), intent(in), optional :: resolution
 
       real(kind=c_float), dimension(:), allocatable :: unique, weights, change_points
-      integer, dimension(:), allocatable :: order
       real(kind=c_float) :: extent, dt
       integer :: i, L
 
@@ -158,10 +155,6 @@ contains
       ! start the timer
       t1 = omp_get_wtime()
 
-      allocate(order(size(x)))
-      call parallel_sort(x, order)
-      print *, '[FORTRAN] parallel sort done', x(order(1)), x(order(size(x)))
-
       ! sort the data
       !call quicksort(x, 1, size(x))
 
@@ -174,9 +167,6 @@ contains
 
       print *, '[FORTRAN] quicksort done', x(1), x(size(x))
 
-      ! set the order array to 1, 2, ..., size(x)
-      order = [(i, i=1,size(x))]
-
       ! end the timer
       t2 = omp_get_wtime()
 
@@ -186,20 +176,18 @@ contains
       allocate(weights(size(x)))
 
       L = 1
-      unique(1) = x(order(1))
+      unique(1) = x(1)
       weights(1) = 1
 
       do i = 2, size(x)
-         if(x(order(i)) .eq. x(order(i-1))) then
+         if(x(i) .eq. x(i-1)) then
             weights(L) = weights(L) + 1
          else
             L = L + 1
-            unique(L) = x(order(i))
+            unique(L) = x(i)
             weights(L) = 1
          end if
       end do
-
-      deallocate(order)
 
       ! truncate the outputs
       unique = unique(1:L)
