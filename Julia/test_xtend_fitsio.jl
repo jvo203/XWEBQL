@@ -68,7 +68,7 @@ println(FITSIO.colnames(f[2]))
 @time begin
     x = read(f[2], "X")
     y = read(f[2], "Y")
-    energy = read(f[2], "PI") * 1.0f0 # .* XRISM_XTEND_Pi2evFactor
+    energy = read(f[2], "PI") .* XRISM_XTEND_Pi2evFactor
 end
 
 nevents = length(x)
