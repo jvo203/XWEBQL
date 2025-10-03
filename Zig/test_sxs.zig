@@ -337,6 +337,7 @@ fn read_events(filename: []const u8, allocator: Allocator) !XEvents {
         i += 1;
     }
 
+    // wait for all threads to finish
     for (handles) |handle| {
         handle.join();
     }
