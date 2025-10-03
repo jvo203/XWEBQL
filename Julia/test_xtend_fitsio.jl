@@ -53,7 +53,8 @@ function get_spectrum(data::Vector{Float32}, E_min::Float32, E_max::Float32, ΔE
 end
 
 #Xtend = "file://" * homedir() * "/NAO/JAXA/XRISM/MAXI_J1744-294/xa901002010xtd_p031300010_cl.evt.gz"
-Xtend = "file://" * homedir() * "/NAO/JAXA/XRISM/xa000129000xtd_p030000010_cl.evt"
+Xtend = "/tmp/xa300018010xtd_p0300000a0_cl.evt"
+#Xtend = "file://" * homedir() * "/NAO/JAXA/XRISM/xa000129000xtd_p030000010_cl.evt"
 println(Xtend)
 f = FITS(Xtend)
 
