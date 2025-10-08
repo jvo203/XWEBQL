@@ -142,7 +142,8 @@ function list_directory(dir, instrument)
     #println(hrefs)
 
     # map get_file to hrefs
-    skipmissing(ThreadsX.map(href -> get_file(url, instrument, href), hrefs)) |> collect
+    #ThreadsX.
+    skipmissing(map(href -> get_file(url, instrument, href), hrefs)) |> collect
 end
 
 # this function assumes that the user has created the directory structure as per below:
@@ -165,12 +166,17 @@ function get_file(url, instrument, file)
 
     try
         # download and gunzip the _target file
-        #Downloads.download(_url, _target)
-        #run(`gunzip $_target`)
-        #println("downloaded $file to $_home...")
+        Downloads.download(_url, _target)
+        run(`gunzip $_target`)
+        println("downloaded $file to $_home...")
 
-        # _target without the .gz extension        
-        return [replace(file, ".gz" => ""), _url, instrument]
+        # _target without the .gz extension
+        dataset = replace(file, ".gz" => "")
+
+        # exit the program for testing
+        exit()
+
+        return [dataset, _url, instrument]
     catch e
         println(e)
         return missing
