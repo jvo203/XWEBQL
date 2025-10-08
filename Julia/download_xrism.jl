@@ -1,5 +1,31 @@
+using CSV
+using DataFrames
 using Downloads
 using Cascadia, Gumbo, HTTP
+
+using JSON
+using Images
+using Plots
+
+pyplot()
+
+include("xevent.jl")
+
+function to_pdf(edges, heights; lb=minimum(heights) / 3)
+    X = Float32[]
+    Y = Float32[]
+    push!(X, edges[begin])
+    push!(Y, lb)
+    for i in eachindex(heights)
+        push!(X, edges[i])
+        push!(X, edges[i+1])
+        push!(Y, heights[i])
+        push!(Y, heights[i])
+    end
+    push!(X, edges[end])
+    push!(Y, lb)
+    return X, Y
+end
 
 const pub = "https://data.darts.isas.jaxa.jp/pub/xrism/browse/public_list/?k=time&o=asc&c=ALL&q="
 const root = "https://data.darts.isas.jaxa.jp/pub/xrism/data/obs/rev3/"
@@ -98,17 +124,19 @@ function get_file(url, instrument, file)
         return
     end
 
+    _home = homedir() * "/JAXA/XRISM/" # a local filesystem (Mac Studio)
     #_home = homedir() * "/NAO/JAXA/XRISM/" # a local filesystem
-    _home = "/Volumes/OWC/JAXA/XRISM/" # an SSD RAID Volume on zodiac
+    #_home = "/Volumes/OWC/JAXA/XRISM/" # an SSD RAID Volume on zodiac
 
     println("downloading $file to $_home...")
 
     # download the file
     _url = url * file
-    _target = _home * uppercase(instrument) * "/" * file
-    Downloads.download(_url, _target)
+    _target = _home * "/" * file
+    #_target = _home * uppercase(instrument) * "/" * file
 
-    # gunzip the _target file
+    # download and gunzip the _target file
+    Downloads.download(_url, _target)
     run(`gunzip $_target`)
 end
 
