@@ -2,6 +2,7 @@ using CSV
 using DataFrames
 using Downloads
 using Cascadia, Gumbo, HTTP
+using ThreadsX
 
 using JSON
 using Images
@@ -50,20 +51,38 @@ function get_root(root::String)
 
     # get all href attributes
     hrefs = map(x -> x.attributes["href"], hrefs)
-    println(hrefs)
+    #println(hrefs)
+
+    entries = []
 
     # for each href call get_directory
     for href in hrefs
         try
-            get_directory(root * href)
+            rows = get_directory(root * href)
+
+            # only push non-empty results
+            if !isempty(rows)
+                append!(entries, rows)
+            end
         catch e
             println(e)
         end
     end
+
+    println("total number of entries: ", length(entries))
+    println("entries[1:5]: ", entries[1:5])
+    println("entries[end-4:end]: ", entries[end-4:end])
+
+    # convert to DataFrame    
+    df = DataFrame(dataset=String[], url=String[], instrument=String[])
+    push!(df, entries...)
+
+    # save to CSV
+    CSV.write("xrism.csv", df)
 end
 
 function get_directory(dir)
-    println(dir)
+    println("dir: ", dir)
 
     req = HTTP.get(dir)
     html = parsehtml(String(req.body))
@@ -73,27 +92,44 @@ function get_directory(dir)
 
     # get all href attributes
     hrefs = map(x -> x.attributes["href"], hrefs)
-    println(hrefs)
+    #println(hrefs)
+
+    rows = []
 
     # iterate through sub-directories
     for href in hrefs
         try
             # Xtend
-            list_directory(dir * href, "xtend")
+            files = list_directory(dir * href, "xtend")
+
+            # only push non-empty results
+            if !isempty(files)
+                push!(rows, files)
+            end
         catch _
         end
 
         try
             # Resolve
-            list_directory(dir * href, "resolve")
+            files = list_directory(dir * href, "resolve")
+
+            # only push non-empty results
+            if !isempty(files)
+                push!(rows, files)
+            end
         catch _
         end
     end
+
+    # flatten rows
+    rows = vcat(rows...)
+    println("number of files: ", length(rows))
+
+    return rows
 end
 
 function list_directory(dir, instrument)
     url = dir * instrument * "/event_cl/"
-    println(url)
 
     req = HTTP.get(url)
     html = parsehtml(String(req.body))
@@ -105,14 +141,8 @@ function list_directory(dir, instrument)
     hrefs = map(x -> x.attributes["href"], hrefs)
     #println(hrefs)
 
-    # for each href try to download a clean event file
-    for href in hrefs
-        try
-            get_file(url, instrument, href)
-        catch e
-            println(e)
-        end
-    end
+    # map get_file to hrefs
+    skipmissing(ThreadsX.map(href -> get_file(url, instrument, href), hrefs)) |> collect
 end
 
 # this function assumes that the user has created the directory structure as per below:
@@ -121,23 +151,30 @@ end
 function get_file(url, instrument, file)
     # check if the file ends with "_cl.evt.gz"
     if !endswith(file, "_cl.evt.gz")
-        return
+        return missing
     end
 
     _home = homedir() * "/JAXA/XRISM/" # a local filesystem (Mac Studio)
     #_home = homedir() * "/NAO/JAXA/XRISM/" # a local filesystem
-    #_home = "/Volumes/OWC/JAXA/XRISM/" # an SSD RAID Volume on zodiac
-
-    println("downloading $file to $_home...")
+    #_home = "/Volumes/OWC/JAXA/XRISM/" # an SSD RAID Volume on zodiac    
 
     # download the file
     _url = url * file
-    _target = _home * "/" * file
+    _target = _home * file
     #_target = _home * uppercase(instrument) * "/" * file
 
-    # download and gunzip the _target file
-    Downloads.download(_url, _target)
-    run(`gunzip $_target`)
+    try
+        # download and gunzip the _target file
+        #Downloads.download(_url, _target)
+        #run(`gunzip $_target`)
+        #println("downloaded $file to $_home...")
+
+        # _target without the .gz extension        
+        return [replace(file, ".gz" => ""), _url, instrument]
+    catch e
+        println(e)
+        return missing
+    end
 end
 
 #get_table(pub)
