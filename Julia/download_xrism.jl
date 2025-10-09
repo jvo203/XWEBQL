@@ -149,7 +149,7 @@ function list_directory(dir, instrument)
 
     # map get_file to hrefs
     #ThreadsX.
-    skipmissing(map(href -> get_file(url, instrument, href), hrefs)) |> collect
+    skipmissing(ThreadsX.map(href -> get_file(url, instrument, href), hrefs)) |> collect
 end
 
 # this function assumes that the user has created the directory structure as per below:
@@ -192,10 +192,7 @@ function get_file(url, instrument, file)
 
         max_count = ThreadsX.maximum(pixels)
 
-        # convert pixels/mask to RGB
-        dims = size(pixels)
-        img_width = dims[1]
-        img_height = dims[2]
+        # convert pixels/mask to RGB        
         fill = 0
 
         if max_count > 0
@@ -272,9 +269,6 @@ function get_file(url, instrument, file)
 
         # replace "_" with " "
         object = replace(object, "_" => " ")
-
-        # exit the program for testing
-        exit()
 
         return [dataset, _url, instrument, object, ra, dec]
     catch e
