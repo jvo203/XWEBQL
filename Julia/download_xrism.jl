@@ -69,8 +69,14 @@ function get_root(root::String)
     end
 
     println("total number of entries: ", length(entries))
-    println("entries[1:5]: ", entries[1:5])
-    println("entries[end-4:end]: ", entries[(end-4):end])
+
+    # if the length is 0 return
+    if isempty(entries)
+        return
+    end
+
+    println("the first entry: ", entries[1])
+    println("the last entry: ", entries[end])
 
     # convert to DataFrame    
     df = DataFrame(
