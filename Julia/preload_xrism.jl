@@ -36,7 +36,9 @@ function poll_progress(dataset)
         "/xwebql/progress/" *
         HTTP.escapeuri(dataset)
 
-    resp = HTTP.get(strURL)
+    # use a POST request to poll the progress
+    resp = HTTP.post(strURL)
+    #resp = HTTP.get(strURL)
     println(resp)
 
     if resp.status == 200
