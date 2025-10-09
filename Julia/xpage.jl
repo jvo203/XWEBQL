@@ -9,7 +9,7 @@ pyplot()
 
 include("xevent.jl")
 
-function to_pdf(edges, heights; lb=minimum(heights) / 3)
+function to_pdf(edges, heights; lb = minimum(heights) / 3)
     X = Float32[]
     Y = Float32[]
     push!(X, edges[begin])
@@ -55,7 +55,10 @@ function get_download_url(filename::String)::String
 end
 
 function get_xwebql_url(filename::String)::String
-    return "http://$HOST:$PORT/xwebql/events.html?mission=" * lowercase(mission) * "&dataset=" * filename
+    return "http://$HOST:$PORT/xwebql/events.html?mission=" *
+           lowercase(mission) *
+           "&dataset=" *
+           filename
 end
 
 function get_darts_xwebql(url::String)::String
@@ -86,13 +89,26 @@ write(html, "<title>" * mission * "</title>\n</head>\n<body>\n")
 write(html, "<h1>" * mission * " X-ray SXI / SXS Event Files</h1>\n")
 
 # append HTML table header
-write(html, "<table><tr><th>#</th><th>Dataset</th><th>Object</th><th>Ra [deg]</th><th>Dec [deg]</th><th>QL image</th><th>QL spectrum</th><th>XWEBQL Preview</th><th>Event File Download</th></tr>\n")
+write(
+    html,
+    "<table><tr><th>#</th><th>Dataset</th><th>Object</th><th>Ra [deg]</th><th>Dec [deg]</th><th>QL image</th><th>QL spectrum</th><th>XWEBQL Preview</th><th>Event File Download</th></tr>\n",
+)
 
 # open a CSV file for writing
 csv = CSV.open(dir * "DEMO/" * lowercase(mission) * ".csv", "w")
 
 # create an empty DataFrame
-df = DataFrame(index=Integer[], dataset=String[], object=String[], ra=Float64[], dec=Float64[], image=String[], spectrum=String[], xwebql=String[], download=String[])
+df = DataFrame(
+    index = Integer[],
+    dataset = String[],
+    object = String[],
+    ra = Float64[],
+    dec = Float64[],
+    image = String[],
+    spectrum = String[],
+    xwebql = String[],
+    download = String[],
+)
 
 # write the CSV header
 #CSV.write(csv, IOBuffer(["#", "Dataset", "Object", "Ra [deg]", "Dec [deg]", "QL image", "QL spectrum", "XWEBQL Preview", "Event File Download"]))
@@ -113,13 +129,14 @@ for entry in files
     println(count, " ", dataset, " ", download_url, " ", xwebql_url)
 
     xdataset = XDataSet(dataset, uri)
-    load_events(xdataset, uri)
+    load_events(xdataset)
 
     width = 128
     height = 128
 
     try
-        (pixels, mask, spectrum, header, json, min_count, max_count) = getImageSpectrum(xdataset, width, height)
+        (pixels, mask, spectrum, header, json, min_count, max_count) =
+            getImageSpectrum(xdataset, width, height)
     catch e
         println("Error: ", e)
         continue
@@ -150,7 +167,7 @@ for entry in files
     pixels = pixels'
 
     # flip the image
-    pixels = reverse(pixels, dims=1)
+    pixels = reverse(pixels, dims = 1)
 
     # make an image from pixels
     img = colorview(Gray, pixels)
@@ -170,7 +187,7 @@ for entry in files
     heights = Float32[]
     edges = Float32[]
     # iterate through the bins dictionary
-    for i in 1:length(bins)
+    for i = 1:length(bins)
         bin = bins[i]
         bheight = Float32(bin["height"])
         bcenter = Float32(bin["center"])
@@ -186,7 +203,16 @@ for entry in files
     # convert to PDF 
     support, density = to_pdf(edges, heights)
 
-    plot_ref = Plots.plot(support, log.(density); legend=false, border=true, grid=false, axis=([], false), color=:black, linewidth=4)
+    plot_ref = Plots.plot(
+        support,
+        log.(density);
+        legend = false,
+        border = true,
+        grid = false,
+        axis = ([], false),
+        color = :black,
+        linewidth = 4,
+    )
     Plots.savefig(plot_ref, dir * "DEMO/images/" * entry * "_spectrum.png")
 
     # parse the JSON to a dictionary
@@ -203,10 +229,26 @@ for entry in files
     spectrum_link = "images/" * entry * "_spectrum.png"
 
     # append HTML table row
-    write(html, "<tr><td>$count</td><td>$dataset</td><td>$object</td><td>$ra</td><td>$dec</td><td><img src='$image_link'></td><td><img src='$spectrum_link' width='$width'></td><td><a href=\"$xwebql_url\">$xwebql_url</a></td><td><a href=\"$download_url\">$download_url</a></td></tr>\n")
+    write(
+        html,
+        "<tr><td>$count</td><td>$dataset</td><td>$object</td><td>$ra</td><td>$dec</td><td><img src='$image_link'></td><td><img src='$spectrum_link' width='$width'></td><td><a href=\"$xwebql_url\">$xwebql_url</a></td><td><a href=\"$download_url\">$download_url</a></td></tr>\n",
+    )
 
     # append the DataFrame row
-    push!(df, [count, dataset, object, ra, dec, image_link, spectrum_link, xwebql_url, download_url])
+    push!(
+        df,
+        [
+            count,
+            dataset,
+            object,
+            ra,
+            dec,
+            image_link,
+            spectrum_link,
+            xwebql_url,
+            download_url,
+        ],
+    )
 
     # increment the index
     count = count + 1

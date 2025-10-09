@@ -12,7 +12,7 @@ pyplot()
 
 include("xevent.jl")
 
-function to_pdf(edges, heights; lb=minimum(heights) / 3)
+function to_pdf(edges, heights; lb = minimum(heights) / 3)
     X = Float32[]
     Y = Float32[]
     push!(X, edges[begin])
@@ -71,10 +71,10 @@ function get_root(root::String)
 
     println("total number of entries: ", length(entries))
     println("entries[1:5]: ", entries[1:5])
-    println("entries[end-4:end]: ", entries[end-4:end])
+    println("entries[end-4:end]: ", entries[(end-4):end])
 
     # convert to DataFrame    
-    df = DataFrame(dataset=String[], url=String[], instrument=String[])
+    df = DataFrame(dataset = String[], url = String[], instrument = String[])
     push!(df, entries...)
 
     # save to CSV
@@ -155,9 +155,9 @@ function get_file(url, instrument, file)
         return missing
     end
 
-    _home = homedir() * "/JAXA/XRISM/" # a local filesystem (Mac Studio)
+    #_home = homedir() * "/JAXA/XRISM/" # a local filesystem (Mac Studio)
     #_home = homedir() * "/NAO/JAXA/XRISM/" # a local filesystem
-    #_home = "/Volumes/OWC/JAXA/XRISM/" # an SSD RAID Volume on zodiac    
+    _home = "/Volumes/OWC/JAXA/XRISM/" # an SSD RAID Volume on zodiac    
 
     # download the file
     _url = url * file
@@ -171,7 +171,18 @@ function get_file(url, instrument, file)
         println("downloaded $file to $_home...")
 
         # _target without the .gz extension
+        _target = replace(_target, ".gz" => "")
         dataset = replace(file, ".gz" => "")
+
+        # preload the dataset, create thumbnails
+        xdataset = XDataSet(dataset, _target)
+        load_events(xdataset)
+
+        width = 128
+        height = 128
+
+        (pixels, mask, spectrum, header, json, min_count, max_count) =
+            getImageSpectrum(xdataset, width, height)
 
         # exit the program for testing
         exit()
