@@ -75,7 +75,14 @@ function get_root(root::String)
     println("entries[end-4:end]: ", entries[(end-4):end])
 
     # convert to DataFrame    
-    df = DataFrame(dataset = String[], url = String[], instrument = String[])
+    df = DataFrame(
+        dataset = String[],
+        url = String[],
+        instrument = String[],
+        object = String[],
+        ra = Float64[],
+        dec = Float64[],
+    )
     push!(df, entries...)
 
     # save to CSV
@@ -185,10 +192,93 @@ function get_file(url, instrument, file)
         (pixels, mask, spectrum, header, json, min_count, max_count) =
             getImageSpectrum(xdataset, width, height)
 
+        max_count = ThreadsX.maximum(pixels)
+
+        # convert pixels/mask to RGB
+        dims = size(pixels)
+        img_width = dims[1]
+        img_height = dims[2]
+        fill = 0
+
+        if max_count > 0
+            pixels = clamp.(pixels ./ max_count, 0.0, 1.0)
+        else
+            pixels .= Float32(0)
+            pixels[mask] .= Float32(1)
+
+            println("mask range:", ThreadsX.extrema(mask))
+            println("pixels range:", ThreadsX.extrema(pixels))
+        end
+
+        # fill pixels with the fill colour where mask is false
+        pixels[.!mask] .= fill
+
+        # transpose the pixels array
+        pixels = pixels'
+
+        # flip the image
+        pixels = reverse(pixels, dims = 1)
+
+        # make an image from pixels
+        img = colorview(Gray, pixels)
+
+        # save image as PNG
+        save(_home * "DEMO/images/" * dataset * "_image.png", img)
+
+        println(max_count, extrema(pixels))
+
+        # plot the spectrum as PNG
+        println(spectrum)
+
+        # parse the spectrum JSON array "{"height":0.27966323,"center":5.432244,"width":0.17027283}",
+        # extract height, center and width Float32 arrays
+        bins = JSON.parse(spectrum)
+
+        heights = Float32[]
+        edges = Float32[]
+        # iterate through the bins dictionary
+        for i = 1:length(bins)
+            bin = bins[i]
+            bheight = Float32(bin["height"])
+            bcenter = Float32(bin["center"])
+            bwidth = Float32(bin["width"])
+            push!(heights, bheight)
+            push!(edges, bcenter - bwidth / 2)
+        end
+        push!(edges, Float32(bins[end]["center"]) + Float32(bins[end]["width"]) / 2)
+
+        println("heights: ", heights)
+        println("edges: ", edges)
+
+        # convert to PDF 
+        support, density = to_pdf(edges, heights)
+
+        plot_ref = Plots.plot(
+            support,
+            log.(density);
+            legend = false,
+            border = true,
+            grid = false,
+            axis = ([], false),
+            color = :black,
+            linewidth = 4,
+        )
+        #Plots.savefig(plot_ref, _home * "DEMO/images/" * dataset * "_spectrum.png")
+
+        # parse the JSON to a dictionary
+        json = JSON.parse(json)
+
+        object = json["OBJECT"]
+        ra = json["RA_OBJ"]
+        dec = json["DEC_OBJ"]
+
+        # replace "_" with " "
+        object = replace(object, "_" => " ")
+
         # exit the program for testing
         exit()
 
-        return [dataset, _url, instrument]
+        return [dataset, _url, instrument, object, ra, dec]
     catch e
         println(e)
         return missing
