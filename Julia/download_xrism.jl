@@ -8,7 +8,7 @@ using JSON
 using Images
 using Plots
 
-pyplot()
+#pyplot()
 
 include("xevent.jl")
 
@@ -30,6 +30,7 @@ end
 
 const pub = "https://data.darts.isas.jaxa.jp/pub/xrism/browse/public_list/?k=time&o=asc&c=ALL&q="
 const root = "https://data.darts.isas.jaxa.jp/pub/xrism/data/obs/rev3/"
+const SERVER_STRING = "xpage.jl"
 
 function get_table(pub)
     req = HTTP.get(pub)
