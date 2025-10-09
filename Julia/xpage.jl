@@ -5,8 +5,6 @@ using JSON
 using Images
 using Plots
 
-pyplot()
-
 include("xevent.jl")
 
 function to_pdf(edges, heights; lb = minimum(heights) / 3)

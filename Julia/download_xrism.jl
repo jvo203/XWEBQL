@@ -8,8 +8,6 @@ using JSON
 using Images
 using Plots
 
-#pyplot()
-
 include("xevent.jl")
 
 function to_pdf(edges, heights; lb = minimum(heights) / 3)
@@ -263,7 +261,7 @@ function get_file(url, instrument, file)
             color = :black,
             linewidth = 4,
         )
-        #Plots.savefig(plot_ref, _home * "DEMO/images/" * dataset * "_spectrum.png")
+        Plots.savefig(plot_ref, _home * "DEMO/images/" * dataset * "_spectrum.png")
 
         # parse the JSON to a dictionary
         json = JSON.parse(json)
