@@ -147,8 +147,7 @@ function list_directory(dir, instrument)
     hrefs = map(x -> x.attributes["href"], hrefs)
     #println(hrefs)
 
-    # map get_file to hrefs
-    #ThreadsX.
+    # map get_file to hrefs    
     skipmissing(ThreadsX.map(href -> get_file(url, instrument, href), hrefs)) |> collect
 end
 
@@ -156,6 +155,8 @@ end
 # ~/NAO/JAXA/XRISM/XTEND
 # ~/NAO/JAXA/XRISM/RESOLVE
 function get_file(url, instrument, file)
+    local pixels, mask, spectrum, header, json, min_count, max_count
+
     # check if the file ends with "_cl.evt.gz"
     if !endswith(file, "_cl.evt.gz")
         return missing
@@ -190,7 +191,7 @@ function get_file(url, instrument, file)
         (pixels, mask, spectrum, header, json, min_count, max_count) =
             getImageSpectrum(xdataset, width, height)
 
-        max_count = ThreadsX.maximum(pixels)
+        max_count = maximum(pixels)
 
         # convert pixels/mask to RGB        
         fill = 0
@@ -200,9 +201,6 @@ function get_file(url, instrument, file)
         else
             pixels .= Float32(0)
             pixels[mask] .= Float32(1)
-
-            println("mask range:", ThreadsX.extrema(mask))
-            println("pixels range:", ThreadsX.extrema(pixels))
         end
 
         # fill pixels with the fill colour where mask is false
@@ -220,11 +218,7 @@ function get_file(url, instrument, file)
         # save image as PNG
         save(_home * "DEMO/images/" * dataset * "_image.png", img)
 
-        println(max_count, extrema(pixels))
-
         # plot the spectrum as PNG
-        println(spectrum)
-
         # parse the spectrum JSON array "{"height":0.27966323,"center":5.432244,"width":0.17027283}",
         # extract height, center and width Float32 arrays
         bins = JSON.parse(spectrum)
@@ -241,9 +235,6 @@ function get_file(url, instrument, file)
             push!(edges, bcenter - bwidth / 2)
         end
         push!(edges, Float32(bins[end]["center"]) + Float32(bins[end]["width"]) / 2)
-
-        println("heights: ", heights)
-        println("edges: ", edges)
 
         # convert to PDF 
         support, density = to_pdf(edges, heights)
