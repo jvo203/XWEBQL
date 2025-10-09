@@ -1,8 +1,8 @@
 using HTTP
-using ProgressMeter
+using JSON
 
 mission = "xrism"
-host = "jvow"
+host = "grid82" # jvow or grid82
 port = 10000
 dir = "/Volumes/OWC/JAXA/XRISM"
 
@@ -38,8 +38,7 @@ function poll_progress(dataset)
 
     # use a POST request to poll the progress
     resp = HTTP.post(strURL)
-    #resp = HTTP.get(strURL)
-    println(resp)
+    #println(resp)
 
     if resp.status == 200
         return JSON.parse(String(resp.body))["progress"]
@@ -61,11 +60,12 @@ function preload_dataset(dataset, url)
         return
     end
 
-    sleep(30) # give it some time to start loading
-    return
+    sleep(1) # give it some time to start loading
 
-    # wait until a dataset has been loaded
-    p = Progress(100, 1, "Loading...")
+    #sleep(30) # give it some time to start loading
+    #return
+
+    # wait until a dataset has been loaded    
 
     # repeatedly poll for progress
     while true
@@ -75,8 +75,6 @@ function preload_dataset(dataset, url)
             println("\nno progress")
             break
         end
-
-        update!(p, Int(floor(progress)))
 
         # throw a DomainError if the progress is over 100% (should not happen, I want to catch any logical bugs, network problems, etc.)
         if progress > 100
