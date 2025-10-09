@@ -171,6 +171,12 @@ function get_file(url, instrument, file)
     _target = _home * file
     #_target = _home * uppercase(instrument) * "/" * file
 
+    # check if the file already exists
+    if isfile(replace(_target, ".gz" => ""))
+        println("file already exists: ", replace(_target, ".gz" => ""))
+        return missing
+    end
+
     try
         # download and gunzip the _target file
         Downloads.download(_url, _target)
