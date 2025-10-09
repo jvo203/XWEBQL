@@ -2,7 +2,7 @@ using HTTP
 using JSON
 
 mission = "xrism"
-host = "grid82" # jvow or grid82
+host = "jvow" # jvow or grid82
 port = 10000
 dir = "/Volumes/OWC/JAXA/XRISM"
 
