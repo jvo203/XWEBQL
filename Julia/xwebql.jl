@@ -115,7 +115,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "25.09.22.0"
-const VERSION_STRING = "J/SV2025-10-03.0-BETA"
+const VERSION_STRING = "J/SV2025-10-10.0-BETA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -1368,7 +1368,7 @@ function ws_coroutine(ws, ids)
             end
 
             # check if x, y, energy are nothing
-            if x === nothing || y === nothing || energy === nothing
+            if isnothing(x) || isnothing(y) || isnothing(energy)
                 x = xobject.x
                 y = xobject.y
                 energy = xobject.energy
@@ -1386,7 +1386,7 @@ function ws_coroutine(ws, ids)
             println("[getViewportSpectrum] elapsed: $elapsed [ms]")
 
             Threads.@spawn begin
-                if viewport != Nothing
+                if !isnothing(viewport)
                     # send a viewport                    
                     resp = IOBuffer()
 
@@ -1402,7 +1402,7 @@ function ws_coroutine(ws, ids)
                     put!(outgoing, resp)
                 end
 
-                if spectrum != Nothing
+                if !isnothing(spectrum)
                     # send a spectrum
                     resp = IOBuffer()
 
@@ -1447,7 +1447,7 @@ function ws_coroutine(ws, ids)
             end
 
             # check if x, y, energy are nothing
-            if x === nothing || y === nothing || energy === nothing
+            if isnothing(x) || isnothing(y) || isnothing(energy)
                 x = xobject.x
                 y = xobject.y
                 energy = xobject.energy
@@ -1714,7 +1714,7 @@ function ws_coroutine(ws, ids)
                 end
 
                 # check if x, y, energy are nothing
-                if x === nothing || y === nothing || energy === nothing
+                if isnothing(x) || isnothing(y) || isnothing(energy)
                     x = xobject.x
                     y = xobject.y
                     energy = xobject.energy
@@ -1731,19 +1731,29 @@ function ws_coroutine(ws, ids)
                 req["y1"] = offsety
                 req["y2"] = offsety + inner_height - 1
 
-                elapsed = @elapsed image, spectrum = getViewportSpectrum(
-                    x,
-                    y,
-                    energy,
-                    req,
-                    getNumChannels(xobject.header),
-                )
-                elapsed *= 1000.0 # [ms]
+                try
+                    elapsed = @elapsed image, spectrum = getViewportSpectrum(
+                        x,
+                        y,
+                        energy,
+                        req,
+                        getNumChannels(xobject.header),
+                    )
+                    elapsed *= 1000.0 # [ms]
+                catch e
+                    # save the error to a file error.log
+                    open("error.log", "a") do f
+                        write(f, "[$(now())] Error: $e\n")
+                    end
+                    image = nothing
+                    spectrum = nothing
+                    elapsed = 0.0
+                end
 
                 println("[getViewportSpectrum] elapsed: $elapsed [ms]")
 
                 Threads.@spawn begin
-                    if image != Nothing
+                    if !isnothing(image)
                         # send an image 
                         resp = IOBuffer()
 
@@ -1759,7 +1769,7 @@ function ws_coroutine(ws, ids)
                         put!(outgoing, resp)
                     end
 
-                    if spectrum != Nothing
+                    if !isnothing(spectrum)
                         # send a spectrum
                         resp = IOBuffer()
 
