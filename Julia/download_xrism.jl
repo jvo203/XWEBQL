@@ -10,7 +10,7 @@ using Plots
 
 include("xevent.jl")
 
-function to_pdf(edges, heights; lb = minimum(heights) / 3)
+function to_pdf(edges, heights; lb=minimum(heights) / 3)
     X = Float32[]
     Y = Float32[]
     push!(X, edges[begin])
@@ -80,12 +80,12 @@ function get_root(root::String)
 
     # convert to DataFrame    
     df = DataFrame(
-        dataset = String[],
-        url = String[],
-        instrument = String[],
-        object = String[],
-        ra = Float64[],
-        dec = Float64[],
+        dataset=String[],
+        url=String[],
+        instrument=String[],
+        #object=String[],
+        #ra=Float64[],
+        #dec=Float64[],
     )
     push!(df, entries...)
 
@@ -193,6 +193,8 @@ function get_file(url, instrument, file)
         _target = replace(_target, ".gz" => "")
         dataset = replace(file, ".gz" => "")
 
+        return [dataset, _url, instrument] # return early
+
         # preload the dataset, create thumbnails
         xdataset = XDataSet(dataset, _target)
         load_events(xdataset)
@@ -222,7 +224,7 @@ function get_file(url, instrument, file)
         pixels = pixels'
 
         # flip the image
-        pixels = reverse(pixels, dims = 1)
+        pixels = reverse(pixels, dims=1)
 
         # make an image from pixels
         img = colorview(Gray, pixels)
@@ -254,12 +256,12 @@ function get_file(url, instrument, file)
         plot_ref = Plots.plot(
             support,
             log.(density);
-            legend = false,
-            border = true,
-            grid = false,
-            axis = ([], false),
-            color = :black,
-            linewidth = 4,
+            legend=false,
+            border=true,
+            grid=false,
+            axis=([], false),
+            color=:black,
+            linewidth=4,
         )
         Plots.savefig(plot_ref, _home * "DEMO/images/" * dataset * "_spectrum.png")
 

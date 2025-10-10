@@ -62,6 +62,9 @@ Manifest.toml
 # FITS files
 *.fits
 
+# CSV files (i.e. xrism.csv)
+*.csv
+
 #Microsoft Visual Code IDE
 /.vscode/
 
