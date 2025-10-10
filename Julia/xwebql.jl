@@ -1731,24 +1731,14 @@ function ws_coroutine(ws, ids)
                 req["y1"] = offsety
                 req["y2"] = offsety + inner_height - 1
 
-                try
-                    elapsed = @elapsed image, spectrum = getViewportSpectrum(
-                        x,
-                        y,
-                        energy,
-                        req,
-                        getNumChannels(xobject.header),
-                    )
-                    elapsed *= 1000.0 # [ms]
-                catch e
-                    # save the error to a file error.log
-                    open("error.log", "a") do f
-                        write(f, "[$(now())] Error: $e\n")
-                    end
-                    image = nothing
-                    spectrum = nothing
-                    elapsed = 0.0
-                end
+                elapsed = @elapsed image, spectrum = getViewportSpectrum(
+                    x,
+                    y,
+                    energy,
+                    req,
+                    getNumChannels(xobject.header),
+                )
+                elapsed *= 1000.0 # [ms]            
 
                 println("[getViewportSpectrum] elapsed: $elapsed [ms]")
 

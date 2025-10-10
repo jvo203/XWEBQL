@@ -1171,7 +1171,7 @@ function write_html_header(io::IO, hdr::FITSHeader)
     end
 end
 
-function getViewportSpectrum(x, y, energy, req::Dict{String,Any}, num_channels::Integer)
+function getViewportSpectrum(x, y, energy, req, num_channels::Integer)
     local pixels, mask, spectrum
     local min_count, max_count
     local view_resp, spec_resp
