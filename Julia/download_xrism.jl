@@ -4,12 +4,12 @@ using Downloads
 using Cascadia, Gumbo, HTTP
 using ThreadsX
 
+# no longer in use
+#=
 using JSON
 using Images
 using Plots
 
-# no longer in use
-#=
 include("xevent.jl")
 
 function to_pdf(edges, heights; lb = minimum(heights) / 3)
