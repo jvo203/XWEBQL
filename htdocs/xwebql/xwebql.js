@@ -910,7 +910,7 @@ async function mainRenderer() {
         viewport = {};
         zoom_dims = null;
         zoom_location = 'lower';
-        zoom_scale = 25;
+        zoom_scale = 25; // was 25
         xradec = null;
         lines = [];
 
@@ -5075,7 +5075,7 @@ function setup_image_selection() {
     var zoom_cross = d3.select("#zoomCross");
 
     var zoom = d3.zoom()
-        .scaleExtent([10, 200])//was 200
+        .scaleExtent([10, 100])//was [10, 200]
         .on("zoom", zoomed);
 
     now = performance.now();
