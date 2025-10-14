@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-09-22.0";
+    return "JS2025-10-14.0";
 }
 
 function uuidv4() {
@@ -1597,12 +1597,6 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
 
                             console.log(fitsData);
 
-                            /*if (!isLocal) {
-                                let filesize = fitsData.filesize;
-                                let strFileSize = numeral(filesize).format('0.0b');
-                                d3.select("#FITS").html("full download (" + strFileSize + ")");
-                            }*/
-
                             {
                                 frame_reference_unit();
 
@@ -1818,69 +1812,6 @@ function display_menu() {
         .style('cursor', 'pointer')
         .on("click", show_fits_header)
         .html('display header');
-
-    /*if (!isLocal && (window.location.search.indexOf('ALMA') > 0 || window.location.search.indexOf('ALMB') > 0)) {
-        var url = "";
-
-        if (datasetId.localeCompare("ALMA01000000") < 0)
-            url = "http://jvo.nao.ac.jp/portal/alma/sv.do?action=download.fits&dataId=";
-        else
-            url = "http://jvo.nao.ac.jp/portal/alma/archive.do?action=download.fits&dataId=";
-
-        fitsDropdown.append("li")
-            .append("a")
-            .attr("id", "FITS")
-            .attr("href", url + datasetId + '_00_00_00')
-            .html('full FITS download <span class="fas fa-save"></span>');
-    }
-    else*/
-    if (!isLocal) {
-        let filename = datasetId;
-
-        // extract the first 3 characters
-        let prefix = filename.substring(0, 3);
-
-        // extract the string between "ah" and "sxs"
-        let suffix = filename.substring(filename.indexOf("ah") + 2, filename.indexOf("sxs"));
-
-        // check if the last character if 0 or 1
-        let lastChar = prefix.substring(prefix.length - 1);
-
-        console.log(filename, prefix, lastChar, suffix);
-
-        let _url = "https://data.darts.isas.jaxa.jp/pub/hitomi/obs/";
-
-        if (lastChar === "0")
-            _url += "0/";
-
-        if (lastChar === "1")
-            _url += "1/";
-
-        _url += suffix + "/sxs/event_cl/" + encodeURIComponent(datasetId);
-
-        fitsDropdown.append("li")
-            .append("a")
-            .attr("id", "FITS")
-            .attr("href", _url)
-            .attr("target", "_blank")
-            .attr('download', '')
-            .html('events file download <span class="fas fa-save"></span>');
-    }
-
-    //IMAGE
-    /*var imageMenu = mainUL.append("li")
-        .attr("class", "dropdown");
-
-    imageMenu.append("a")
-        .attr("class", "dropdown-toggle")
-        .attr("data-toggle", "dropdown")
-        .style('cursor', 'pointer')
-        .html('Image <span class="caret"></span>');
-
-    var imageDropdown = imageMenu.append("ul")
-        .attr("id", "imageDropdown")
-        .attr("class", "dropdown-menu");
-    //.style("background-color", "rgba(0,0,0,0.4)");*/
 
     //PREFERENCES
     var prefMenu = mainUL.append("li")
