@@ -8,9 +8,11 @@ using JSON
 using Images
 using Plots
 
+# no longer in use
+#=
 include("xevent.jl")
 
-function to_pdf(edges, heights; lb=minimum(heights) / 3)
+function to_pdf(edges, heights; lb = minimum(heights) / 3)
     X = Float32[]
     Y = Float32[]
     push!(X, edges[begin])
@@ -25,6 +27,7 @@ function to_pdf(edges, heights; lb=minimum(heights) / 3)
     push!(Y, lb)
     return X, Y
 end
+=#
 
 const pub = "https://data.darts.isas.jaxa.jp/pub/xrism/browse/public_list/?k=time&o=asc&c=ALL&q="
 const root = "https://data.darts.isas.jaxa.jp/pub/xrism/data/obs/rev3/"
@@ -80,9 +83,9 @@ function get_root(root::String)
 
     # convert to DataFrame    
     df = DataFrame(
-        dataset=String[],
-        url=String[],
-        instrument=String[],
+        dataset = String[],
+        url = String[],
+        instrument = String[],
         #object=String[],
         #ra=Float64[],
         #dec=Float64[],
@@ -195,6 +198,7 @@ function get_file(url, instrument, file)
 
         return [dataset, _url, instrument] # return early
 
+        #=
         # preload the dataset, create thumbnails
         xdataset = XDataSet(dataset, _target)
         load_events(xdataset)
@@ -224,7 +228,7 @@ function get_file(url, instrument, file)
         pixels = pixels'
 
         # flip the image
-        pixels = reverse(pixels, dims=1)
+        pixels = reverse(pixels, dims = 1)
 
         # make an image from pixels
         img = colorview(Gray, pixels)
@@ -256,12 +260,12 @@ function get_file(url, instrument, file)
         plot_ref = Plots.plot(
             support,
             log.(density);
-            legend=false,
-            border=true,
-            grid=false,
-            axis=([], false),
-            color=:black,
-            linewidth=4,
+            legend = false,
+            border = true,
+            grid = false,
+            axis = ([], false),
+            color = :black,
+            linewidth = 4,
         )
         Plots.savefig(plot_ref, _home * "DEMO/images/" * dataset * "_spectrum.png")
 
@@ -276,6 +280,7 @@ function get_file(url, instrument, file)
         object = replace(object, "_" => " ")
 
         return [dataset, _url, instrument, object, ra, dec]
+        =#
     catch e
         println(e)
         return missing
