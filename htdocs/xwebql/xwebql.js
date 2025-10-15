@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-10-14.0";
+    return "JS2025-10-15.0";
 }
 
 function uuidv4() {
@@ -4375,6 +4375,11 @@ function get_image_scale(width, height, img_width, img_height) {
     }
 }
 
+function get_clip_size(width, height) {
+    //return Math.min(width, height) / zoom_scale;
+    return (width + height) / (2.0 * zoom_scale);
+}
+
 /** ---------------------------------------------------------------------
  * Create and compile an individual shader.
  * @param gl WebGLRenderingContext The WebGL context.
@@ -5074,8 +5079,10 @@ function setup_image_selection() {
     var zoom_element = d3.select("#zoom");
     var zoom_cross = d3.select("#zoomCross");
 
+    console.log("scale=", scale, "zoom_scale=", zoom_scale);
+
     var zoom = d3.zoom()
-        .scaleExtent([10, 100])//was [10, 200]
+        .scaleExtent([10, 200])//was [10, 200]
         .on("zoom", zoomed);
 
     now = performance.now();
@@ -5404,7 +5411,7 @@ function setup_image_selection() {
             var image_bounding_dims = imageContainer.image_bounding_dims;
             var scale = get_image_scale(width, height, image_bounding_dims.width, image_bounding_dims.height);
 
-            var clipSize = Math.min(image_bounding_dims.width - 1, image_bounding_dims.height - 1) / zoom_scale;
+            var clipSize = get_clip_size(image_bounding_dims.width - 1, image_bounding_dims.height - 1);
             var sel_width = Math.floor(clipSize * scale);
             var sel_height = Math.floor(clipSize * scale);
 
@@ -6473,7 +6480,7 @@ function imageTimeout() {
     x = clamp(x, image_bounding_dims.x1, image_bounding_dims.x1 + image_bounding_dims.width - 1);
     y = clamp(y, image_bounding_dims.y1, image_bounding_dims.y1 + image_bounding_dims.height - 1);
 
-    var clipSize = Math.min(image_bounding_dims.width - 1, image_bounding_dims.height - 1) / zoom_scale;
+    var clipSize = get_clip_size(image_bounding_dims.width - 1, image_bounding_dims.height - 1);
     var sel_width = Math.floor(clipSize * scale);
     var sel_height = Math.floor(clipSize * scale);
 
