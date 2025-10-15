@@ -4376,8 +4376,14 @@ function get_image_scale(width, height, img_width, img_height) {
 }
 
 function get_clip_size(width, height) {
+    // legacy
     //return Math.min(width, height) / zoom_scale;
-    return (width + height) / (2.0 * zoom_scale);
+
+    // an arithmetic mean of width and height
+    //return (width + height) / (2.0 * zoom_scale);
+
+    // a geometric mean of width and height
+    return Math.sqrt(width * height) / zoom_scale;
 }
 
 /** ---------------------------------------------------------------------
