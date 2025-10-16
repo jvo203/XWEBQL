@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-10-15.0";
+    return "JS2025-10-16.0";
 }
 
 function uuidv4() {
@@ -910,7 +910,7 @@ async function mainRenderer() {
         viewport = {};
         zoom_dims = null;
         zoom_location = 'lower';
-        zoom_scale = 25; // was 25
+        zoom_scale = 25;
         xradec = null;
         lines = [];
 
@@ -5088,7 +5088,7 @@ function setup_image_selection() {
     console.log("scale=", scale, "zoom_scale=", zoom_scale);
 
     var zoom = d3.zoom()
-        .scaleExtent([10, 200])//was [10, 200]
+        .scaleExtent([10, 200])
         .on("zoom", zoomed);
 
     now = performance.now();
