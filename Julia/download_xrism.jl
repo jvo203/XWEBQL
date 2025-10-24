@@ -33,6 +33,21 @@ const pub = "https://data.darts.isas.jaxa.jp/pub/xrism/browse/public_list/?k=tim
 const root = "https://data.darts.isas.jaxa.jp/pub/xrism/data/obs/rev3/"
 const SERVER_STRING = "download_xrism.jl"
 
+XRISM_HOME = "/Volumes/OWC/JAXA/XRISM/"
+
+if length(ARGS) == 0
+    println("Usage: julia download_xrism.jl --xrism_home=<xrism_home>")
+    println("e.g.: julia download_xrism.jl --xrism_home=/Volumes/OWC/JAXA/XRISM/")
+    exit(1)
+end
+
+# get the arguments from the command line
+for arg in ARGS
+    if startswith(arg, "--xrism_home=")
+        global XRISM_HOME = split(arg, "=")[2]
+    end
+end
+
 function get_table(pub)
     req = HTTP.get(pub)
     html = parsehtml(String(req.body))
@@ -83,9 +98,9 @@ function get_root(root::String)
 
     # convert to DataFrame    
     df = DataFrame(
-        dataset = String[],
-        url = String[],
-        instrument = String[],
+        dataset=String[],
+        url=String[],
+        instrument=String[],
         #object=String[],
         #ra=Float64[],
         #dec=Float64[],
@@ -164,6 +179,7 @@ end
 # ~/NAO/JAXA/XRISM/XTEND
 # ~/NAO/JAXA/XRISM/RESOLVE
 function get_file(url, instrument, file)
+    global XRISM_HOME
     local pixels, mask, spectrum, header, json, min_count, max_count
 
     # check if the file ends with "_cl.evt.gz"
@@ -173,7 +189,9 @@ function get_file(url, instrument, file)
 
     #_home = homedir() * "/JAXA/XRISM/" # a local filesystem (Mac Studio)
     #_home = homedir() * "/NAO/JAXA/XRISM/" # a local filesystem
-    _home = "/Volumes/OWC/JAXA/XRISM/" # an SSD RAID Volume on zodiac    
+    #_home = "/Volumes/OWC/JAXA/XRISM/" # an SSD RAID Volume on zodiac    
+
+    _home = XRISM_HOME
 
     # download the file
     _url = url * file
@@ -198,89 +216,89 @@ function get_file(url, instrument, file)
 
         return [dataset, _url, instrument] # return early
 
-        #=
-        # preload the dataset, create thumbnails
-        xdataset = XDataSet(dataset, _target)
-        load_events(xdataset)
+    #=
+    # preload the dataset, create thumbnails
+    xdataset = XDataSet(dataset, _target)
+    load_events(xdataset)
 
-        width = 128
-        height = 128
+    width = 128
+    height = 128
 
-        (pixels, mask, spectrum, header, json, min_count, max_count) =
-            getImageSpectrum(xdataset, width, height)
+    (pixels, mask, spectrum, header, json, min_count, max_count) =
+        getImageSpectrum(xdataset, width, height)
 
-        max_count = maximum(pixels)
+    max_count = maximum(pixels)
 
-        # convert pixels/mask to RGB        
-        fill = 0
+    # convert pixels/mask to RGB        
+    fill = 0
 
-        if max_count > 0
-            pixels = clamp.(pixels ./ max_count, 0.0, 1.0)
-        else
-            pixels .= Float32(0)
-            pixels[mask] .= Float32(1)
-        end
+    if max_count > 0
+        pixels = clamp.(pixels ./ max_count, 0.0, 1.0)
+    else
+        pixels .= Float32(0)
+        pixels[mask] .= Float32(1)
+    end
 
-        # fill pixels with the fill colour where mask is false
-        pixels[.!mask] .= fill
+    # fill pixels with the fill colour where mask is false
+    pixels[.!mask] .= fill
 
-        # transpose the pixels array
-        pixels = pixels'
+    # transpose the pixels array
+    pixels = pixels'
 
-        # flip the image
-        pixels = reverse(pixels, dims = 1)
+    # flip the image
+    pixels = reverse(pixels, dims = 1)
 
-        # make an image from pixels
-        img = colorview(Gray, pixels)
+    # make an image from pixels
+    img = colorview(Gray, pixels)
 
-        # save image as PNG
-        save(_home * "DEMO/images/" * dataset * "_image.png", img)
+    # save image as PNG
+    save(_home * "DEMO/images/" * dataset * "_image.png", img)
 
-        # plot the spectrum as PNG
-        # parse the spectrum JSON array "{"height":0.27966323,"center":5.432244,"width":0.17027283}",
-        # extract height, center and width Float32 arrays
-        bins = JSON.parse(spectrum)
+    # plot the spectrum as PNG
+    # parse the spectrum JSON array "{"height":0.27966323,"center":5.432244,"width":0.17027283}",
+    # extract height, center and width Float32 arrays
+    bins = JSON.parse(spectrum)
 
-        heights = Float32[]
-        edges = Float32[]
-        # iterate through the bins dictionary
-        for i = 1:length(bins)
-            bin = bins[i]
-            bheight = Float32(bin["height"])
-            bcenter = Float32(bin["center"])
-            bwidth = Float32(bin["width"])
-            push!(heights, bheight)
-            push!(edges, bcenter - bwidth / 2)
-        end
-        push!(edges, Float32(bins[end]["center"]) + Float32(bins[end]["width"]) / 2)
+    heights = Float32[]
+    edges = Float32[]
+    # iterate through the bins dictionary
+    for i = 1:length(bins)
+        bin = bins[i]
+        bheight = Float32(bin["height"])
+        bcenter = Float32(bin["center"])
+        bwidth = Float32(bin["width"])
+        push!(heights, bheight)
+        push!(edges, bcenter - bwidth / 2)
+    end
+    push!(edges, Float32(bins[end]["center"]) + Float32(bins[end]["width"]) / 2)
 
-        # convert to PDF 
-        support, density = to_pdf(edges, heights)
+    # convert to PDF 
+    support, density = to_pdf(edges, heights)
 
-        plot_ref = Plots.plot(
-            support,
-            log.(density);
-            legend = false,
-            border = true,
-            grid = false,
-            axis = ([], false),
-            color = :black,
-            linewidth = 4,
-        )
-        Plots.savefig(plot_ref, _home * "DEMO/images/" * dataset * "_spectrum.png")
+    plot_ref = Plots.plot(
+        support,
+        log.(density);
+        legend = false,
+        border = true,
+        grid = false,
+        axis = ([], false),
+        color = :black,
+        linewidth = 4,
+    )
+    Plots.savefig(plot_ref, _home * "DEMO/images/" * dataset * "_spectrum.png")
 
-        # parse the JSON to a dictionary
-        json = JSON.parse(json)
+    # parse the JSON to a dictionary
+    json = JSON.parse(json)
 
-        object = json["OBJECT"]
-        ra = json["RA_OBJ"]
-        dec = json["DEC_OBJ"]
+    object = json["OBJECT"]
+    ra = json["RA_OBJ"]
+    dec = json["DEC_OBJ"]
 
-        # replace "_" with " "
-        object = replace(object, "_" => " ")
+    # replace "_" with " "
+    object = replace(object, "_" => " ")
 
-        return [dataset, _url, instrument, object, ra, dec]
-        =#
+    return [dataset, _url, instrument, object, ra, dec]
+    =#
     catch e
         println(e)
         return missing
