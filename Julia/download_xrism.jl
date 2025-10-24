@@ -33,11 +33,11 @@ const pub = "https://data.darts.isas.jaxa.jp/pub/xrism/browse/public_list/?k=tim
 const root = "https://data.darts.isas.jaxa.jp/pub/xrism/data/obs/rev3/"
 const SERVER_STRING = "download_xrism.jl"
 
-XRISM_HOME = "/Volumes/OWC/JAXA/XRISM/"
+XRISM_HOME = "/Volumes/OWC/JAXA/XRISM"
 
 if length(ARGS) == 0
     println("Usage: julia download_xrism.jl --xrism_home=<xrism_home>")
-    println("e.g.: julia download_xrism.jl --xrism_home=/Volumes/OWC/JAXA/XRISM/")
+    println("e.g.: julia download_xrism.jl --xrism_home=/Volumes/OWC/JAXA/XRISM")
     exit(1)
 end
 
@@ -191,7 +191,7 @@ function get_file(url, instrument, file)
     #_home = homedir() * "/NAO/JAXA/XRISM/" # a local filesystem
     #_home = "/Volumes/OWC/JAXA/XRISM/" # an SSD RAID Volume on zodiac    
 
-    _home = XRISM_HOME
+    _home = XRISM_HOME * "/"
 
     # download the file
     _url = url * file
