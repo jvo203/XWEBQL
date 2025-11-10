@@ -99,6 +99,12 @@ parsed_args = parse_commandline()
 LOCAL_VERSION = true
 TIMEOUT = 60 # [s]
 
+DB_HOST = "localhost"
+DB_PORT = 5432
+DB_USER = "jvo"
+DB_PASSWORD = ""
+DB_HOME = "/home"
+
 XHOME = ".cache"
 XCACHE = ".cache"
 
@@ -115,7 +121,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "25.10.14.0"
-const VERSION_STRING = "J/SV2025-10-16.0-BETA"
+const VERSION_STRING = "J/SV2025-11-10.0-BETA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -276,7 +282,7 @@ function streamDirectory(http::HTTP.Streams.Stream)
 
     println("Scanning $dir ...")
 
-    resp = chop(JSON.json(Dict("location" => dir)), tail = 1) * ", \"contents\":["
+    resp = chop(JSON.json(Dict("location" => dir)), tail=1) * ", \"contents\":["
 
     elements = false
 
@@ -324,7 +330,7 @@ function streamDirectory(http::HTTP.Streams.Stream)
     end
 
     if elements
-        resp = chop(resp, tail = 1) * "]}"
+        resp = chop(resp, tail=1) * "]}"
     else
         resp *= "]}"
     end
@@ -348,7 +354,7 @@ function streamDirectory(http::HTTP.Streams.Stream)
     return nothing
 end
 
-function exitFunc(exception = false)
+function exitFunc(exception=false)
     global ws_server, gc_task, running
 
     running = false
@@ -458,7 +464,7 @@ end
 function remove_symlinks()
     # scan HT_DOCS for any symlinks and remove them
 
-    foreach(readdir(HT_DOCS, join = true)) do f
+    foreach(readdir(HT_DOCS, join=true)) do f
 
         # is it a symbolic link ?
         if islink(f)
@@ -1034,7 +1040,7 @@ function streamSpectralLines(http::HTTP.Streams.Stream)
         json = "{\"lines\" : []}"
     else
         # remove the last character (comma) from json, end an array
-        json = chop(json, tail = 1) * "]}"
+        json = chop(json, tail=1) * "]}"
     end
 
     # compress with bzip2 (more efficient than LZ4HC)
@@ -1160,7 +1166,7 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
             prec = ZFP_LOW_PRECISION
         end
 
-        compressed_pixels = zfp_compress(pixels, precision = prec)
+        compressed_pixels = zfp_compress(pixels, precision=prec)
         write(http, Int32(length(compressed_pixels)))
         write(http, compressed_pixels)
 
@@ -1265,6 +1271,33 @@ try
 
     try
         global XCACHE = retrieve(conf, "xwebql", "cache")
+    catch _
+    end
+
+    # [postgresql]
+
+    try
+        global DB_HOST = retrieve(conf, "postgresql", "host")
+    catch _
+    end
+
+    try
+        global DB_PORT = parse(Int64, retrieve(conf, "postgresql", "port"))
+    catch _
+    end
+
+    try
+        global DB_USER = retrieve(conf, "postgresql", "user")
+    catch _
+    end
+
+    try
+        global DB_PASSWORD = retrieve(conf, "postgresql", "password")
+    catch _
+    end
+
+    try
+        global DB_HOME = retrieve(conf, "postgresql", "home")
     catch _
     end
 catch e
@@ -2114,7 +2147,7 @@ Threads.@spawn :interactive WebSockets.serve(ws_server, host, WS_PORT)
 global gc_task = @async garbage_collector(XOBJECTS, XLOCK, TIMEOUT)
 
 try
-    HTTP.serve(XROUTER, host, UInt16(HTTP_PORT), stream = true)
+    HTTP.serve(XROUTER, host, UInt16(HTTP_PORT), stream=true)
 catch e
     @warn(e)
     typeof(e) == InterruptException && rethrow(e)
