@@ -153,6 +153,92 @@ include("xevent.jl")
 XOBJECTS = Dict{String,XDataSet}()
 XLOCK = ReentrantLock()
 
+function get_jvo_path(
+    datasetid,
+    host::String,
+    port::Int64,
+    user::String,
+    password::String,
+    db::String,
+    table::String,
+)
+    local url::String, dataid::String, sql::String
+    local conn
+
+    url = "postgresql://" * user
+
+    if password != ""
+        url *= ":" * password
+    end
+
+    url *= "@" * host
+
+    if port > 0
+        url *= ":" * string(port)
+    end
+
+    url *= "/" * db
+
+    try
+        conn = LibPQ.Connection(url)
+    catch _
+        error("cannot connect to PostgreSQL")
+    end
+
+    # dataid: if db is alma append _00_00_00
+    if db == "alma"
+        dataid = datasetid * "_00_00_00"
+    else
+        dataid = datasetid
+    end
+
+    sql = "SELECT path FROM " * table * " WHERE data_id = '" * dataid * "';"
+    println(sql)
+
+    filepath = ""
+
+    try
+        result = execute(conn, sql)
+        data = columntable(result)
+        path = data[:path][1]
+
+        pos = findfirst(".", table)
+
+        if !isnothing(pos)
+            filepath =
+                DB_HOME *
+                "/" *
+                db *
+                "/" *
+                uppercase(SubString(table, 1:(pos[1]-1))) *
+                "/" *
+                path
+        else
+            if (db == "spcam") || (db == "moircs")
+                filepath = DB_HOME * "/subaru/" * db * "/mosaic/" * path
+            else
+                filepath = DB_HOME * "/" * db * "/" * path
+            end
+        end
+
+        println("filepath:", filepath)
+    catch err
+        println(err)
+        close(conn)
+        error("cannot read from PostgreSQL")
+    end
+
+    close(conn)
+
+    # check if the file exists
+    if isfile(filepath)
+        return filepath
+    else
+        # otherwise throw an error    
+        error("'$filepath' does not exist.")
+    end
+end
+
 function streamFile(http::HTTP.Streams.Stream, path::String)
     # strip out a question mark (if there is any)
     pos = findlast("?", path)
@@ -609,7 +695,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
                     uri *= "." * ext
                 end
             else
-                uri = "file://" * XHOME
+                uri = XHOME
 
                 if mission != ""
                     # convert mission to uppercase
@@ -617,6 +703,25 @@ function streamXEvents(http::HTTP.Streams.Stream)
                 end
 
                 uri *= "/" * dataset
+
+                if !isfile(uri)
+                    # get the JVO path from the database
+                    try
+                        uri = get_jvo_path(
+                            dataset,
+                            DB_HOST,
+                            DB_PORT,
+                            DB_USER,
+                            DB_PASSWORD,
+                            lowercase(mission),
+                            "jvo_" * lowercase(mission) * "_files",
+                        )
+                    catch err
+                        error("cannot get the JVO path from the database: $err")
+                    end
+                end
+
+                uri = "file://" * uri
             end
         else
             # extract the dataset name from the URI, take the string after the last slash
