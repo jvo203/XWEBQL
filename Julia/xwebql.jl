@@ -99,14 +99,14 @@ parsed_args = parse_commandline()
 LOCAL_VERSION = true
 TIMEOUT = 60 # [s]
 
+XHOME = ".cache"
+XCACHE = ".cache"
+
 DB_HOST = "localhost"
 DB_PORT = 5432
 DB_USER = "jvo"
 DB_PASSWORD = ""
 DB_HOME = "/home"
-
-XHOME = ".cache"
-XCACHE = ".cache"
 
 const VERSION_MAJOR = 1
 const VERSION_MINOR = 0
