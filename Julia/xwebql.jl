@@ -179,11 +179,7 @@ function get_jvo_path(
 
     url *= "/" * db
 
-    try
-        conn = LibPQ.Connection(url)
-    catch _
-        error("cannot connect to PostgreSQL")
-    end
+    conn = LibPQ.Connection(url) # this will throw an error upon failure
 
     # dataid: if db is alma append _00_00_00
     if db == "alma"
@@ -717,7 +713,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
                             "jvo_" * lowercase(mission) * "_files",
                         )
                     catch err
-                        error("cannot get the JVO path from the database: $err")
+                        println("cannot get the JVO path from the database:", err)
                     end
                 end
 
