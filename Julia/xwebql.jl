@@ -7,6 +7,7 @@ using CodecZstd
 using ConfParser
 using HTTP
 using JSON
+using LibPQ, Tables
 using SQLite
 using Sockets
 using WebSockets
