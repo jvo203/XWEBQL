@@ -122,7 +122,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "25.10.14.0"
-const VERSION_STRING = "J/SV2025-11-10.0-BETA"
+const VERSION_STRING = "J/SV2025-11-11.0-BETA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -162,7 +162,7 @@ function get_jvo_path(
     db::String,
     table::String,
 )
-    local url::String, dataid::String, sql::String
+    local url::String, sql::String
     local conn
 
     url = "postgresql://" * user
@@ -181,14 +181,7 @@ function get_jvo_path(
 
     conn = LibPQ.Connection(url) # this will throw an error upon failure
 
-    # dataid: if db is alma append _00_00_00
-    if db == "alma"
-        dataid = datasetid * "_00_00_00"
-    else
-        dataid = datasetid
-    end
-
-    sql = "SELECT path FROM " * table * " WHERE data_id = '" * dataid * "';"
+    sql = "SELECT path FROM " * table * " WHERE data_id = '" * datasetid * "';"
     println(sql)
 
     filepath = ""
@@ -198,25 +191,7 @@ function get_jvo_path(
         data = columntable(result)
         path = data[:path][1]
 
-        pos = findfirst(".", table)
-
-        if !isnothing(pos)
-            filepath =
-                DB_HOME *
-                "/" *
-                db *
-                "/" *
-                uppercase(SubString(table, 1:(pos[1]-1))) *
-                "/" *
-                path
-        else
-            if (db == "spcam") || (db == "moircs")
-                filepath = DB_HOME * "/subaru/" * db * "/mosaic/" * path
-            else
-                filepath = DB_HOME * "/" * db * "/" * path
-            end
-        end
-
+        filepath = DB_HOME * "/" * db * "/" * path
         println("filepath:", filepath)
     catch err
         println(err)
@@ -365,7 +340,7 @@ function streamDirectory(http::HTTP.Streams.Stream)
 
     println("Scanning $dir ...")
 
-    resp = chop(JSON.json(Dict("location" => dir)), tail=1) * ", \"contents\":["
+    resp = chop(JSON.json(Dict("location" => dir)), tail = 1) * ", \"contents\":["
 
     elements = false
 
@@ -413,7 +388,7 @@ function streamDirectory(http::HTTP.Streams.Stream)
     end
 
     if elements
-        resp = chop(resp, tail=1) * "]}"
+        resp = chop(resp, tail = 1) * "]}"
     else
         resp *= "]}"
     end
@@ -437,7 +412,7 @@ function streamDirectory(http::HTTP.Streams.Stream)
     return nothing
 end
 
-function exitFunc(exception=false)
+function exitFunc(exception = false)
     global ws_server, gc_task, running
 
     running = false
@@ -547,7 +522,7 @@ end
 function remove_symlinks()
     # scan HT_DOCS for any symlinks and remove them
 
-    foreach(readdir(HT_DOCS, join=true)) do f
+    foreach(readdir(HT_DOCS, join = true)) do f
 
         # is it a symbolic link ?
         if islink(f)
@@ -710,7 +685,7 @@ function streamXEvents(http::HTTP.Streams.Stream)
                             DB_USER,
                             DB_PASSWORD,
                             lowercase(mission),
-                            "jvo_" * lowercase(mission) * "_files",
+                            "meta_251002",
                         )
                     catch err
                         println("cannot get the JVO path from the database:", err)
@@ -1142,7 +1117,7 @@ function streamSpectralLines(http::HTTP.Streams.Stream)
         json = "{\"lines\" : []}"
     else
         # remove the last character (comma) from json, end an array
-        json = chop(json, tail=1) * "]}"
+        json = chop(json, tail = 1) * "]}"
     end
 
     # compress with bzip2 (more efficient than LZ4HC)
@@ -1268,7 +1243,7 @@ function streamImageSpectrum(http::HTTP.Streams.Stream)
             prec = ZFP_LOW_PRECISION
         end
 
-        compressed_pixels = zfp_compress(pixels, precision=prec)
+        compressed_pixels = zfp_compress(pixels, precision = prec)
         write(http, Int32(length(compressed_pixels)))
         write(http, compressed_pixels)
 
@@ -2249,7 +2224,7 @@ Threads.@spawn :interactive WebSockets.serve(ws_server, host, WS_PORT)
 global gc_task = @async garbage_collector(XOBJECTS, XLOCK, TIMEOUT)
 
 try
-    HTTP.serve(XROUTER, host, UInt16(HTTP_PORT), stream=true)
+    HTTP.serve(XROUTER, host, UInt16(HTTP_PORT), stream = true)
 catch e
     @warn(e)
     typeof(e) == InterruptException && rethrow(e)
