@@ -1,1 +1,0 @@
-xa300068010xtd_p0300000a0_cl.evt CDELT3 = Inf, JSON: allownan=true
