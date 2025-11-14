@@ -911,11 +911,6 @@ function getHeader(
     CUNIT3 = "eV"
     CTYPE3 = "LOG(ENERGY)"
 
-    # if CDELT3 is NaN, replace it by a "NaN" string
-    if isnan(CDELT3)
-        CDELT3 = "NaN"
-    end
-
     # if CDELT3 is Inf, replace it by a "Inf" string
     if isinf(CDELT3)
         CDELT3 = "Inf"
