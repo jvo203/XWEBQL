@@ -1,5 +1,0 @@
-xa300068010xtd_p0300000a0_cl.evt CDELT3 = Inf, JSON: allownan=true
-
-not found
-
-https://jvo.nao.ac.jp/xwebql/events.html?mission=xrism&dataset=xa901001010rsl_p0px0000_cl.evt
