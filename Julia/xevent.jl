@@ -353,6 +353,12 @@ function load_events(xdataset::XDataSet)
             energy = read(f[2], "PI") .* PI2eV
         end
 
+        # create a mask to filter out invalid energy values (<= 0.0)
+        mask = energy .> 0.0
+        x = x[mask]
+        y = y[mask]
+        energy = energy[mask]
+
         nevents = length(x)
         println("nevents = ", nevents)
 
@@ -495,10 +501,11 @@ function getBayesSpectrum(xobject::XDataSet, dx::Integer)
     centers = Float32.(bl.centers)
     widths = Float32.(bl.widths)
     heights = Float32.(bl.heights)
-        =#
+    =#
 
     # cap the energy at E_max    
     energy = energy[(energy.<=E_max)]
+
     @time blocks = ParallelBayesianBinning(energy, length(energy), 5 * dx)
     hist = FastBayesHistogram(blocks)
     len = hist.n
