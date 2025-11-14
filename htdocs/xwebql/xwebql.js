@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-10-16.0";
+    return "JS2025-11-14.0";
 }
 
 function uuidv4() {
@@ -1607,12 +1607,6 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
 
                             display_dataset_info();
 
-                            try {
-                                display_scale_info();
-                            }
-                            catch (err) {
-                            };
-
                             display_preferences();
 
                             display_FITS_header();
@@ -2459,164 +2453,6 @@ function get_axes_range(width, height) {
     };
 
     return range;
-}
-
-function display_scale_info() {
-    // add the markers anyway (they are needed by the P-V diagram)
-    var svg = d3.select("#BackgroundSVG");
-    var width = parseFloat(svg.attr("width"));
-    var defs = svg.append("defs");
-
-    defs.append("marker")
-        .attr("id", "head")
-        .attr("orient", "auto")
-        .attr("markerWidth", (emStrokeWidth))
-        .attr("markerHeight", (0.5 * emFontSize))
-        .attr("refX", 0)
-        .attr("refY", (0.5 * emFontSize / 2))
-        .append("path")
-        .style("stroke-width", 1)
-        .attr("d", "M0,0 V" + 0.5 * emFontSize);
-
-    defs.append("marker")
-        .attr("id", "arrow")
-        .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 5)
-        .attr("refY", 0)
-        .attr("markerWidth", 0.67 * emFontSize)
-        .attr("markerHeight", 0.67 * emFontSize)
-        .attr("orient", "auto")
-        .append("path")
-        .style("stroke-width", 1)
-        .style("fill", "none")
-        .attr("d", "M-5,-5 L5,0 L-5,5");
-
-    if (fitsData.depth > 1)
-        return;
-
-    var elem = document.getElementById("image_rectangle");
-    if (elem == null)
-        return;
-
-    var img_width = parseFloat(elem.getAttribute("width"));
-    var img_height = parseFloat(elem.getAttribute("height"));
-    var img_x = parseFloat(elem.getAttribute("x"));
-    var img_y = parseFloat(elem.getAttribute("y"));
-
-    var image = imageContainer;
-    var image_bounding_dims = image.image_bounding_dims;
-    var scale = image.height / image_bounding_dims.height;
-
-    //scale
-    var arcmins = 60;
-    var gridScale = inverse_CD_matrix(arcmins, arcmins);
-
-    for (let i = 0; i < gridScale.length; i++)
-        if (isNaN(gridScale[i]))
-            throw "NaN gridScale";
-
-    if (Math.abs(gridScale[1]) * scale > 1) {
-        //reduce the scale
-        //console.log("Vertical height:", Math.abs(gridScale[1]) * scale);
-
-        arcmins = 10;
-        gridScale = inverse_CD_matrix(arcmins, arcmins);
-
-        for (let i = 0; i < gridScale.length; i++)
-            if (isNaN(gridScale[i]))
-                throw "NaN gridScale";
-
-        //console.log("Reduced vertical height:", Math.abs(gridScale[1]) * scale);
-    }
-
-    //vertical scale	
-    var L = Math.abs(gridScale[1]) * scale * img_height;
-    var X = 1 * emFontSize;
-    if (composite_view)
-        X += img_x + img_width;
-    //var Y = L + img_y;//1.75 * emFontSize;
-    var Y = img_y + img_height;
-
-    var vert = svg.append("g")
-        .attr("id", "verticalScale");
-
-    vert.append("path")
-        .attr("marker-end", "url(#head)")
-        .attr("marker-start", "url(#head)")
-        .style("stroke-width", (emStrokeWidth))
-        .style("fill", "none")
-        .attr("d", "M" + X + "," + Y + " L" + X + "," + (Y - L));
-
-    vert.append("text")
-        .attr("x", (X + emFontSize))
-        .attr("y", (Y - L / 2 + emFontSize / 3))
-        .attr("font-family", "Monospace")
-        .attr("font-size", "1.0em")
-        .attr("text-anchor", "middle")
-        .attr("stroke", "none")
-        .text(arcmins + "\"");
-
-    //N-E compass
-    var L = 3 * emFontSize;//*Math.sign(gridScale[0]) ;
-    var X = 0.02 * width + L + 1.5 * emFontSize;
-    var Y = Y - L / 2;
-    if (composite_view)
-        X += img_x + img_width;
-    //var Y = 0.01*width + L + emFontSize;
-    //var Y = L + img_y;//Math.max(Y - 1.5 * emFontSize, 0.01 * width + L + emFontSize);
-
-    //rotation
-    var compass = svg.append("g")
-        .attr("id", "compass")
-        .attr("transform", 'rotate(' + gridScale[2] * Math.sign(gridScale[0]) + ' ' + X + ' ' + Y + ')');
-
-    var east = compass.append("g")
-        .attr("id", "east");
-
-    east.append("path")
-        .attr("marker-end", "url(#arrow)")
-        .style("stroke-width", (emStrokeWidth))
-        .style("fill", "none")
-        .attr("d", "M" + X + "," + Y + " L" + (X + L * Math.sign(gridScale[0])) + "," + Y);
-
-    east.append("text")
-        .attr("x", (X + L * Math.sign(gridScale[0]) + Math.sign(gridScale[0]) * emFontSize / 2))
-        .attr("y", (Y + emFontSize / 2.5))
-        .attr("font-family", "Monospace")
-        .attr("font-size", "1.0em")
-        .attr("text-anchor", "middle")
-        .attr("stroke", "none")
-        .text("E");
-
-    var north = compass.append("g")
-        .attr("id", "north");
-
-    L *= Math.sign(gridScale[1]);
-
-    north.append("path")
-        .attr("marker-end", "url(#arrow)")
-        .style("stroke-width", (emStrokeWidth))
-        .style("fill", "none")
-        .attr("d", "M" + X + "," + Y + " L" + X + "," + (Y - L));
-
-    if (L > 0)
-        north.append("text")
-            .attr("x", (X))
-            .attr("y", (Y - L - emFontSize / 4))
-            .attr("font-family", "Monospace")
-            .attr("font-size", "1.1em")
-            .attr("text-anchor", "middle")
-            .attr("stroke", "none")
-            .text("N");
-    else
-        north.append("text")
-            .attr("x", (X))
-            .attr("y", (Y - L + emFontSize))
-            .attr("font-family", "Monospace")
-            .attr("font-size", "1.0em")
-            .attr("text-anchor", "middle")
-            .attr("stroke", "none")
-            .text("N");
 }
 
 function display_preferences() {
@@ -4220,13 +4056,6 @@ function process_hdr_image(img_width, img_height, pixels, alpha, min_count, max_
     }
     catch (err) {
         console.log("setup_image_selection: ", err);
-    };
-
-    try {
-        display_scale_info();
-    }
-    catch (err) {
-        console.log("display_scale_info: ", err);
     };
 
     has_image = true;
