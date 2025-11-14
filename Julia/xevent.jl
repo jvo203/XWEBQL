@@ -911,7 +911,7 @@ function getHeader(
     CUNIT3 = "eV"
     CTYPE3 = "LOG(ENERGY)"
 
-    # if CDELT3 is Inf, replace it by a "Inf" string
+    # if CDELT3 is Inf, replace it by an "Inf" string
     if isinf(CDELT3)
         CDELT3 = "Inf"
     end
