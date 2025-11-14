@@ -911,6 +911,16 @@ function getHeader(
     CUNIT3 = "eV"
     CTYPE3 = "LOG(ENERGY)"
 
+    # if CDELT3 is NaN, replace it by "NaN" string
+    if isnan(CDELT3)
+        CDELT3 = "NaN"
+    end
+
+    # if CDELT3 is Inf, replace it by "Inf" string
+    if isinf(CDELT3)
+        CDELT3 = "Inf"
+    end
+
     println(
         "CRVAL1 = $CRVAL1, CDELT1 = $CDELT1, CRPIX1 = $CRPIX1, CUNIT1 = $CUNIT1, CTYPE1 = $CTYPE1",
     )
