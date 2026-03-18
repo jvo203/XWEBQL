@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2025-11-14.0";
+    return "JS2026-03-18.0";
 }
 
 function uuidv4() {
@@ -1352,7 +1352,7 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
     if (add_timestamp)
         url += '&timestamp=' + Date.now();
 
-    xmlhttp.onreadystatechange = function () {
+    xmlhttp.onreadystatechange = async function () {
         if (xmlhttp.readyState == 4 && xmlhttp.status == 404) {
             if (dataset_timeout != -1) {
                 window.clearTimeout(dataset_timeout);
@@ -1431,6 +1431,10 @@ async function fetch_image_spectrum(_datasetId, fetch_data, add_timestamp) {
             setup_window_timeout();
 
             // wait for WebAssembly to get compiled
+            // Module がロードされるまで待つ
+            while (typeof Module === 'undefined') {
+                await new Promise(r => setTimeout(r, 50));
+            };
             Module().then(instance => {
                 console.log("WebAssembly compiled successfully.");
                 WASM = instance;
