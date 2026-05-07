@@ -111,7 +111,7 @@ DB_HOME = "/home"
 
 const VERSION_MAJOR = 1
 const VERSION_MINOR = 0
-const VERSION_SUB = 28
+const VERSION_SUB = 29
 
 const SERVER_STRING =
     "XWEBQL v" *
@@ -121,8 +121,8 @@ const SERVER_STRING =
     "." *
     string(VERSION_SUB)
 
-const WASM_VERSION = "26.03.18.0"
-const VERSION_STRING = "J/SV2026-03-18.0-BETA"
+const WASM_VERSION = "26.05.07.0"
+const VERSION_STRING = "J/SV2026-05-07.0-BETA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -780,11 +780,25 @@ function streamXEvents(http::HTTP.Streams.Stream)
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/marchingsquares-isobands.min.js\" defer></script>\n",
     )
 
-    # Font Awesome
+    # Font Awesome Free Kit
+    #write(
+    #    html,
+    #    "<script src=\"https://kit.fontawesome.com/8433b7dde2.js?ver=5.15.4\" crossorigin=\"anonymous\"></script>\n",
+    #)
+    # self-hosted Font Awesome    
     write(
         html,
-        "<script src=\"https://kit.fontawesome.com/8433b7dde2.js?ver=5.15.4\" crossorigin=\"anonymous\"></script>\n",
+        "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/css/fontawesome.min.css\"/>\n",
     )
+    write(
+        html,
+        "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/css/solid.min.css\"/>\n",
+    )
+    write(
+        html,
+        "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/css/regular.min.css\"/>\n",
+    )
+
 
     # Bzip2 decoder
     if LOCAL_VERSION
