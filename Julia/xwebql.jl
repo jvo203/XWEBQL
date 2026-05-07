@@ -780,11 +780,25 @@ function streamXEvents(http::HTTP.Streams.Stream)
         "<script src=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/marchingsquares-isobands.min.js\" defer></script>\n",
     )
 
-    # Font Awesome
+    # Font Awesome Free Kit
+    #write(
+    #    html,
+    #    "<script src=\"https://kit.fontawesome.com/8433b7dde2.js?ver=5.15.4\" crossorigin=\"anonymous\"></script>\n",
+    #)
+    # self-hosted Font Awesome    
     write(
         html,
-        "<script src=\"https://kit.fontawesome.com/8433b7dde2.js?ver=5.15.4\" crossorigin=\"anonymous\"></script>\n",
+        "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/css/fontawesome.min.css\"/>\n",
     )
+    write(
+        html,
+        "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/css/solid.min.css\"/>\n",
+    )
+    write(
+        html,
+        "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/css/regular.min.css\"/>\n",
+    )
+
 
     # Bzip2 decoder
     if LOCAL_VERSION
