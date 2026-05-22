@@ -1,210 +1,303 @@
-// standard global variables
-var container, scene, camera, renderer, controls;//, stats;
-var keyboard = new THREEx.KeyboardState();
-var clock = new THREE.Clock();
-var resize, fullscreen;
-var wireTexture, geometry, material, plane;
+let THREE = null;
+let OrbitControls = null;
 
-var segments = 512;//512
-var is_active;
+let container;
+let camera;
+let controls;
+let scene;
+let renderer;
+let mesh;
+let wireTexture;
+let geometry;
+let material;
+let isActive = false;
+let initTimer = 0;
 
-//get z from imageFrame raw float32 pixels
-function meshFunction(x, y, p0) {
-    var imageFrame, image_bounding_dims;
+const segments = 512;
+let surfacePoint = null;
+let threeReadyPromise = null;
 
-    var z;
+window.addEventListener('beforeunload', function () {
+    if (isActive) {
+        closeSurface();
+    }
+});
 
-    imageFrame = imageContainer;
-    image_bounding_dims = imageFrame.image_bounding_dims;
+window.addEventListener('pagehide', function () {
+    if (isActive) {
+        closeSurface();
+    }
+});
 
-    // logarithmic tone mapping        
-    let pmin = Math.log(imageFrame.pixel_range.min_pixel);
-    let pmax = Math.log(imageFrame.pixel_range.max_pixel);
+function ensureThreeDeps() {
+    if (THREE != null && OrbitControls != null) {
+        return Promise.resolve();
+    }
 
-    let xcoord = Math.round(image_bounding_dims.x1 + (1 - x) * (image_bounding_dims.width - 1));
-    let ycoord = Math.round(image_bounding_dims.y1 + (1 - y) * (image_bounding_dims.height - 1));
+    if (threeReadyPromise != null) {
+        return threeReadyPromise;
+    }
 
-    let pixel = ycoord * imageFrame.width + xcoord;
-    let raw = imageFrame.pixels[pixel];
-    // <raw> needs to be transformed into a pixel range in [0, 255] via the tone mapping function    
-    pixel = 255 * clamp((raw - pmin) / (pmax - pmin), 0, 1);
-    z = pixel - 127;
-    //console.log(xcoord, ycoord, "raw:", raw, "pixel:", pixel, "z:", z);    
+    threeReadyPromise = new Promise((resolve) => {
+        function attemptResolve() {
+            if (window.THREE != null && window.OrbitControls != null) {
+                THREE = window.THREE;
+                OrbitControls = window.OrbitControls;
+                surfacePoint = new THREE.Vector3();
+                resolve();
+                return;
+            }
 
-    var aspect = image_bounding_dims.height / image_bounding_dims.width;
+            setTimeout(attemptResolve, 10);
+        }
 
-    p0.set(x - 0.5, (y - 0.5) * aspect, z / 2048);
+        attemptResolve();
+    });
+
+    return threeReadyPromise;
+}
+
+function getMainRect() {
+    return document.getElementById('mainDiv').getBoundingClientRect();
+}
+
+function getSurfaceDimensions() {
+    return imageContainer.image_bounding_dims;
+}
+
+function getAspectRatio() {
+    const imageBoundingDims = getSurfaceDimensions();
+    return imageBoundingDims.height / imageBoundingDims.width;
+}
+
+function getToneMappedPixel(imageFrame, pixel) {
+    const pmin = Math.log(imageFrame.pixel_range.min_pixel);
+    const pmax = Math.log(imageFrame.pixel_range.max_pixel);
+    const raw = imageFrame.pixels[pixel];
+
+    return 255 * clamp((raw - pmin) / (pmax - pmin), 0, 1);
+}
+
+function meshFunction(x, y, target) {
+    const imageFrame = imageContainer;
+    const imageBoundingDims = imageFrame.image_bounding_dims;
+
+    const xcoord = Math.round(imageBoundingDims.x1 + (1 - x) * (imageBoundingDims.width - 1));
+    const ycoord = Math.round(imageBoundingDims.y1 + (1 - y) * (imageBoundingDims.height - 1));
+    const pixel = ycoord * imageFrame.width + xcoord;
+    const z = getToneMappedPixel(imageFrame, pixel) - 127;
+    const aspect = imageBoundingDims.height / imageBoundingDims.width;
+
+    target.set(x - 0.5, (y - 0.5) * aspect, z / 2048);
 }
 
 function colourFunction(x, y) {
-    var imageFrame, image_bounding_dims;
-    var rgb = [0, 0, 0];
+    const imageFrame = imageContainer;
+    const imageBoundingDims = imageFrame.image_bounding_dims;
+    const aspect = imageBoundingDims.height / imageBoundingDims.width;
 
-    imageFrame = imageContainer;
-    image_bounding_dims = imageFrame.image_bounding_dims;
+    const xcoord = Math.round(imageBoundingDims.x1 + ((1 - x) - 0.5) * (imageBoundingDims.width - 1));
+    const ycoord = Math.round(imageBoundingDims.y1 + ((-y) / aspect + 0.5) * (imageBoundingDims.height - 1));
+    const pixel = ycoord * imageFrame.width + xcoord;
+    const toneMappedPixel = Math.round(getToneMappedPixel(imageFrame, pixel));
 
-    // logarithmic tone mapping        
-    let pmin = Math.log(imageFrame.pixel_range.min_pixel);
-    let pmax = Math.log(imageFrame.pixel_range.max_pixel);
-
-    let aspect = image_bounding_dims.height / image_bounding_dims.width;
-    let xcoord = Math.round(image_bounding_dims.x1 + ((1 - x) - 0.5) * (image_bounding_dims.width - 1));
-    let ycoord = Math.round(image_bounding_dims.y1 + ((- y) / aspect + 0.5) * (image_bounding_dims.height - 1));
-    let pixel = ycoord * imageFrame.width + xcoord;
-
-    let raw = imageFrame.pixels[pixel];
-    pixel = Math.round(255 * clamp((raw - pmin) / (pmax - pmin), 0, 1));
-    rgb = [pixel, pixel, pixel];
-
-    return new THREE.Color("rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")");
+    return new THREE.Color('rgb(' + toneMappedPixel + ',' + toneMappedPixel + ',' + toneMappedPixel + ')');
 }
 
-function init_surface() {
-    var div = d3.select("body").append("div")
-        .attr("id", "ThreeJS")
-        .attr("class", "threejs");
+function disposeSurfaceResources() {
+    window.removeEventListener('resize', onWindowResize);
 
-    div.append("span")
-        .attr("id", "closeThreeJS")
-        .attr("class", "close myclose")
-        .on("click", function () {
-            is_active = false;
-            d3.select("#ThreeJS").remove();
-            resize.destroy();
-            fullscreen.unbind();
-            wireTexture.dispose();
-            geometry.dispose();
-            material.dispose();
-            scene = null;
-            container = null;
-            camera = null;
-            renderer = null;
-            controls = null;
-            //stats = null ;
-            /*keyboard = null ;
-            clock = null ;*/
-        })
-        .text("×");
-
-    div.append("img")
-        .attr("id", "hourglassThreeJS")
-        .attr("class", "hourglass")
-        .attr("src", "https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/loading.gif")
-        .attr("alt", "hourglass")
-        .style("width", 200)
-        .style("height", 200);
-
-    setTimeout(init_graph, 50);
-}
-
-function init_graph() {
-    var rect = document.getElementById('mainDiv').getBoundingClientRect();
-
-    var SCREEN_WIDTH = rect.width;
-    var SCREEN_HEIGHT = rect.height;
-
-    // SCENE
-    scene = new THREE.Scene();
-
-    // CAMERA
-    var VIEW_ANGLE = 25, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
-    camera = new THREE.PerspectiveCamera(VIEW_ANGLE, ASPECT, NEAR, FAR);
-    scene.add(camera);
-
-    //camera.position.set( 1.1*imageCanvas.width, 1.1*imageCanvas.height, 1024);//0.5*(imageCanvas.width+imageCanvas.height)/2);
-    camera.position.set(1.1, 1.1, 1);
-    camera.up = new THREE.Vector3(0, 0, 1);
-
-    //camera.position.set(0,-1000,1.25*(imageCanvas.width+imageCanvas.height)/2);
-    camera.lookAt(scene.position);
-
-    // RENDERER
-    if (Detector.webgl)
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    else
-        renderer = new THREE.CanvasRenderer();
-
-    renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
-    container = document.getElementById('ThreeJS');
-    container.appendChild(renderer.domElement);
-
-    // EVENTS
-    resize = THREEx.WindowResize(renderer, camera);
-    fullscreen = THREEx.FullScreen.bindKey({ charCode: 'm'.charCodeAt(0) });
-
-    // CONTROLS
-    controls = new THREE.TrackballControls(camera, renderer.domElement);
-
-    // LIGHT
-    scene.add(new THREE.AmbientLight(0x404040 /*0xeeeeee*/));
-
-    geometry = new THREE.ParametricGeometry(meshFunction, segments, segments);
-
-    var color, point, face, numberOfSides, vertexIndex;
-    // faces are indexed using characters
-    var faceIndices = ['a', 'b', 'c', 'd'];
-
-    for (var i = 0; i < geometry.vertices.length; i++) {
-        point = geometry.vertices[i];
-        color = colourFunction(point.x, point.y);
-        geometry.colors[i] = color;
+    if (scene != null) {
+        scene.clear();
     }
 
-    for (var i = 0; i < geometry.faces.length; i++) {
-        face = geometry.faces[i];
-        numberOfSides = (face instanceof THREE.Face3) ? 3 : 4;
-        for (var j = 0; j < numberOfSides; j++) {
-            vertexIndex = face[faceIndices[j]];
-            face.vertexColors[j] = geometry.colors[vertexIndex];
+    if (camera != null) {
+        camera.clear();
+    }
+
+    if (geometry != null) {
+        geometry.dispose();
+    }
+
+    if (material != null) {
+        material.dispose();
+    }
+
+    if (renderer != null) {
+        renderer.setAnimationLoop(null);
+        renderer.dispose();
+    }
+
+    if (controls != null) {
+        controls.dispose();
+    }
+
+    if (wireTexture != null) {
+        wireTexture.dispose();
+    }
+
+    container = null;
+    camera = null;
+    controls = null;
+    scene = null;
+    renderer = null;
+    mesh = null;
+    wireTexture = null;
+    geometry = null;
+    material = null;
+
+    console.log('Surface resources disposed');
+}
+
+function closeSurface() {
+    if (initTimer !== 0) {
+        clearTimeout(initTimer);
+        initTimer = 0;
+    }
+
+    isActive = false;
+    disposeSurfaceResources();
+    threeReadyPromise = null;
+    d3.select('#ThreeJS').remove();
+}
+
+function buildGeometry() {
+    geometry = new THREE.PlaneGeometry(1, getAspectRatio(), segments, segments);
+
+    const position = geometry.attributes.position;
+    const colors = new Float32Array(position.count * 3);
+
+    for (let iy = 0; iy <= segments; iy++) {
+        for (let ix = 0; ix <= segments; ix++) {
+            const index = iy * (segments + 1) + ix;
+            const x = ix / segments;
+            const y = iy / segments;
+
+            meshFunction(x, y, surfacePoint);
+            position.setXYZ(index, surfacePoint.x, surfacePoint.y, surfacePoint.z);
+
+            const color = colourFunction(surfacePoint.x, surfacePoint.y);
+            colors[3 * index] = color.r;
+            colors[3 * index + 1] = color.g;
+            colors[3 * index + 2] = color.b;
         }
     }
 
-    //wireTexture = new THREE.TextureLoader().load(ROOT_PATH + 'square.png');
-    wireTexture = new THREE.TextureLoader().load("https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/square.png")
-    wireTexture.wrapS = wireTexture.wrapT = THREE.RepeatWrapping;
-    //wireTexture.minFilter = wireTexture.magFilter = THREE.LinearFilter;
-    wireTexture.repeat.set(segments, segments);
-
-    material = new THREE.MeshBasicMaterial({
-        //color: 0xFFFFFF,
-        map: wireTexture,
-        vertexColors: THREE.VertexColors,
-        side: THREE.DoubleSide,
-        wireframe: false
-    });
-
-    plane = new THREE.Mesh(geometry, material);
-    plane.doubleSided = true;
-    scene.add(plane);
-
-    is_active = true;
-    animate_surface();
-
-    d3.select("#hourglassThreeJS").remove();
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.computeVertexNormals();
 }
 
-function animate_surface() {
-    if (!is_active) {
-        console.log("exiting animate_surface()");
+function initSurfaceScene() {
+    initTimer = 0;
+
+    if (!isActive) {
         return;
     }
 
-    requestAnimationFrame(animate_surface);
+    const rect = getMainRect();
+    const screenWidth = rect.width;
+    const screenHeight = rect.height;
 
-    render();
-    update();
+    scene = new THREE.Scene();
+
+    camera = new THREE.PerspectiveCamera(45, screenWidth / screenHeight, 0.01, 100);
+    camera.position.set(1.15, -1.35, 0.85);
+    camera.up.set(0, 0, 1);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(screenWidth, screenHeight);
+    renderer.setAnimationLoop(animateSurface);
+
+    container = document.getElementById('ThreeJS');
+    container.appendChild(renderer.domElement);
+
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.enablePan = false;
+    controls.minDistance = 0.35;
+    controls.maxDistance = 4.0;
+    controls.maxPolarAngle = Math.PI / 2;
+    controls.target.set(0, 0, 0);
+    controls.update();
+
+    scene.add(new THREE.AmbientLight(0xffffff, 1.8));
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    directionalLight.position.set(1.5, -1.0, 2.0);
+    scene.add(directionalLight);
+
+    buildGeometry();
+
+    wireTexture = new THREE.TextureLoader().load('https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/square.png');
+    wireTexture.wrapS = THREE.RepeatWrapping;
+    wireTexture.wrapT = THREE.RepeatWrapping;
+    wireTexture.repeat.set(segments, segments);
+    wireTexture.colorSpace = THREE.SRGBColorSpace;
+
+    material = new THREE.MeshPhongMaterial({
+        map: wireTexture,
+        vertexColors: true,
+        side: THREE.DoubleSide
+    });
+
+    mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+    window.addEventListener('resize', onWindowResize);
+
+    d3.select('#hourglassThreeJS').remove();
 }
 
-function update() {
-    /*if ( keyboard.pressed("z") ) 
-    { 
-    // do something
-    }*/
+function init_surface() {
+    if (isActive) {
+        closeSurface();
+    }
+
+    const div = d3.select('body').append('div')
+        .attr('id', 'ThreeJS')
+        .attr('class', 'threejs');
+
+    div.append('span')
+        .attr('id', 'closeThreeJS')
+        .attr('class', 'close myclose')
+        .on('click', closeSurface)
+        .text('×');
+
+    div.append('img')
+        .attr('id', 'hourglassThreeJS')
+        .attr('class', 'hourglass')
+        .attr('src', 'https://cdn.jsdelivr.net/gh/jvo203/fits_web_ql/htdocs/fitswebql/loading.gif')
+        .attr('alt', 'hourglass')
+        .style('width', 200)
+        .style('height', 200);
+
+    isActive = true;
+
+    ensureThreeDeps().then(() => {
+        if (!isActive) {
+            return;
+        }
+
+        initTimer = setTimeout(initSurfaceScene, 50);
+    });
+}
+
+function onWindowResize() {
+    if (camera == null || renderer == null) {
+        return;
+    }
+
+    const rect = getMainRect();
+    camera.aspect = rect.width / rect.height;
+    camera.updateProjectionMatrix();
+    renderer.setSize(rect.width, rect.height);
+}
+
+function animateSurface() {
+    if (!isActive || renderer == null) {
+        return;
+    }
 
     controls.update();
-    //stats.update();
-}
-
-function render() {
     renderer.render(scene, camera);
 }
