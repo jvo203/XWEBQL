@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2026-05-22.1";
+    return "JS2026-05-22.2";
 }
 
 function uuidv4() {
@@ -352,8 +352,8 @@ function enable_3d_view() {
     if (test_webgl_support()) {
         (function () {
             var po = document.createElement('script'); po.type = 'text/javascript'; po.async = false;
-            po.src = 'surface.js' + '?' + encodeURIComponent(get_js_version());
-            //po.src = 'https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@' + htmlData.getAttribute('data-version-major') + '.' + htmlData.getAttribute('data-version-minor') + '.' + htmlData.getAttribute('data-version-sub') + '/htdocs/xwebql/surface.min.js';
+            //po.src = 'surface.js' + '?' + encodeURIComponent(get_js_version());
+            po.src = 'https://cdn.jsdelivr.net/gh/jvo203/XWEBQL@' + htmlData.getAttribute('data-version-major') + '.' + htmlData.getAttribute('data-version-minor') + '.' + htmlData.getAttribute('data-version-sub') + '/htdocs/xwebql/surface.min.js';
             var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);
         })();
 
