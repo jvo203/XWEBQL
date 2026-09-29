@@ -16,6 +16,7 @@ let initTimer = 0;
 const segments = 512;
 let surfacePoint = null;
 let threeReadyPromise = null;
+let axisResources = [];
 
 window.addEventListener('beforeunload', function () {
     if (isActive) {
@@ -104,6 +105,178 @@ function colourFunction(x, y) {
     return new THREE.Color('rgb(' + toneMappedPixel + ',' + toneMappedPixel + ',' + toneMappedPixel + ')');
 }
 
+function getCoordinateAxisInfo(axis) {
+    const rawCtype = axis === 'ra' ? fitsData.CTYPE1 : fitsData.CTYPE2;
+    const ctype = typeof rawCtype === 'string' ? rawCtype.trim().toUpperCase() : '';
+    const longitude = axis === 'ra';
+    const supported = longitude
+        ? ctype.indexOf('RA') > -1 || ctype.indexOf('GLON') > -1 || ctype.indexOf('ELON') > -1
+        : ctype.indexOf('DEC') > -1 || ctype.indexOf('GLAT') > -1 || ctype.indexOf('ELAT') > -1;
+    const hasLinearScale = longitude ? fitsData.CDELT1 != null : fitsData.CDELT2 != null;
+
+    if (!supported || (!hasLinearScale && typeof CD_matrix !== 'function')) {
+        return null;
+    }
+
+    let label = longitude ? 'RA' : 'DEC';
+    if (ctype.indexOf('GLON') > -1) label = 'GLON';
+    if (ctype.indexOf('GLAT') > -1) label = 'GLAT';
+    if (ctype.indexOf('ELON') > -1) label = 'ELON';
+    if (ctype.indexOf('ELAT') > -1) label = 'ELAT';
+
+    return { longitude, label };
+}
+
+function getFitsPixelAtSurfacePoint(xFraction, yFraction) {
+    const image = imageContainer;
+    const bounds = image.image_bounding_dims;
+    const imageX = bounds.x1 + (1 - xFraction) * (bounds.width - 1);
+    const imageY = bounds.y1 + (1 - yFraction) * (bounds.height - 1);
+
+    return {
+        x: imageX * fitsData.width / image.width,
+        y: imageY * fitsData.height / image.height
+    };
+}
+
+function formatSurfaceCoordinate(axisInfo, pixel) {
+    if (axisInfo.longitude && fitsData.CDELT1 != null) {
+        try {
+            if (axisInfo.label === 'RA' && coordsFmt !== 'DMS') {
+                return x2hms(pixel.x);
+            }
+            return x2dms(pixel.x);
+        } catch (_) {
+        }
+    }
+
+    if (!axisInfo.longitude && fitsData.CDELT2 != null) {
+        try {
+            return y2dms(pixel.y);
+        } catch (_) {
+        }
+    }
+
+    if (typeof CD_matrix === 'function') {
+        try {
+            const coordinates = CD_matrix(pixel.x, fitsData.height - pixel.y);
+            if (axisInfo.longitude) {
+                return axisInfo.label === 'RA' && coordsFmt !== 'DMS'
+                    ? RadiansPrintHMS(coordinates[0])
+                    : RadiansPrintDMS(coordinates[0]);
+            }
+            return RadiansPrintDMS(coordinates[1]);
+        } catch (error) {
+            console.warn('Unable to format surface coordinate:', error);
+        }
+    }
+
+    return '';
+}
+
+function addSurfaceLabel(text, position, width) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 128;
+
+    const context = canvas.getContext('2d');
+    const color = theme === 'light' ? '#111111' : '#ffcc00';
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.font = '48px monospace';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillStyle = color;
+    context.fillText(text, canvas.width / 2, canvas.height / 2, canvas.width - 16);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+
+    const labelMaterial = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthWrite: false
+    });
+    const sprite = new THREE.Sprite(labelMaterial);
+    sprite.position.copy(position);
+    sprite.scale.set(width, width * canvas.height / canvas.width, 1);
+    scene.add(sprite);
+
+    axisResources.push(texture, labelMaterial);
+}
+
+function addSurfaceAxes() {
+    if (typeof fitsData === 'undefined' || fitsData == null || imageContainer == null) {
+        return;
+    }
+
+    const raAxis = getCoordinateAxisInfo('ra');
+    const decAxis = getCoordinateAxisInfo('dec');
+    if (raAxis == null && decAxis == null) {
+        return;
+    }
+
+    const aspect = getAspectRatio();
+    const axisZ = -0.08;
+    const margin = Math.max(0.045, aspect * 0.045);
+    const tickSize = Math.max(0.012, aspect * 0.012);
+    const axisColor = theme === 'light' ? 0x111111 : 0xffcc00;
+    const lineMaterial = new THREE.LineBasicMaterial({ color: axisColor });
+    const linePoints = [];
+
+    function addSegment(x1, y1, x2, y2) {
+        linePoints.push(
+            new THREE.Vector3(x1, y1, axisZ),
+            new THREE.Vector3(x2, y2, axisZ)
+        );
+    }
+
+    if (raAxis != null) {
+        const axisY = -aspect / 2;
+        addSegment(-0.5, axisY, 0.5, axisY);
+
+        for (let index = 0; index <= 4; index++) {
+            const fraction = index / 4;
+            const x = fraction - 0.5;
+            addSegment(x, axisY, x, axisY - tickSize);
+
+            const pixel = getFitsPixelAtSurfacePoint(fraction, 0);
+            const label = formatSurfaceCoordinate(raAxis, pixel);
+            if (label !== '') {
+                addSurfaceLabel(label, new THREE.Vector3(x, axisY - margin * 0.55, axisZ), 0.2);
+            }
+        }
+
+        addSurfaceLabel(raAxis.label, new THREE.Vector3(0.56, axisY - margin * 1.5, axisZ), 0.13);
+    }
+
+    if (decAxis != null) {
+        const axisX = -0.5;
+        addSegment(axisX, -aspect / 2, axisX, aspect / 2);
+
+        for (let index = 0; index <= 4; index++) {
+            const fraction = index / 4;
+            const y = (fraction - 0.5) * aspect;
+            addSegment(axisX, y, axisX - tickSize, y);
+
+            const pixel = getFitsPixelAtSurfacePoint(0, fraction);
+            const label = formatSurfaceCoordinate(decAxis, pixel);
+            if (label !== '') {
+                addSurfaceLabel(label, new THREE.Vector3(axisX - margin * 0.6, y, axisZ), 0.2);
+            }
+        }
+
+        addSurfaceLabel(decAxis.label, new THREE.Vector3(axisX - margin * 1.5, aspect / 2 + margin, axisZ), 0.13);
+    }
+
+    if (linePoints.length > 0) {
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints(linePoints);
+        scene.add(new THREE.LineSegments(lineGeometry, lineMaterial));
+        axisResources.push(lineGeometry, lineMaterial);
+    } else {
+        lineMaterial.dispose();
+    }
+}
+
 function disposeSurfaceResources() {
     window.removeEventListener('resize', onWindowResize);
 
@@ -135,6 +308,11 @@ function disposeSurfaceResources() {
     if (wireTexture != null) {
         wireTexture.dispose();
     }
+
+    for (const resource of axisResources) {
+        resource.dispose();
+    }
+    axisResources = [];
 
     container = null;
     camera = null;
@@ -243,6 +421,7 @@ function initSurfaceScene() {
 
     mesh = new THREE.Mesh(geometry, material);
     scene.add(mesh);
+    addSurfaceAxes();
     window.addEventListener('resize', onWindowResize);
 
     d3.select('#hourglassThreeJS').remove();
