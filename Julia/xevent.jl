@@ -465,14 +465,16 @@ function getImage(xobject::XDataSet)
     ymin = minimum(y)
     ymax = maximum(y)
 
+    edges = ((xmin-0.5):1:(xmax+0.5), (ymin-0.5):1:(ymax+0.5))
+
     # make a mask
     mask = [energy[i] <= MAXIMUM_ENERGY for i = 1:length(x)]
 
-    @time h = Hist2D(
+    @time h_count = Hist2D(
         (x[mask], y[mask]);
-        binedges=((xmin-0.5):1:(xmax+0.5), (ymin-0.5):1:(ymax+0.5)),
+        binedges=edges,
     )
-    pixels = bincounts(h)
+    pixels = bincounts(h_count)
 
     # make a mask for the pixels
     mask = pixels .> 0
@@ -504,7 +506,7 @@ function getBayesSpectrum(xobject::XDataSet, dx::Integer)
     =#
 
     # cap the energy at E_max    
-    energy = energy[(energy.<=E_max)]
+    energy = energy[(energy .<= E_max)]
 
     @time blocks = ParallelBayesianBinning(energy, length(energy), 5 * dx)
     hist = FastBayesHistogram(blocks)
@@ -553,12 +555,14 @@ function getViewport(
         (x, y, e) in zip(x, y, energy)
     ]
 
-    h = Hist2D(
+    edges = ((xmin-0.5):1:(xmax+0.5), (ymin-0.5):1:(ymax+0.5))
+
+    h_count = Hist2D(
         (x[mask], y[mask]);
-        binedges=((xmin-0.5):1:(xmax+0.5), (ymin-0.5):1:(ymax+0.5)),
+        binedges=edges,
         overflow=false,
     )
-    pixels = bincounts(h)
+    pixels = bincounts(h_count)
 
     # make a mask for the pixels
     mask = pixels .> 0
@@ -1177,7 +1181,7 @@ function write_html_header(io::IO, hdr::FITSHeader)
         end
 
         if length(hdr.comments[i]) > 0
-            @printf io " / %s" hdr.comments[i][1:min(rc - 3, end)]
+            @printf io " / %s" hdr.comments[i][1:min(rc-3, end)]
         end
         i != n && println(io, "<br/>") # HTML line break
     end
