@@ -456,6 +456,8 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
 end
 
 function getImage(xobject::XDataSet)
+    local h_weighted, h_count, h_mean
+
     x = xobject.x
     y = xobject.y
     energy = xobject.energy
@@ -476,7 +478,7 @@ function getImage(xobject::XDataSet)
     energy = energy[mask]
 
     # 1. Total energy per pixel (Weighted)
-    @time h_weighted = Hist2D(
+    task = Threads.@spawn h_weighted = Hist2D(
         (x, y);
         weights=energy,
         binedges=edges,
@@ -488,6 +490,8 @@ function getImage(xobject::XDataSet)
         binedges=edges,
     )
     pixels = bincounts(h_count)
+
+    wait(task)
 
     # 3. Element-wise division yields the mean energy per bin
     # (Use FHist's underlying counts matrix, handling 0/0 if necessary)
