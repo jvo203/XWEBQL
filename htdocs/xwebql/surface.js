@@ -174,6 +174,28 @@ function formatSurfaceCoordinate(axisInfo, pixel) {
     return '';
 }
 
+function getSurfaceCountRange() {
+    const range = imageContainer.pixel_range;
+    const minCount = Math.ceil(range.min_pixel);
+    const maxCount = Math.floor(range.max_pixel);
+
+    if (!Number.isFinite(minCount) || !Number.isFinite(maxCount) || minCount <= 0 || maxCount < minCount) {
+        return null;
+    }
+
+    return { minCount, maxCount };
+}
+
+function countToSurfaceZ(count, countRange) {
+    const minLog = Math.log(countRange.minCount);
+    const maxLog = Math.log(countRange.maxCount);
+    const fraction = maxLog === minLog
+        ? 0.5
+        : clamp((Math.log(count) - minLog) / (maxLog - minLog), 0, 1);
+
+    return (255 * fraction - 127) / 2048;
+}
+
 function addSurfaceLabel(text, position, width) {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
@@ -211,9 +233,6 @@ function addSurfaceAxes() {
 
     const raAxis = getCoordinateAxisInfo('ra');
     const decAxis = getCoordinateAxisInfo('dec');
-    if (raAxis == null && decAxis == null) {
-        return;
-    }
 
     const aspect = getAspectRatio();
     const axisZ = -0.08;
@@ -266,6 +285,39 @@ function addSurfaceAxes() {
         }
 
         addSurfaceLabel(decAxis.label, new THREE.Vector3(axisX - margin * 1.5, aspect / 2 + margin, axisZ), 0.13);
+    }
+
+    const countRange = getSurfaceCountRange();
+    if (countRange != null) {
+        const axisX = -0.5;
+        const axisY = -aspect / 2;
+        const topZ = countToSurfaceZ(countRange.maxCount, countRange);
+
+        linePoints.push(
+            new THREE.Vector3(axisX, axisY, axisZ),
+            new THREE.Vector3(axisX, axisY, topZ + margin * 0.35)
+        );
+
+        let previousCount = null;
+        for (let index = 0; index <= 4; index++) {
+            const fraction = index / 4;
+            const count = Math.round(Math.exp(
+                Math.log(countRange.minCount) + fraction * (Math.log(countRange.maxCount) - Math.log(countRange.minCount))
+            ));
+            if (count === previousCount) {
+                continue;
+            }
+            previousCount = count;
+
+            const z = countToSurfaceZ(count, countRange);
+            linePoints.push(
+                new THREE.Vector3(axisX, axisY, z),
+                new THREE.Vector3(axisX + tickSize, axisY, z)
+            );
+            addSurfaceLabel(String(count), new THREE.Vector3(axisX - margin * 0.7, axisY, z), 0.2);
+        }
+
+        addSurfaceLabel('COUNTS (log scale)', new THREE.Vector3(axisX - margin * 1.5, axisY, topZ + margin * 0.8), 0.32);
     }
 
     if (linePoints.length > 0) {
