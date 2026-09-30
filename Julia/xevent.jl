@@ -490,7 +490,7 @@ function getImage(xobject::XDataSet)
 
     # 3. Element-wise division yields the mean energy per bin
     # (Use FHist's underlying counts matrix, handling 0/0 if necessary)
-    h_mean = h_weighted ./ h_count
+    h_mean = h_weighted.counts ./ h_count.counts
 
     pixels = bincounts(h_count)
 
