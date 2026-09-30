@@ -470,16 +470,21 @@ function getImage(xobject::XDataSet)
     # make a mask
     mask = [energy[i] <= MAXIMUM_ENERGY for i = 1:length(x)]
 
+    # filter the x, y, energy arrays using the mask
+    x = x[mask]
+    y = y[mask]
+    energy = energy[mask]
+
     # 1. Total energy per pixel (Weighted)
     @time h_weighted = Hist2D(
-        (x[mask], y[mask]);
-        weights=energy[mask],
+        (x, y);
+        weights=energy,
         binedges=edges,
     )
 
     # 2. Count per pixel (Unweighted)
     @time h_count = Hist2D(
-        (x[mask], y[mask]);
+        (x, y);
         binedges=edges,
     )
 
