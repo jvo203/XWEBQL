@@ -492,6 +492,9 @@ function getImage(xobject::XDataSet)
     # (Use FHist's underlying counts matrix, handling 0/0 if necessary)
     h_mean = h_weighted.counts ./ h_count.counts
 
+    # set the mean energy to 0.0 where the count is 0
+    h_mean[h_count.counts .== 0] .= 0.0
+
     pixels = bincounts(h_count)
 
     # make a mask for the pixels
