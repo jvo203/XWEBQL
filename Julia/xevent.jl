@@ -475,6 +475,8 @@ function getImage(xobject::XDataSet)
     # filter the x, y, energy arrays using the mask
     x = x[mask]
     y = y[mask]
+
+    #=
     energy = energy[mask]
 
     # 1. Total energy per pixel (Weighted)
@@ -483,6 +485,7 @@ function getImage(xobject::XDataSet)
         weights=energy,
         binedges=edges,
     )
+    =#
 
     # 2. Count per pixel (Unweighted)
     @time h_count = Hist2D(
@@ -491,14 +494,14 @@ function getImage(xobject::XDataSet)
     )
     pixels = bincounts(h_count)
 
-    wait(task)
+    #wait(task)
 
     # 3. Element-wise division yields the mean energy per bin
     # (Use FHist's underlying counts matrix, handling 0/0 if necessary)
-    h_mean = bincounts(h_weighted) ./ pixels
+    #h_mean = bincounts(h_weighted) ./ pixels
 
     # set the mean energy to 0.0 where the count is 0
-    h_mean[pixels .== 0] .= 0.0
+    #h_mean[pixels .== 0] .= 0.0
 
     # make a mask for the pixels
     mask = pixels .> 0
