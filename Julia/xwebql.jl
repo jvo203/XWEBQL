@@ -111,7 +111,7 @@ DB_HOME = "/home"
 
 const VERSION_MAJOR = 1
 const VERSION_MINOR = 0
-const VERSION_SUB = 30
+const VERSION_SUB = 31
 
 const SERVER_STRING =
     "XWEBQL v" *
@@ -121,8 +121,8 @@ const SERVER_STRING =
     "." *
     string(VERSION_SUB)
 
-const WASM_VERSION = "26.05.07.0"
-const VERSION_STRING = "J/SV2026-05-22.1-BETA"
+const WASM_VERSION = "26.09.29.0"
+const VERSION_STRING = "J/SV2026-10-02.0-BETA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11

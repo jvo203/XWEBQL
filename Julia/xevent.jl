@@ -456,6 +456,8 @@ function getImageSpectrum(xobject::XDataSet, width::Integer, height::Integer)
 end
 
 function getImage(xobject::XDataSet)
+    local h_weighted, h_count, h_mean
+
     x = xobject.x
     y = xobject.y
     energy = xobject.energy
@@ -465,14 +467,41 @@ function getImage(xobject::XDataSet)
     ymin = minimum(y)
     ymax = maximum(y)
 
+    edges = ((xmin-0.5):1:(xmax+0.5), (ymin-0.5):1:(ymax+0.5))
+
     # make a mask
     mask = [energy[i] <= MAXIMUM_ENERGY for i = 1:length(x)]
 
-    @time h = Hist2D(
-        (x[mask], y[mask]);
-        binedges=((xmin-0.5):1:(xmax+0.5), (ymin-0.5):1:(ymax+0.5)),
+    # filter the x, y, energy arrays using the mask
+    x = x[mask]
+    y = y[mask]
+
+    #=
+    energy = energy[mask]
+
+    # 1. Total energy per pixel (Weighted)
+    task = Threads.@spawn h_weighted = Hist2D(
+        (x, y);
+        weights=energy,
+        binedges=edges,
     )
-    pixels = bincounts(h)
+    =#
+
+    # 2. Count per pixel (Unweighted)
+    @time h_count = Hist2D(
+        (x, y);
+        binedges=edges,
+    )
+    pixels = bincounts(h_count)
+
+    #wait(task)
+
+    # 3. Element-wise division yields the mean energy per bin
+    # (Use FHist's underlying counts matrix, handling 0/0 if necessary)
+    #h_mean = bincounts(h_weighted) ./ pixels
+
+    # set the mean energy to 0.0 where the count is 0
+    #h_mean[pixels .== 0] .= 0.0
 
     # make a mask for the pixels
     mask = pixels .> 0
@@ -504,7 +533,7 @@ function getBayesSpectrum(xobject::XDataSet, dx::Integer)
     =#
 
     # cap the energy at E_max    
-    energy = energy[(energy.<=E_max)]
+    energy = energy[(energy .<= E_max)]
 
     @time blocks = ParallelBayesianBinning(energy, length(energy), 5 * dx)
     hist = FastBayesHistogram(blocks)
@@ -553,12 +582,14 @@ function getViewport(
         (x, y, e) in zip(x, y, energy)
     ]
 
-    h = Hist2D(
+    edges = ((xmin-0.5):1:(xmax+0.5), (ymin-0.5):1:(ymax+0.5))
+
+    h_count = Hist2D(
         (x[mask], y[mask]);
-        binedges=((xmin-0.5):1:(xmax+0.5), (ymin-0.5):1:(ymax+0.5)),
+        binedges=edges,
         overflow=false,
     )
-    pixels = bincounts(h)
+    pixels = bincounts(h_count)
 
     # make a mask for the pixels
     mask = pixels .> 0
@@ -1177,7 +1208,7 @@ function write_html_header(io::IO, hdr::FITSHeader)
         end
 
         if length(hdr.comments[i]) > 0
-            @printf io " / %s" hdr.comments[i][1:min(rc - 3, end)]
+            @printf io " / %s" hdr.comments[i][1:min(rc-3, end)]
         end
         i != n && println(io, "<br/>") # HTML line break
     end
