@@ -122,7 +122,7 @@ const SERVER_STRING =
     string(VERSION_SUB)
 
 const WASM_VERSION = "26.09.29.0"
-const VERSION_STRING = "J/SV2026-10-02.0-BETA"
+const VERSION_STRING = "J/SV2026-10-05.0-BETA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -956,8 +956,8 @@ function streamXEvents(http::HTTP.Streams.Stream)
     # Three.js import script (used by the 3D viewer)
     write(html,
         "<script type=\"module\">\n",
-        "  import * as THREE from 'https://esm.sh/three@0.184.0';\n",
-        "  import { OrbitControls } from 'https://esm.sh/three@0.184.0/examples/jsm/controls/OrbitControls.js';\n",
+        "  import * as THREE from 'https://esm.sh/three@0.186.1';\n",
+        "  import { OrbitControls } from 'https://esm.sh/three@0.186.1/examples/jsm/controls/OrbitControls.js';\n",
         "  window.THREE = THREE;\n",
         "  window.OrbitControls = OrbitControls;\n",
         "</script>\n",
