@@ -119,7 +119,7 @@ const SERVER_STRING =
         string(VERSION_SUB)
 
 const WASM_VERSION = "26.10.27.0"
-const VERSION_STRING = "J/SV2026-10-27.1-BETA"
+const VERSION_STRING = "J/SV2026-10-28.0-BETA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -1389,7 +1389,7 @@ function ws_coroutine(ws, ids)
 
     viewport_requests = Channel{Dict{String,Any}}(32)
 
-    realtime = @async while true
+    realtime = Threads.@spawn :default while true
         try
             req = take!(viewport_requests)
             #println(data   setid, "::", req)
