@@ -3,7 +3,8 @@ gfortran = strip(read(`which gfortran`, String))
 gfortran == "" && error("gfortran is required")
 
 @static if Sys.isapple()
-    link(objfile, libfile) = run(`$gfortran -fopenmp -dynamiclib -o "$libfile" "$objfile"`)
+    macos_sdk = strip(read(`xcrun --show-sdk-path`, String))
+    link(objfile, libfile) = run(`$gfortran -fopenmp -dynamiclib -isysroot "$macos_sdk" -o "$libfile" "$objfile"`)
 end
 
 @static if Sys.islinux()

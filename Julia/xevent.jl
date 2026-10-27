@@ -298,8 +298,11 @@ function garbage_collector(xobjects, xlock, timeout::Int64)
         end
     catch e
         global running = false
-        @warn(e)
-        #typeof(e) == InterruptException && rethrow(e)        
+        if e isa InterruptException
+            @info "Garbage collection loop interrupted."
+        else
+            @warn(e)
+        end
     end
 
     @info "Garbage collection loop terminated."

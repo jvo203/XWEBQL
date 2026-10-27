@@ -6,11 +6,11 @@ using CodecZlib
 using CodecZstd
 using ConfParser
 using HTTP
+using HTTP: closeread, startwrite
 using JSON
 using LibPQ, Tables
 using SQLite
 using Sockets
-using WebSockets
 using x265_jll
 using ZfpCompression
 #using UUIDs
@@ -62,8 +62,8 @@ end
     if parse(Int32, x265_apiver()) < 215
         error(
             "x265 API version " *
-            x265_apiver() *
-            " used by Julia is too old, make sure Julia x265_jll package is v4.1.0 or higher.",
+                x265_apiver() *
+                " used by Julia is too old, make sure Julia x265_jll package is v4.1.0 or higher.",
         )
     end
 end
@@ -78,7 +78,7 @@ end
 
 include("kalman.jl")
 
-function parse_commandline()
+function parse_commandline(args=ARGS)
     s = ArgParseSettings()
 
     @add_arg_table s begin
@@ -86,16 +86,13 @@ function parse_commandline()
         help = "a configuration file."
         default = "config.ini"
         "--port"
-        help = "an HTTP listening port, defaults to 8080. WebSockets will use the next port (i.e. 8081). The port can also be specified in the .ini config file. Any config file will override this command-line argument."
+        help = "an HTTP listening port, defaults to 8080. The port can also be specified in the .ini config file. Any config file will override this command-line argument."
         arg_type = Int
         default = 8080
     end
 
-    return parse_args(s)
+    return parse_args(args, s)
 end
-
-# parse command-line arguments (a config file, port numbers etc.)
-parsed_args = parse_commandline()
 
 LOCAL_VERSION = true
 TIMEOUT = 60 # [s]
@@ -111,18 +108,18 @@ DB_HOME = "/home"
 
 const VERSION_MAJOR = 1
 const VERSION_MINOR = 0
-const VERSION_SUB = 31
+const VERSION_SUB = 32
 
 const SERVER_STRING =
     "XWEBQL v" *
-    string(VERSION_MAJOR) *
-    "." *
-    string(VERSION_MINOR) *
-    "." *
-    string(VERSION_SUB)
+        string(VERSION_MAJOR) *
+        "." *
+        string(VERSION_MINOR) *
+        "." *
+        string(VERSION_SUB)
 
-const WASM_VERSION = "26.09.29.0"
-const VERSION_STRING = "J/SV2026-10-02.0-BETA"
+const WASM_VERSION = "26.10.27.0"
+const VERSION_STRING = "J/SV2026-10-27.1-BETA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -138,14 +135,6 @@ CONFIG_FILE = "config.ini"
 
 const HT_DOCS = "htdocs"
 HTTP_PORT = 8080
-WS_PORT = HTTP_PORT + 1
-
-# parse the command-line arguments
-try
-    global HTTP_PORT = parsed_args["port"]
-    global WS_PORT = HTTP_PORT + 1
-catch _
-end
 
 include("xevent.jl")
 
@@ -210,7 +199,7 @@ function get_jvo_path(
     end
 end
 
-function streamFile(http::HTTP.Streams.Stream, path::String)
+function streamFile(http::HTTP.Stream, path::String)
     # strip out a question mark (if there is any)
     pos = findlast("?", path)
 
@@ -304,9 +293,9 @@ function streamFile(http::HTTP.Streams.Stream, path::String)
     return nothing
 end
 
-function streamDirectory(http::HTTP.Streams.Stream)
+function streamDirectory(http::HTTP.Stream)
     request::HTTP.Request = http.message
-    request.body = read(http)
+    read(http)
     closeread(http)
 
     @show request.target
@@ -412,23 +401,19 @@ function streamDirectory(http::HTTP.Streams.Stream)
     return nothing
 end
 
-function exitFunc(exception=false)
-    global ws_server, gc_task, running
+function exitFunc()
+    global gc_task, running
 
     running = false
-    #@async Base.throwto(gc_task, InterruptException())
-    #wait(gc_task)
+
+    if !istaskdone(gc_task)
+        schedule(gc_task, InterruptException(); error=true)
+        wait(gc_task)
+    end
 
     @info "shutting down XWEBQL ..."
 
     remove_symlinks()
-
-    try
-        println("WebSocket Server .out channel: ", string(take!(ws_server.out)))
-        close(ws_server)
-    catch e
-        println(e)
-    end
 
     # empty XOBJECTS
     for (key, value) in XOBJECTS
@@ -455,15 +440,14 @@ function exitFunc(exception=false)
     end
 
     @info "XWEBQL shutdown completed."
-    exit()
 end
 
-# the SIGINT will be caught later on
-running = true
-Base.exit_on_sigint(false)
+# the SIGINT handler and running state are initialized in main().
+running = false
 
-function gracefullyShutdown(http::HTTP.Streams.Stream)
-    @async exitFunc(true)
+function gracefullyShutdown(http::HTTP.Stream)
+    global running
+    running = false
 
     closeread(http)
 
@@ -473,13 +457,12 @@ function gracefullyShutdown(http::HTTP.Streams.Stream)
     return nothing
 end
 
-function streamDocument(http::HTTP.Streams.Stream)
-    host, port = Sockets.getpeername(http)
+function streamDocument(http::HTTP.Stream)
     request::HTTP.Request = http.message
-    request.body = read(http)
+    read(http)
     closeread(http)
 
-    println("HTTP request '$(request.target)' from $host:$port")
+    println("HTTP request '$(request.target)'")
 
     # prevent a simple directory traversal
     if occursin("../", request.target) || occursin("..\\", request.target)
@@ -538,9 +521,9 @@ function remove_symlinks()
     end
 end
 
-function streamHeartBeat(http::HTTP.Streams.Stream)
+function streamHeartBeat(http::HTTP.Stream)
     request::HTTP.Request = http.message
-    request.body = read(http)
+    read(http)
     closeread(http)
 
     timestamp = HTTP.URIs.splitpath(HTTP.unescapeuri(request.target))[3]
@@ -550,11 +533,11 @@ function streamHeartBeat(http::HTTP.Streams.Stream)
     return nothing
 end
 
-function streamProgress(http::HTTP.Streams.Stream)
+function streamProgress(http::HTTP.Stream)
     global XOBJECTS, XLOCK
 
     request::HTTP.Request = http.message
-    request.body = read(http)
+    read(http)
     closeread(http)
 
     datasetid = HTTP.URIs.splitpath(HTTP.unescapeuri(request.target))[3]
@@ -590,16 +573,16 @@ function streamProgress(http::HTTP.Streams.Stream)
     return nothing
 end
 
-function streamXEvents(http::HTTP.Streams.Stream)
+function streamXEvents(http::HTTP.Stream)
     global XOBJECTS, XLOCK
     local xdataset
 
     request::HTTP.Request = http.message
 
     # extract Accept-Encoding header
-    accept_encoding = HTTP.header(http, "Accept-Encoding")
+    accept_encoding = HTTP.header(request, "Accept-Encoding")
 
-    request.body = read(http)
+    read(http)
     closeread(http)
 
     root_path = HTTP.URIs.splitpath(request.target)[1]
@@ -956,8 +939,8 @@ function streamXEvents(http::HTTP.Streams.Stream)
     # Three.js import script (used by the 3D viewer)
     write(html,
         "<script type=\"module\">\n",
-        "  import * as THREE from 'https://esm.sh/three@0.184.0';\n",
-        "  import { OrbitControls } from 'https://esm.sh/three@0.184.0/examples/jsm/controls/OrbitControls.js';\n",
+        "  import * as THREE from 'https://esm.sh/three@0.186.1';\n",
+        "  import { OrbitControls } from 'https://esm.sh/three@0.186.1/examples/jsm/controls/OrbitControls.js';\n",
         "  window.THREE = THREE;\n",
         "  window.OrbitControls = OrbitControls;\n",
         "</script>\n",
@@ -995,8 +978,6 @@ function streamXEvents(http::HTTP.Streams.Stream)
 
     has_events_str = data_has_events ? "1" : "0"
     write(html, "' data-has-events='$has_events_str'></div>\n")
-    write(html, "<script>var WS_PORT = $WS_PORT;</script>\n")
-
     # the page entry point
     write(
         html,
@@ -1047,11 +1028,11 @@ function streamXEvents(http::HTTP.Streams.Stream)
     return nothing
 end
 
-function streamSpectralLines(http::HTTP.Streams.Stream)
+function streamSpectralLines(http::HTTP.Stream)
     global atom_db, XOBJECTS, XLOCK
 
     request::HTTP.Request = http.message
-    request.body = read(http)
+    read(http)
     closeread(http)
 
     params = HTTP.queryparams(HTTP.URI(request.target))
@@ -1163,11 +1144,11 @@ function streamSpectralLines(http::HTTP.Streams.Stream)
     return nothing
 end
 
-function streamImageSpectrum(http::HTTP.Streams.Stream)
+function streamImageSpectrum(http::HTTP.Stream)
     global XOBJECTS, XLOCK
 
     request::HTTP.Request = http.message
-    request.body = read(http)
+    read(http)
     closeread(http)
 
     params = HTTP.queryparams(HTTP.URI(request.target))
@@ -1325,98 +1306,24 @@ HTTP.register!(XROUTER, "GET", "*", streamDocument)
 HTTP.register!(XROUTER, "GET", "/*/image_spectrum/", streamImageSpectrum)
 HTTP.register!(XROUTER, "GET", "/*/get_atomdb/", streamSpectralLines)
 
-try
-    global CONFIG_FILE = parsed_args["config"]
-catch _
-    println("A config file not supplied. Will try a default config.ini .")
+function websocket_send_guarded(ws, message)
+    try
+        HTTP.WebSockets.send(ws, message)
+        return true
+    catch e
+        e isa HTTP.WebSockets.WebSocketError && return false
+        rethrow()
+    end
 end
 
-# read the config file (if available)
-try
-    conf = ConfParse(CONFIG_FILE)
-    parse_conf!(conf)
-
-    # [xwebql]
-
+function websocket_receive_guarded(ws)
     try
-        global HTTP_PORT = parse(Int64, retrieve(conf, "xwebql", "port"))
-        global WS_PORT = HTTP_PORT + 1
-    catch _
-        # cannot find the port, try the command-line arguments
-        try
-            global HTTP_PORT = parsed_args["port"]
-            global WS_PORT = HTTP_PORT + 1
-        catch _
-        end
+        return HTTP.WebSockets.receive(ws)
+    catch e
+        e isa HTTP.WebSockets.WebSocketError && return nothing
+        rethrow()
     end
-
-    try
-        global LOCAL_VERSION = parse(Bool, retrieve(conf, "xwebql", "local"))
-    catch _
-    end
-
-    try
-        global TIMEOUT = parse(Int64, retrieve(conf, "xwebql", "timeout"))
-    catch _
-    end
-
-    try
-        global XHOME = retrieve(conf, "xwebql", "home")
-    catch _
-    end
-
-    try
-        global LOGS = retrieve(conf, "xwebql", "logs")
-    catch _
-    end
-
-    try
-        global XCACHE = retrieve(conf, "xwebql", "cache")
-    catch _
-    end
-
-    # [postgresql]
-
-    try
-        global DB_HOST = retrieve(conf, "postgresql", "host")
-    catch _
-    end
-
-    try
-        global DB_PORT = parse(Int64, retrieve(conf, "postgresql", "port"))
-    catch _
-    end
-
-    try
-        global DB_USER = retrieve(conf, "postgresql", "user")
-    catch _
-    end
-
-    try
-        global DB_PASSWORD = retrieve(conf, "postgresql", "password")
-    catch _
-    end
-
-    try
-        global DB_HOME = retrieve(conf, "postgresql", "home")
-    catch _
-    end
-catch e
-    println("Cannot parse the config file $CONFIG_FILE: $e")
 end
-
-# open an Atom DB connection
-const atom_db = SQLite.DB("atom.db")
-
-println("$SERVER_STRING")
-println("DATASET TIMEOUT: $(TIMEOUT)s")
-println("Point your browser to http://localhost:$HTTP_PORT")
-println(
-    "Press CTRL+C or send SIGINT to exit. Alternatively point your browser to http://localhost:$HTTP_PORT/exit",
-)
-
-# Sockets.localhost or Sockets.IPv4(0)
-host = Sockets.IPv4(0)
 
 function ws_coroutine(ws, ids)
     global XOBJECTS, XLOCK
@@ -1450,16 +1357,12 @@ function ws_coroutine(ws, ids)
 
         if xobject.id == "" || has_error(xobject)
             @error "$datasetid not found, closing a websocket coroutine."
-            writeguarded(ws, "[close]")
+            websocket_send_guarded(ws, "[close]")
             return
         end
     end
 
     @info "Started a websocket coroutine for $datasetid" ws
-
-    # speed-up the underlying TCP socket
-    Sockets.nagle(ws.socket, false)
-    Sockets.quickack(ws.socket, true)
 
     # an outgoing queue for messages to be sent
     outgoing = RemoteChannel(() -> Channel{Any}(32))
@@ -1471,7 +1374,7 @@ function ws_coroutine(ws, ids)
                 msg = take!(msg)
             end
 
-            if !writeguarded(ws, msg)
+            if !websocket_send_guarded(ws, msg)
                 break
             end
         catch e
@@ -1786,8 +1689,9 @@ function ws_coroutine(ws, ids)
         end
     end
 
-    while isopen(ws)
-        data, = readguarded(ws)
+    while true
+        data = websocket_receive_guarded(ws)
+        isnothing(data) && break
         s = String(data)
 
         if s == ""
@@ -1802,13 +1706,13 @@ function ws_coroutine(ws, ids)
 
             if xobject.id == "" || has_error(xobject)
                 @error "$datasetid not found, closing a websocket coroutine."
-                writeguarded(ws, "[close]")
+                websocket_send_guarded(ws, "[close]")
                 break
             end
 
             if has_error(xobject)
                 @error "$datasetid: an error detected, closing a websocket coroutine."
-                writeguarded(ws, "[close]")
+                websocket_send_guarded(ws, "[close]")
                 break
             end
 
@@ -2207,10 +2111,10 @@ function ws_coroutine(ws, ids)
 end
 
 function ws_gatekeeper(req, ws)
-    orig = WebSockets.origin(req)
+    orig = HTTP.header(req, "Origin", nothing)
     target = HTTP.unescapeuri(req.target)
 
-    @info "\nOrigin: $orig   Target: $target   subprotocol: $(subprotocol(req))"
+    @info "\nOrigin: $orig   Target: $target   subprotocol: $(HTTP.header(req, "Sec-WebSocket-Protocol", nothing))"
 
     # check if there is a '<sessionid>/<datasetid>' present in <target>
     pos = findlast("/", target)
@@ -2239,19 +2143,143 @@ function ws_gatekeeper(req, ws)
 
 end
 
-ws_handle(req) = SERVER_STRING |> WebSockets.Response
-const ws_server = WebSockets.ServerWS(ws_handle, ws_gatekeeper)
+function ws_handle(ws)
+    req = ws.handshake_request
+    isnothing(req) && error("WebSocket connection is missing its handshake request")
+    ws_gatekeeper(req, ws)
+end
 
-Threads.@spawn :interactive WebSockets.serve(ws_server, host, WS_PORT)
+function http_handle(stream::HTTP.Stream)
+    if HTTP.WebSockets.isupgrade(stream.message)
+        HTTP.WebSockets.upgrade(
+            ws_handle,
+            stream;
+            check_origin=(req, origin) -> true,
+        )
+    else
+        XROUTER(stream)
+    end
+end
 
-# a garbage collection loop (dataset timeout)
-global gc_task = @async garbage_collector(XOBJECTS, XLOCK, TIMEOUT)
+function stop_http_server(server::HTTP.Server)
+    close_task = @async close(server)
 
-try
-    HTTP.serve(XROUTER, host, UInt16(HTTP_PORT), stream=true)
-catch e
-    @warn(e)
-    typeof(e) == InterruptException && rethrow(e)
-finally
-    exitFunc()
+    if timedwait(() -> istaskdone(close_task), 5.0; pollint=0.1) == :timed_out
+        @warn "HTTP server graceful shutdown timed out; closing active connections"
+        HTTP.forceclose(server)
+    end
+
+    wait(close_task)
+end
+
+function main(args=ARGS)
+    global CONFIG_FILE, HTTP_PORT, LOCAL_VERSION, TIMEOUT
+    global XHOME, XCACHE, DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_HOME, LOGS
+    global atom_db, host, running, gc_task, http_server
+
+    parsed_args = parse_commandline(args)
+    CONFIG_FILE = parsed_args["config"]
+    HTTP_PORT = parsed_args["port"]
+
+    try
+        conf = ConfParse(CONFIG_FILE)
+        parse_conf!(conf)
+
+        try
+            HTTP_PORT = parse(Int64, retrieve(conf, "xwebql", "port"))
+        catch
+        end
+
+        try
+            LOCAL_VERSION = parse(Bool, retrieve(conf, "xwebql", "local"))
+        catch
+        end
+
+        try
+            TIMEOUT = parse(Int64, retrieve(conf, "xwebql", "timeout"))
+        catch
+        end
+
+        try
+            XHOME = retrieve(conf, "xwebql", "home")
+        catch
+        end
+
+        try
+            LOGS = retrieve(conf, "xwebql", "logs")
+        catch
+        end
+
+        try
+            XCACHE = retrieve(conf, "xwebql", "cache")
+        catch
+        end
+
+        try
+            DB_HOST = retrieve(conf, "postgresql", "host")
+        catch
+        end
+
+        try
+            DB_PORT = parse(Int64, retrieve(conf, "postgresql", "port"))
+        catch
+        end
+
+        try
+            DB_USER = retrieve(conf, "postgresql", "user")
+        catch
+        end
+
+        try
+            DB_PASSWORD = retrieve(conf, "postgresql", "password")
+        catch
+        end
+
+        try
+            DB_HOME = retrieve(conf, "postgresql", "home")
+        catch
+        end
+    catch e
+        println("Cannot parse the config file $CONFIG_FILE: $e")
+    end
+
+    atom_db = SQLite.DB("atom.db")
+
+    println("$SERVER_STRING")
+    println("DATASET TIMEOUT: $(TIMEOUT)s")
+    println("Point your browser to http://localhost:$HTTP_PORT")
+    println(
+        "Press CTRL+C or send SIGINT to exit. Alternatively point your browser to http://localhost:$HTTP_PORT/exit",
+    )
+
+    host = Sockets.IPv4(0)
+    running = true
+    Base.exit_on_sigint(false)
+
+    gc_task = @async garbage_collector(XOBJECTS, XLOCK, TIMEOUT)
+    http_server = nothing
+
+    try
+        http_server = HTTP.listen!(http_handle, string(host), UInt16(HTTP_PORT))
+        wait(gc_task)
+    catch e
+        if e isa InterruptException
+            running = false
+        else
+            @warn(e)
+            rethrow()
+        end
+    finally
+        try
+            if !isnothing(http_server)
+                stop_http_server(http_server)
+            end
+        finally
+            exitFunc()
+        end
+    end
+end
+
+if abspath(PROGRAM_FILE) == abspath(@__FILE__)
+    main()
 end

@@ -1,5 +1,5 @@
 function get_js_version() {
-    return "JS2026-10-02.0";
+    return "JS2026-10-27.0";
 }
 
 function uuidv4() {
@@ -6402,14 +6402,14 @@ async function open_websocket_connection(_datasetId, index) {
         var prot = loc.protocol;
 
         if (prot !== "https:") {
-            ws_uri = "ws://" + loc.hostname + ':' + WS_PORT;
+            ws_uri = "ws://" + loc.host;
         } else {
-            ws_uri = "wss://" + loc.hostname;
+            ws_uri = "wss://" + loc.host;
         }
 
         // a JVO override (a special exception)
         if (loc.hostname.indexOf("jvo.") != -1 || loc.hostname.indexOf("jvo-dev.") != -1) {
-            ws_uri = "wss://" + loc.hostname;
+            ws_uri = "wss://" + loc.host;
         }
 
         ws_uri += ROOT_PATH + "websocket/" + encodeURIComponent(_datasetId) + "/" + session_id;
