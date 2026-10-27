@@ -410,12 +410,15 @@ function streamDirectory(http::HTTP.Stream)
     return nothing
 end
 
-function exitFunc(exception=false)
+function exitFunc()
     global gc_task, running
 
     running = false
-    #@async Base.throwto(gc_task, InterruptException())
-    #wait(gc_task)
+
+    if !istaskdone(gc_task)
+        schedule(gc_task, InterruptException(); error=true)
+        wait(gc_task)
+    end
 
     @info "shutting down XWEBQL ..."
 
@@ -451,10 +454,11 @@ end
 
 # the SIGINT will be caught later on
 running = true
-Base.exit_on_sigint(true)
+Base.exit_on_sigint(false)
 
 function gracefullyShutdown(http::HTTP.Stream)
-    @async exitFunc(true)
+    global running
+    running = false
 
     closeread(http)
 
@@ -2259,14 +2263,38 @@ function http_handle(stream::HTTP.Stream)
     end
 end
 
+function stop_http_server(server::HTTP.Server)
+    close_task = @async close(server)
+
+    if timedwait(() -> istaskdone(close_task), 5.0; pollint=0.1) == :timed_out
+        @warn "HTTP server graceful shutdown timed out; closing active connections"
+        HTTP.forceclose(server)
+    end
+
+    wait(close_task)
+end
+
 # a garbage collection loop (dataset timeout)
 global gc_task = @async garbage_collector(XOBJECTS, XLOCK, TIMEOUT)
+global http_server = nothing
 
 try
-    HTTP.listen(http_handle, string(host), UInt16(HTTP_PORT))
+    global http_server = HTTP.listen!(http_handle, string(host), UInt16(HTTP_PORT))
+    Base.exit_on_sigint(false)
+    wait(gc_task)
 catch e
-    @warn(e)
-    typeof(e) == InterruptException && rethrow(e)
+    if e isa InterruptException
+        global running = false
+    else
+        @warn(e)
+        rethrow()
+    end
 finally
-    exitFunc()
+    try
+        if !isnothing(http_server)
+            stop_http_server(http_server)
+        end
+    finally
+        exitFunc()
+    end
 end
