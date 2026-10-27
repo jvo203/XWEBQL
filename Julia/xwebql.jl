@@ -78,7 +78,7 @@ end
 
 include("kalman.jl")
 
-function parse_commandline()
+function parse_commandline(args=ARGS)
     s = ArgParseSettings()
 
     @add_arg_table s begin
@@ -91,11 +91,8 @@ function parse_commandline()
         default = 8080
     end
 
-    return parse_args(s)
+    return parse_args(args, s)
 end
-
-# parse command-line arguments (a config file, port numbers etc.)
-parsed_args = parse_commandline()
 
 LOCAL_VERSION = true
 TIMEOUT = 60 # [s]
@@ -138,12 +135,6 @@ CONFIG_FILE = "config.ini"
 
 const HT_DOCS = "htdocs"
 HTTP_PORT = 8080
-
-# parse the command-line arguments
-try
-    global HTTP_PORT = parsed_args["port"]
-catch _
-end
 
 include("xevent.jl")
 
@@ -449,12 +440,10 @@ function exitFunc()
     end
 
     @info "XWEBQL shutdown completed."
-    exit()
 end
 
-# the SIGINT will be caught later on
-running = true
-Base.exit_on_sigint(false)
+# the SIGINT handler and running state are initialized in main().
+running = false
 
 function gracefullyShutdown(http::HTTP.Stream)
     global running
@@ -1316,97 +1305,6 @@ HTTP.register!(XROUTER, "GET", "*/*", streamDocument)
 HTTP.register!(XROUTER, "GET", "*", streamDocument)
 HTTP.register!(XROUTER, "GET", "/*/image_spectrum/", streamImageSpectrum)
 HTTP.register!(XROUTER, "GET", "/*/get_atomdb/", streamSpectralLines)
-
-try
-    global CONFIG_FILE = parsed_args["config"]
-catch _
-    println("A config file not supplied. Will try a default config.ini .")
-end
-
-# read the config file (if available)
-try
-    conf = ConfParse(CONFIG_FILE)
-    parse_conf!(conf)
-
-    # [xwebql]
-
-    try
-        global HTTP_PORT = parse(Int64, retrieve(conf, "xwebql", "port"))
-    catch _
-        # cannot find the port, try the command-line arguments
-        try
-            global HTTP_PORT = parsed_args["port"]
-        catch _
-        end
-    end
-
-    try
-        global LOCAL_VERSION = parse(Bool, retrieve(conf, "xwebql", "local"))
-    catch _
-    end
-
-    try
-        global TIMEOUT = parse(Int64, retrieve(conf, "xwebql", "timeout"))
-    catch _
-    end
-
-    try
-        global XHOME = retrieve(conf, "xwebql", "home")
-    catch _
-    end
-
-    try
-        global LOGS = retrieve(conf, "xwebql", "logs")
-    catch _
-    end
-
-    try
-        global XCACHE = retrieve(conf, "xwebql", "cache")
-    catch _
-    end
-
-    # [postgresql]
-
-    try
-        global DB_HOST = retrieve(conf, "postgresql", "host")
-    catch _
-    end
-
-    try
-        global DB_PORT = parse(Int64, retrieve(conf, "postgresql", "port"))
-    catch _
-    end
-
-    try
-        global DB_USER = retrieve(conf, "postgresql", "user")
-    catch _
-    end
-
-    try
-        global DB_PASSWORD = retrieve(conf, "postgresql", "password")
-    catch _
-    end
-
-    try
-        global DB_HOME = retrieve(conf, "postgresql", "home")
-    catch _
-    end
-catch e
-    println("Cannot parse the config file $CONFIG_FILE: $e")
-end
-
-# open an Atom DB connection
-const atom_db = SQLite.DB("atom.db")
-
-println("$SERVER_STRING")
-println("DATASET TIMEOUT: $(TIMEOUT)s")
-println("Point your browser to http://localhost:$HTTP_PORT")
-println(
-    "Press CTRL+C or send SIGINT to exit. Alternatively point your browser to http://localhost:$HTTP_PORT/exit",
-)
-
-# Sockets.localhost or Sockets.IPv4(0)
-host = Sockets.IPv4(0)
 
 function websocket_send_guarded(ws, message)
     try
@@ -2274,26 +2172,114 @@ function stop_http_server(server::HTTP.Server)
     wait(close_task)
 end
 
-# a garbage collection loop (dataset timeout)
-global gc_task = @async garbage_collector(XOBJECTS, XLOCK, TIMEOUT)
-global http_server = nothing
+function main(args=ARGS)
+    global CONFIG_FILE, HTTP_PORT, LOCAL_VERSION, TIMEOUT
+    global XHOME, XCACHE, DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_HOME, LOGS
+    global atom_db, host, running, gc_task, http_server
 
-try
-    global http_server = HTTP.listen!(http_handle, string(host), UInt16(HTTP_PORT))
-    wait(gc_task)
-catch e
-    if e isa InterruptException
-        global running = false
-    else
-        @warn(e)
-        rethrow()
-    end
-finally
+    parsed_args = parse_commandline(args)
+    CONFIG_FILE = parsed_args["config"]
+    HTTP_PORT = parsed_args["port"]
+
     try
-        if !isnothing(http_server)
-            stop_http_server(http_server)
+        conf = ConfParse(CONFIG_FILE)
+        parse_conf!(conf)
+
+        try
+            HTTP_PORT = parse(Int64, retrieve(conf, "xwebql", "port"))
+        catch
+        end
+
+        try
+            LOCAL_VERSION = parse(Bool, retrieve(conf, "xwebql", "local"))
+        catch
+        end
+
+        try
+            TIMEOUT = parse(Int64, retrieve(conf, "xwebql", "timeout"))
+        catch
+        end
+
+        try
+            XHOME = retrieve(conf, "xwebql", "home")
+        catch
+        end
+
+        try
+            LOGS = retrieve(conf, "xwebql", "logs")
+        catch
+        end
+
+        try
+            XCACHE = retrieve(conf, "xwebql", "cache")
+        catch
+        end
+
+        try
+            DB_HOST = retrieve(conf, "postgresql", "host")
+        catch
+        end
+
+        try
+            DB_PORT = parse(Int64, retrieve(conf, "postgresql", "port"))
+        catch
+        end
+
+        try
+            DB_USER = retrieve(conf, "postgresql", "user")
+        catch
+        end
+
+        try
+            DB_PASSWORD = retrieve(conf, "postgresql", "password")
+        catch
+        end
+
+        try
+            DB_HOME = retrieve(conf, "postgresql", "home")
+        catch
+        end
+    catch e
+        println("Cannot parse the config file $CONFIG_FILE: $e")
+    end
+
+    atom_db = SQLite.DB("atom.db")
+
+    println("$SERVER_STRING")
+    println("DATASET TIMEOUT: $(TIMEOUT)s")
+    println("Point your browser to http://localhost:$HTTP_PORT")
+    println(
+        "Press CTRL+C or send SIGINT to exit. Alternatively point your browser to http://localhost:$HTTP_PORT/exit",
+    )
+
+    host = Sockets.IPv4(0)
+    running = true
+    Base.exit_on_sigint(false)
+
+    gc_task = @async garbage_collector(XOBJECTS, XLOCK, TIMEOUT)
+    http_server = nothing
+
+    try
+        http_server = HTTP.listen!(http_handle, string(host), UInt16(HTTP_PORT))
+        wait(gc_task)
+    catch e
+        if e isa InterruptException
+            running = false
+        else
+            @warn(e)
+            rethrow()
         end
     finally
-        exitFunc()
+        try
+            if !isnothing(http_server)
+                stop_http_server(http_server)
+            end
+        finally
+            exitFunc()
+        end
     end
+end
+
+if abspath(PROGRAM_FILE) == abspath(@__FILE__)
+    main()
 end
