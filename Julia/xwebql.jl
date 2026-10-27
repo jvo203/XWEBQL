@@ -451,7 +451,7 @@ end
 
 # the SIGINT will be caught later on
 running = true
-Base.exit_on_sigint(false)
+Base.exit_on_sigint(true)
 
 function gracefullyShutdown(http::HTTP.Stream)
     @async exitFunc(true)
