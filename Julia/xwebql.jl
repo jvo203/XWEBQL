@@ -108,7 +108,7 @@ DB_HOME = "/home"
 
 const VERSION_MAJOR = 1
 const VERSION_MINOR = 0
-const VERSION_SUB = 31
+const VERSION_SUB = 32
 
 const SERVER_STRING =
     "XWEBQL v" *
