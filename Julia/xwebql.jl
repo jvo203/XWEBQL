@@ -2256,7 +2256,7 @@ function http_handle(stream::HTTP.Stream)
         HTTP.WebSockets.upgrade(
             ws_handle,
             stream;
-            check_origin = (req, origin) -> true,
+            check_origin=(req, origin) -> true,
         )
     else
         XROUTER(stream)
@@ -2280,7 +2280,6 @@ global http_server = nothing
 
 try
     global http_server = HTTP.listen!(http_handle, string(host), UInt16(HTTP_PORT))
-    Base.exit_on_sigint(false)
     wait(gc_task)
 catch e
     if e isa InterruptException
