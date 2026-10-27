@@ -6,11 +6,11 @@ using CodecZlib
 using CodecZstd
 using ConfParser
 using HTTP
+using HTTP: closeread, startwrite
 using JSON
 using LibPQ, Tables
 using SQLite
 using Sockets
-using WebSockets
 using x265_jll
 using ZfpCompression
 #using UUIDs
@@ -62,8 +62,8 @@ end
     if parse(Int32, x265_apiver()) < 215
         error(
             "x265 API version " *
-            x265_apiver() *
-            " used by Julia is too old, make sure Julia x265_jll package is v4.1.0 or higher.",
+                x265_apiver() *
+                " used by Julia is too old, make sure Julia x265_jll package is v4.1.0 or higher.",
         )
     end
 end
@@ -86,7 +86,7 @@ function parse_commandline()
         help = "a configuration file."
         default = "config.ini"
         "--port"
-        help = "an HTTP listening port, defaults to 8080. WebSockets will use the next port (i.e. 8081). The port can also be specified in the .ini config file. Any config file will override this command-line argument."
+        help = "an HTTP listening port, defaults to 8080. The port can also be specified in the .ini config file. Any config file will override this command-line argument."
         arg_type = Int
         default = 8080
     end
@@ -115,14 +115,14 @@ const VERSION_SUB = 31
 
 const SERVER_STRING =
     "XWEBQL v" *
-    string(VERSION_MAJOR) *
-    "." *
-    string(VERSION_MINOR) *
-    "." *
-    string(VERSION_SUB)
+        string(VERSION_MAJOR) *
+        "." *
+        string(VERSION_MINOR) *
+        "." *
+        string(VERSION_SUB)
 
 const WASM_VERSION = "26.09.29.0"
-const VERSION_STRING = "J/SV2026-10-05.0-BETA"
+const VERSION_STRING = "J/SV2026-10-27.0-BETA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -138,12 +138,10 @@ CONFIG_FILE = "config.ini"
 
 const HT_DOCS = "htdocs"
 HTTP_PORT = 8080
-WS_PORT = HTTP_PORT + 1
 
 # parse the command-line arguments
 try
     global HTTP_PORT = parsed_args["port"]
-    global WS_PORT = HTTP_PORT + 1
 catch _
 end
 
@@ -210,7 +208,7 @@ function get_jvo_path(
     end
 end
 
-function streamFile(http::HTTP.Streams.Stream, path::String)
+function streamFile(http::HTTP.Stream, path::String)
     # strip out a question mark (if there is any)
     pos = findlast("?", path)
 
@@ -304,9 +302,9 @@ function streamFile(http::HTTP.Streams.Stream, path::String)
     return nothing
 end
 
-function streamDirectory(http::HTTP.Streams.Stream)
+function streamDirectory(http::HTTP.Stream)
     request::HTTP.Request = http.message
-    request.body = read(http)
+    read(http)
     closeread(http)
 
     @show request.target
@@ -413,7 +411,7 @@ function streamDirectory(http::HTTP.Streams.Stream)
 end
 
 function exitFunc(exception=false)
-    global ws_server, gc_task, running
+    global gc_task, running
 
     running = false
     #@async Base.throwto(gc_task, InterruptException())
@@ -422,13 +420,6 @@ function exitFunc(exception=false)
     @info "shutting down XWEBQL ..."
 
     remove_symlinks()
-
-    try
-        println("WebSocket Server .out channel: ", string(take!(ws_server.out)))
-        close(ws_server)
-    catch e
-        println(e)
-    end
 
     # empty XOBJECTS
     for (key, value) in XOBJECTS
@@ -462,7 +453,7 @@ end
 running = true
 Base.exit_on_sigint(false)
 
-function gracefullyShutdown(http::HTTP.Streams.Stream)
+function gracefullyShutdown(http::HTTP.Stream)
     @async exitFunc(true)
 
     closeread(http)
@@ -473,13 +464,12 @@ function gracefullyShutdown(http::HTTP.Streams.Stream)
     return nothing
 end
 
-function streamDocument(http::HTTP.Streams.Stream)
-    host, port = Sockets.getpeername(http)
+function streamDocument(http::HTTP.Stream)
     request::HTTP.Request = http.message
-    request.body = read(http)
+    read(http)
     closeread(http)
 
-    println("HTTP request '$(request.target)' from $host:$port")
+    println("HTTP request '$(request.target)'")
 
     # prevent a simple directory traversal
     if occursin("../", request.target) || occursin("..\\", request.target)
@@ -538,9 +528,9 @@ function remove_symlinks()
     end
 end
 
-function streamHeartBeat(http::HTTP.Streams.Stream)
+function streamHeartBeat(http::HTTP.Stream)
     request::HTTP.Request = http.message
-    request.body = read(http)
+    read(http)
     closeread(http)
 
     timestamp = HTTP.URIs.splitpath(HTTP.unescapeuri(request.target))[3]
@@ -550,11 +540,11 @@ function streamHeartBeat(http::HTTP.Streams.Stream)
     return nothing
 end
 
-function streamProgress(http::HTTP.Streams.Stream)
+function streamProgress(http::HTTP.Stream)
     global XOBJECTS, XLOCK
 
     request::HTTP.Request = http.message
-    request.body = read(http)
+    read(http)
     closeread(http)
 
     datasetid = HTTP.URIs.splitpath(HTTP.unescapeuri(request.target))[3]
@@ -590,16 +580,16 @@ function streamProgress(http::HTTP.Streams.Stream)
     return nothing
 end
 
-function streamXEvents(http::HTTP.Streams.Stream)
+function streamXEvents(http::HTTP.Stream)
     global XOBJECTS, XLOCK
     local xdataset
 
     request::HTTP.Request = http.message
 
     # extract Accept-Encoding header
-    accept_encoding = HTTP.header(http, "Accept-Encoding")
+    accept_encoding = HTTP.header(request, "Accept-Encoding")
 
-    request.body = read(http)
+    read(http)
     closeread(http)
 
     root_path = HTTP.URIs.splitpath(request.target)[1]
@@ -995,8 +985,6 @@ function streamXEvents(http::HTTP.Streams.Stream)
 
     has_events_str = data_has_events ? "1" : "0"
     write(html, "' data-has-events='$has_events_str'></div>\n")
-    write(html, "<script>var WS_PORT = $WS_PORT;</script>\n")
-
     # the page entry point
     write(
         html,
@@ -1047,11 +1035,11 @@ function streamXEvents(http::HTTP.Streams.Stream)
     return nothing
 end
 
-function streamSpectralLines(http::HTTP.Streams.Stream)
+function streamSpectralLines(http::HTTP.Stream)
     global atom_db, XOBJECTS, XLOCK
 
     request::HTTP.Request = http.message
-    request.body = read(http)
+    read(http)
     closeread(http)
 
     params = HTTP.queryparams(HTTP.URI(request.target))
@@ -1163,11 +1151,11 @@ function streamSpectralLines(http::HTTP.Streams.Stream)
     return nothing
 end
 
-function streamImageSpectrum(http::HTTP.Streams.Stream)
+function streamImageSpectrum(http::HTTP.Stream)
     global XOBJECTS, XLOCK
 
     request::HTTP.Request = http.message
-    request.body = read(http)
+    read(http)
     closeread(http)
 
     params = HTTP.queryparams(HTTP.URI(request.target))
@@ -1340,12 +1328,10 @@ try
 
     try
         global HTTP_PORT = parse(Int64, retrieve(conf, "xwebql", "port"))
-        global WS_PORT = HTTP_PORT + 1
     catch _
         # cannot find the port, try the command-line arguments
         try
             global HTTP_PORT = parsed_args["port"]
-            global WS_PORT = HTTP_PORT + 1
         catch _
         end
     end
@@ -1418,6 +1404,25 @@ println(
 # Sockets.localhost or Sockets.IPv4(0)
 host = Sockets.IPv4(0)
 
+function websocket_send_guarded(ws, message)
+    try
+        HTTP.WebSockets.send(ws, message)
+        return true
+    catch e
+        e isa HTTP.WebSockets.WebSocketError && return false
+        rethrow()
+    end
+end
+
+function websocket_receive_guarded(ws)
+    try
+        return HTTP.WebSockets.receive(ws)
+    catch e
+        e isa HTTP.WebSockets.WebSocketError && return nothing
+        rethrow()
+    end
+end
+
 function ws_coroutine(ws, ids)
     global XOBJECTS, XLOCK
 
@@ -1450,16 +1455,12 @@ function ws_coroutine(ws, ids)
 
         if xobject.id == "" || has_error(xobject)
             @error "$datasetid not found, closing a websocket coroutine."
-            writeguarded(ws, "[close]")
+            websocket_send_guarded(ws, "[close]")
             return
         end
     end
 
     @info "Started a websocket coroutine for $datasetid" ws
-
-    # speed-up the underlying TCP socket
-    Sockets.nagle(ws.socket, false)
-    Sockets.quickack(ws.socket, true)
 
     # an outgoing queue for messages to be sent
     outgoing = RemoteChannel(() -> Channel{Any}(32))
@@ -1471,7 +1472,7 @@ function ws_coroutine(ws, ids)
                 msg = take!(msg)
             end
 
-            if !writeguarded(ws, msg)
+            if !websocket_send_guarded(ws, msg)
                 break
             end
         catch e
@@ -1786,8 +1787,9 @@ function ws_coroutine(ws, ids)
         end
     end
 
-    while isopen(ws)
-        data, = readguarded(ws)
+    while true
+        data = websocket_receive_guarded(ws)
+        isnothing(data) && break
         s = String(data)
 
         if s == ""
@@ -1802,13 +1804,13 @@ function ws_coroutine(ws, ids)
 
             if xobject.id == "" || has_error(xobject)
                 @error "$datasetid not found, closing a websocket coroutine."
-                writeguarded(ws, "[close]")
+                websocket_send_guarded(ws, "[close]")
                 break
             end
 
             if has_error(xobject)
                 @error "$datasetid: an error detected, closing a websocket coroutine."
-                writeguarded(ws, "[close]")
+                websocket_send_guarded(ws, "[close]")
                 break
             end
 
@@ -2207,10 +2209,10 @@ function ws_coroutine(ws, ids)
 end
 
 function ws_gatekeeper(req, ws)
-    orig = WebSockets.origin(req)
+    orig = HTTP.header(req, "Origin", nothing)
     target = HTTP.unescapeuri(req.target)
 
-    @info "\nOrigin: $orig   Target: $target   subprotocol: $(subprotocol(req))"
+    @info "\nOrigin: $orig   Target: $target   subprotocol: $(HTTP.header(req, "Sec-WebSocket-Protocol", nothing))"
 
     # check if there is a '<sessionid>/<datasetid>' present in <target>
     pos = findlast("/", target)
@@ -2239,16 +2241,29 @@ function ws_gatekeeper(req, ws)
 
 end
 
-ws_handle(req) = SERVER_STRING |> WebSockets.Response
-const ws_server = WebSockets.ServerWS(ws_handle, ws_gatekeeper)
+function ws_handle(ws)
+    req = ws.handshake_request
+    isnothing(req) && error("WebSocket connection is missing its handshake request")
+    ws_gatekeeper(req, ws)
+end
 
-Threads.@spawn :interactive WebSockets.serve(ws_server, host, WS_PORT)
+function http_handle(stream::HTTP.Stream)
+    if HTTP.WebSockets.isupgrade(stream.message)
+        HTTP.WebSockets.upgrade(
+            ws_handle,
+            stream;
+            check_origin = (req, origin) -> true,
+        )
+    else
+        XROUTER(stream)
+    end
+end
 
 # a garbage collection loop (dataset timeout)
 global gc_task = @async garbage_collector(XOBJECTS, XLOCK, TIMEOUT)
 
 try
-    HTTP.serve(XROUTER, host, UInt16(HTTP_PORT), stream=true)
+    HTTP.listen(http_handle, string(host), UInt16(HTTP_PORT))
 catch e
     @warn(e)
     typeof(e) == InterruptException && rethrow(e)
