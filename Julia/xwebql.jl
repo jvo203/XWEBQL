@@ -118,7 +118,7 @@ const SERVER_STRING =
         string(VERSION_SUB)
 
 const WASM_VERSION = "26.10.27.0"
-const VERSION_STRING = "J/SV2026-10-28.1-BETA"
+const VERSION_STRING = "J/SV2026-10-28.2-BETA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -453,9 +453,7 @@ end
 function streamDocument(http::HTTP.Stream)
     request::HTTP.Request = http.message
     read(http)
-    HTTP.closeread(http)
-
-    println("HTTP request '$(request.target)'")
+    HTTP.closeread(http)    
 
     # prevent a simple directory traversal
     if occursin("../", request.target) || occursin("..\\", request.target)
@@ -473,6 +471,8 @@ function streamDocument(http::HTTP.Stream)
         else
             path *= "test.html"
         end
+    else
+        println("HTTP request '$(request.target)'")
     end
 
     return streamFile(http, path)
