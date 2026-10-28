@@ -6,7 +6,6 @@ using CodecZlib
 using CodecZstd
 using ConfParser
 using HTTP
-using HTTP: closeread, startwrite
 using JSON
 using LibPQ, Tables
 using SQLite
@@ -108,7 +107,7 @@ DB_HOME = "/home"
 
 const VERSION_MAJOR = 1
 const VERSION_MINOR = 0
-const VERSION_SUB = 32
+const VERSION_SUB = 33
 
 const SERVER_STRING =
     "XWEBQL v" *
@@ -119,7 +118,7 @@ const SERVER_STRING =
         string(VERSION_SUB)
 
 const WASM_VERSION = "26.10.27.0"
-const VERSION_STRING = "J/SV2026-10-27.1-BETA"
+const VERSION_STRING = "J/SV2026-10-28.0-BETA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -272,12 +271,12 @@ function streamFile(http::HTTP.Stream, path::String)
                 HTTP.setheader(http, key => value)
             end
 
-            startwrite(http)
-            write(http, read(path))
+            HTTP.startwrite(http)
+            HTTP.write(http, read(path))
         else
             HTTP.setstatus(http, 404)
-            startwrite(http)
-            write(http, "$path Not Found.")
+            HTTP.startwrite(http)
+            HTTP.write(http, "$path Not Found.")
         end
     catch e
         if occursin("ECONNRESET", string(e))
@@ -286,8 +285,8 @@ function streamFile(http::HTTP.Stream, path::String)
         end
 
         HTTP.setstatus(http, 404)
-        startwrite(http)
-        write(http, "Error: $e")
+        HTTP.startwrite(http)
+        HTTP.write(http, "Error: $e")
     end
 
     return nothing
@@ -390,12 +389,12 @@ function streamDirectory(http::HTTP.Stream)
             HTTP.setheader(http, key => value)
         end
 
-        startwrite(http)
-        write(http, resp)
+        HTTP.startwrite(http)
+        HTTP.write(http, resp)
     catch e
         HTTP.setstatus(http, 404)
-        startwrite(http)
-        write(http, "Error: $e")
+        HTTP.startwrite(http)
+        HTTP.write(http, "Error: $e")
     end
 
     return nothing
@@ -449,26 +448,26 @@ function gracefullyShutdown(http::HTTP.Stream)
     global running
     running = false
 
-    closeread(http)
+    HTTP.closeread(http)
 
     HTTP.setstatus(http, 200)
-    startwrite(http)
-    write(http, "Shutting down $(SERVER_STRING)")
+    HTTP.startwrite(http)
+    HTTP.write(http, "Shutting down $(SERVER_STRING)")
     return nothing
 end
 
 function streamDocument(http::HTTP.Stream)
     request::HTTP.Request = http.message
     read(http)
-    closeread(http)
+    HTTP.closeread(http)
 
     println("HTTP request '$(request.target)'")
 
     # prevent a simple directory traversal
     if occursin("../", request.target) || occursin("..\\", request.target)
         HTTP.setstatus(http, 404)
-        startwrite(http)
-        write(http, "Not Found")
+        HTTP.startwrite(http)
+        HTTP.write(http, "Not Found")
         return nothing
     end
 
@@ -524,12 +523,12 @@ end
 function streamHeartBeat(http::HTTP.Stream)
     request::HTTP.Request = http.message
     read(http)
-    closeread(http)
+    HTTP.closeread(http)
 
     timestamp = HTTP.URIs.splitpath(HTTP.unescapeuri(request.target))[3]
     HTTP.setstatus(http, 200)
-    startwrite(http)
-    write(http, timestamp)
+    HTTP.startwrite(http)
+    HTTP.write(http, timestamp)
     return nothing
 end
 
@@ -538,22 +537,22 @@ function streamProgress(http::HTTP.Stream)
 
     request::HTTP.Request = http.message
     read(http)
-    closeread(http)
+    HTTP.closeread(http)
 
     datasetid = HTTP.URIs.splitpath(HTTP.unescapeuri(request.target))[3]
     xobject = get_dataset(datasetid, XOBJECTS, XLOCK)
 
     if xobject.id == ""
         HTTP.setstatus(http, 404)
-        startwrite(http)
-        write(http, "Not Found")
+        HTTP.startwrite(http)
+        HTTP.write(http, "Not Found")
         return nothing
     end
 
     if has_error(xobject)
         HTTP.setstatus(http, 500)
-        startwrite(http)
-        write(http, "Internal Server Error")
+        HTTP.startwrite(http)
+        HTTP.write(http, "Internal Server Error")
         return nothing
     end
 
@@ -568,8 +567,8 @@ function streamProgress(http::HTTP.Stream)
 
     HTTP.setstatus(http, 200)
     HTTP.setheader(http, "Content-Type" => "application/json")
-    startwrite(http)
-    write(http, take!(resp))
+    HTTP.startwrite(http)
+    HTTP.write(http, take!(resp))
     return nothing
 end
 
@@ -582,8 +581,8 @@ function streamXEvents(http::HTTP.Stream)
     # extract Accept-Encoding header
     accept_encoding = HTTP.header(request, "Accept-Encoding")
 
-    read(http)
-    closeread(http)
+    HTTP.read(http)
+    HTTP.closeread(http)
 
     root_path = HTTP.URIs.splitpath(request.target)[1]
 
@@ -1007,22 +1006,22 @@ function streamXEvents(http::HTTP.Stream)
     if occursin("zstd", accept_encoding)
         # check if accept_encoding contains zstd
         HTTP.setheader(http, "Content-Encoding" => "zstd")
-        startwrite(http)
-        write(http, transcode(ZstdCompressor, take!(html)))
+        HTTP.startwrite(http)
+        HTTP.write(http, transcode(ZstdCompressor, take!(html)))
     elseif occursin("gzip", accept_encoding)
         # check if accept_encoding contains gzip
         HTTP.setheader(http, "Content-Encoding" => "gzip")
-        startwrite(http)
-        write(http, transcode(GzipCompressor, take!(html)))
+        HTTP.startwrite(http)
+        HTTP.write(http, transcode(GzipCompressor, take!(html)))
     elseif occursin("deflate", accept_encoding)
         # check if accept_encoding contains deflate
         HTTP.setheader(http, "Content-Encoding" => "deflate")
-        startwrite(http)
-        write(http, transcode(DeflateCompressor, take!(html)))
+        HTTP.startwrite(http)
+        HTTP.write(http, transcode(DeflateCompressor, take!(html)))
     else
         # no compression
-        startwrite(http)
-        write(http, take!(html))
+        HTTP.startwrite(http)
+        HTTP.write(http, take!(html))
     end
 
     return nothing
@@ -1032,8 +1031,8 @@ function streamSpectralLines(http::HTTP.Stream)
     global atom_db, XOBJECTS, XLOCK
 
     request::HTTP.Request = http.message
-    read(http)
-    closeread(http)
+    HTTP.read(http)
+    HTTP.closeread(http)
 
     params = HTTP.queryparams(HTTP.URI(request.target))
     # println(params)    
@@ -1049,7 +1048,7 @@ function streamSpectralLines(http::HTTP.Stream)
     catch e
         println(e)
         HTTP.setstatus(http, 404)
-        startwrite(http)
+        HTTP.startwrite(http)
         write(http, "Not Found")
         return nothing
     end
@@ -1061,21 +1060,21 @@ function streamSpectralLines(http::HTTP.Stream)
 
         if xobject.id == ""
             HTTP.setstatus(http, 404)
-            startwrite(http)
+            HTTP.startwrite(http)
             write(http, "Not Found")
             return nothing
         end
 
         if has_error(xobject)
             HTTP.setstatus(http, 500)
-            startwrite(http)
+            HTTP.startwrite(http)
             write(http, "Internal Server Error")
             return nothing
         end
 
         if !has_events(xobject)
             HTTP.setstatus(http, 202)
-            startwrite(http)
+            HTTP.startwrite(http)
             write(http, "Accepted")
             return nothing
         end
@@ -1086,7 +1085,7 @@ function streamSpectralLines(http::HTTP.Stream)
             println("streamSpectralLines::$e")
 
             HTTP.setstatus(http, 404)
-            startwrite(http)
+            HTTP.startwrite(http)
             write(http, "Not Found")
             return nothing
         end
@@ -1111,7 +1110,7 @@ function streamSpectralLines(http::HTTP.Stream)
         println("streamSpectralLines::$e")
 
         HTTP.setstatus(http, 404)
-        startwrite(http)
+        HTTP.startwrite(http)
         write(http, "Not Found")
         return nothing
     end
@@ -1138,7 +1137,7 @@ function streamSpectralLines(http::HTTP.Stream)
     HTTP.setheader(http, "Content-Type" => "application/octet-stream")
 
     HTTP.setstatus(http, 200)
-    startwrite(http)
+    HTTP.startwrite(http)
     write(http, compressed)
 
     return nothing
@@ -1148,8 +1147,8 @@ function streamImageSpectrum(http::HTTP.Stream)
     global XOBJECTS, XLOCK
 
     request::HTTP.Request = http.message
-    read(http)
-    closeread(http)
+    HTTP.read(http)
+    HTTP.closeread(http)
 
     params = HTTP.queryparams(HTTP.URI(request.target))
     # println(params)    
@@ -1167,8 +1166,8 @@ function streamImageSpectrum(http::HTTP.Stream)
     catch e
         println(e)
         HTTP.setstatus(http, 404)
-        startwrite(http)
-        write(http, "Not Found")
+        HTTP.startwrite(http)
+        HTTP.write(http, "Not Found")
         return nothing
     end
 
@@ -1191,22 +1190,22 @@ function streamImageSpectrum(http::HTTP.Stream)
 
     if xobject.id == "" || width <= 0 || height <= 0
         HTTP.setstatus(http, 404)
-        startwrite(http)
-        write(http, "Not Found")
+        HTTP.startwrite(http)
+        HTTP.write(http, "Not Found")
         return nothing
     end
 
     if has_error(xobject)
         HTTP.setstatus(http, 500)
-        startwrite(http)
-        write(http, "Internal Server Error")
+        HTTP.startwrite(http)
+        HTTP.write(http, "Internal Server Error")
         return nothing
     end
 
     if !has_events(xobject)
         HTTP.setstatus(http, 202)
-        startwrite(http)
-        write(http, "Accepted")
+        HTTP.startwrite(http)
+        HTTP.write(http, "Accepted")
         return nothing
     end
 
@@ -1215,7 +1214,7 @@ function streamImageSpectrum(http::HTTP.Stream)
             getImageSpectrum(xobject, width, height)
 
         HTTP.setstatus(http, 200)
-        startwrite(http)
+        HTTP.startwrite(http)
 
         flux = "LOG"
 
@@ -1224,18 +1223,18 @@ function streamImageSpectrum(http::HTTP.Stream)
         len = 4 * (length(flux) ÷ 4 + 1)
         flux = lpad(flux, len, " ")
 
-        write(http, UInt32(length(flux)))
-        write(http, flux)
+        HTTP.write(http, UInt32(length(flux)))
+        HTTP.write(http, flux)
 
-        write(http, UInt64(min_count))
-        write(http, UInt64(max_count))
+        HTTP.write(http, UInt64(min_count))
+        HTTP.write(http, UInt64(max_count))
 
         # next the image
         img_width = size(pixels, 1)
         img_height = size(pixels, 2)
 
-        write(http, Int32(img_width))
-        write(http, Int32(img_height))
+        HTTP.write(http, Int32(img_width))
+        HTTP.write(http, Int32(img_height))
 
         # compress pixels with ZFP
         prec = ZFP_MEDIUM_PRECISION
@@ -1249,12 +1248,12 @@ function streamImageSpectrum(http::HTTP.Stream)
         end
 
         compressed_pixels = zfp_compress(pixels, precision=prec)
-        write(http, Int32(length(compressed_pixels)))
-        write(http, compressed_pixels)
+        HTTP.write(http, Int32(length(compressed_pixels)))
+        HTTP.write(http, compressed_pixels)
 
         compressed_mask = transcode(Bzip2Compressor, collect(flatten(UInt8.(mask))))
-        write(http, Int32(length(compressed_mask)))
-        write(http, compressed_mask)
+        HTTP.write(http, Int32(length(compressed_mask)))
+        HTTP.write(http, compressed_mask)
 
         if fetch_data
             # JSON
@@ -1262,18 +1261,18 @@ function streamImageSpectrum(http::HTTP.Stream)
             compressed_json = lz4_hc_compress(Vector{UInt8}(json))
             compressed_len = length(compressed_json)
 
-            write(http, Int32(json_len))
-            write(http, Int32(compressed_len))
-            write(http, compressed_json)
+            HTTP.write(http, Int32(json_len))
+            HTTP.write(http, Int32(compressed_len))
+            HTTP.write(http, compressed_json)
 
             # FITS HEADER
             header_len = length(header)
             compressed_header = lz4_hc_compress(Vector{UInt8}(header))
             compressed_len = length(compressed_header)
 
-            write(http, Int32(header_len))
-            write(http, Int32(compressed_len))
-            write(http, compressed_header)
+            HTTP.write(http, Int32(header_len))
+            HTTP.write(http, Int32(compressed_len))
+            HTTP.write(http, compressed_header)
 
             # spectrum JSON
             # compress with bzip2 (more efficient than LZ4HC)
@@ -1281,15 +1280,15 @@ function streamImageSpectrum(http::HTTP.Stream)
             println(
                 "SPECTRUM JSON length: $(length(spectrum)); bzip2-compressed: $(length(compressed_spectrum))",
             )
-            write(http, compressed_spectrum)
+            HTTP.write(http, compressed_spectrum)
         end
 
         return nothing
     catch e
         println(e)
         HTTP.setstatus(http, 404)
-        startwrite(http)
-        write(http, "Not Found")
+        HTTP.startwrite(http)
+        HTTP.write(http, "Not Found")
         return nothing
     end
 end
@@ -1389,7 +1388,7 @@ function ws_coroutine(ws, ids)
 
     viewport_requests = Channel{Dict{String,Any}}(32)
 
-    realtime = @async while true
+    realtime = Threads.@spawn :default while true
         try
             req = take!(viewport_requests)
             #println(data   setid, "::", req)
