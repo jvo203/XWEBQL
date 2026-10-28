@@ -107,7 +107,7 @@ DB_HOME = "/home"
 
 const VERSION_MAJOR = 1
 const VERSION_MINOR = 0
-const VERSION_SUB = 33
+const VERSION_SUB = 34
 
 const SERVER_STRING =
     "XWEBQL v" *
@@ -118,7 +118,7 @@ const SERVER_STRING =
         string(VERSION_SUB)
 
 const WASM_VERSION = "26.10.27.0"
-const VERSION_STRING = "J/SV2026-10-28.0-BETA"
+const VERSION_STRING = "J/SV2026-10-28.1-BETA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -262,32 +262,32 @@ function streamFile(http::HTTP.Stream, path::String)
         push!(headers, "Content-Type" => "video/mp4")
     end
 
-    try
-        if isfile(path)
-            HTTP.setstatus(http, 200)
-
-            # enumerate each header
-            for (key, value) in headers
-                HTTP.setheader(http, key => value)
-            end
-
-            HTTP.startwrite(http)
-            HTTP.write(http, read(path))
-        else
-            HTTP.setstatus(http, 404)
-            HTTP.startwrite(http)
-            HTTP.write(http, "$path Not Found.")
-        end
-    catch e
-        if occursin("ECONNRESET", string(e))
-            println(e)
-            return nothing
-        end
-
+    if !isfile(path)
         HTTP.setstatus(http, 404)
         HTTP.startwrite(http)
-        HTTP.write(http, "Error: $e")
+        HTTP.write(http, "$path Not Found.")
+        return nothing
     end
+
+    body = try
+        read(path)
+    catch e
+        @error "Failed to read file for HTTP response" path exception=(e, catch_backtrace())
+        HTTP.setstatus(http, 500)
+        HTTP.startwrite(http)
+        HTTP.write(http, "Internal Server Error")
+        return nothing
+    end
+
+    HTTP.setstatus(http, 200)
+
+    # enumerate each header
+    for (key, value) in headers
+        HTTP.setheader(http, key => value)
+    end
+
+    HTTP.startwrite(http)
+    HTTP.write(http, body)
 
     return nothing
 end
@@ -381,21 +381,15 @@ function streamDirectory(http::HTTP.Stream)
         resp *= "]}"
     end
 
-    try
-        HTTP.setstatus(http, 200)
+    HTTP.setstatus(http, 200)
 
-        # enumerate each header
-        for (key, value) in headers
-            HTTP.setheader(http, key => value)
-        end
-
-        HTTP.startwrite(http)
-        HTTP.write(http, resp)
-    catch e
-        HTTP.setstatus(http, 404)
-        HTTP.startwrite(http)
-        HTTP.write(http, "Error: $e")
+    # enumerate each header
+    for (key, value) in headers
+        HTTP.setheader(http, key => value)
     end
+
+    HTTP.startwrite(http)
+    HTTP.write(http, resp)
 
     return nothing
 end
@@ -1181,11 +1175,6 @@ function streamImageSpectrum(http::HTTP.Stream)
     catch _
     end
 
-    HTTP.setheader(http, "Cache-Control" => "no-cache")
-    HTTP.setheader(http, "Cache-Control" => "no-store")
-    HTTP.setheader(http, "Pragma" => "no-cache")
-    HTTP.setheader(http, "Content-Type" => "application/octet-stream")
-
     xobject = get_dataset(datasetid, XOBJECTS, XLOCK)
 
     if xobject.id == "" || width <= 0 || height <= 0
@@ -1209,12 +1198,10 @@ function streamImageSpectrum(http::HTTP.Stream)
         return nothing
     end
 
+    response = IOBuffer()
     try
         @time (pixels, mask, spectrum, header, json, min_count, max_count) =
             getImageSpectrum(xobject, width, height)
-
-        HTTP.setstatus(http, 200)
-        HTTP.startwrite(http)
 
         flux = "LOG"
 
@@ -1223,18 +1210,18 @@ function streamImageSpectrum(http::HTTP.Stream)
         len = 4 * (length(flux) ÷ 4 + 1)
         flux = lpad(flux, len, " ")
 
-        HTTP.write(http, UInt32(length(flux)))
-        HTTP.write(http, flux)
+        write(response, UInt32(length(flux)))
+        write(response, flux)
 
-        HTTP.write(http, UInt64(min_count))
-        HTTP.write(http, UInt64(max_count))
+        write(response, UInt64(min_count))
+        write(response, UInt64(max_count))
 
         # next the image
         img_width = size(pixels, 1)
         img_height = size(pixels, 2)
 
-        HTTP.write(http, Int32(img_width))
-        HTTP.write(http, Int32(img_height))
+        write(response, Int32(img_width))
+        write(response, Int32(img_height))
 
         # compress pixels with ZFP
         prec = ZFP_MEDIUM_PRECISION
@@ -1248,12 +1235,12 @@ function streamImageSpectrum(http::HTTP.Stream)
         end
 
         compressed_pixels = zfp_compress(pixels, precision=prec)
-        HTTP.write(http, Int32(length(compressed_pixels)))
-        HTTP.write(http, compressed_pixels)
+        write(response, Int32(length(compressed_pixels)))
+        write(response, compressed_pixels)
 
         compressed_mask = transcode(Bzip2Compressor, collect(flatten(UInt8.(mask))))
-        HTTP.write(http, Int32(length(compressed_mask)))
-        HTTP.write(http, compressed_mask)
+        write(response, Int32(length(compressed_mask)))
+        write(response, compressed_mask)
 
         if fetch_data
             # JSON
@@ -1261,18 +1248,18 @@ function streamImageSpectrum(http::HTTP.Stream)
             compressed_json = lz4_hc_compress(Vector{UInt8}(json))
             compressed_len = length(compressed_json)
 
-            HTTP.write(http, Int32(json_len))
-            HTTP.write(http, Int32(compressed_len))
-            HTTP.write(http, compressed_json)
+            write(response, Int32(json_len))
+            write(response, Int32(compressed_len))
+            write(response, compressed_json)
 
             # FITS HEADER
             header_len = length(header)
             compressed_header = lz4_hc_compress(Vector{UInt8}(header))
             compressed_len = length(compressed_header)
 
-            HTTP.write(http, Int32(header_len))
-            HTTP.write(http, Int32(compressed_len))
-            HTTP.write(http, compressed_header)
+            write(response, Int32(header_len))
+            write(response, Int32(compressed_len))
+            write(response, compressed_header)
 
             # spectrum JSON
             # compress with bzip2 (more efficient than LZ4HC)
@@ -1280,17 +1267,24 @@ function streamImageSpectrum(http::HTTP.Stream)
             println(
                 "SPECTRUM JSON length: $(length(spectrum)); bzip2-compressed: $(length(compressed_spectrum))",
             )
-            HTTP.write(http, compressed_spectrum)
+            write(response, compressed_spectrum)
         end
-
-        return nothing
     catch e
-        println(e)
-        HTTP.setstatus(http, 404)
+        @error "Failed to generate image spectrum response" datasetid exception=(e, catch_backtrace())
+        HTTP.setstatus(http, 500)
         HTTP.startwrite(http)
-        HTTP.write(http, "Not Found")
+        HTTP.write(http, "Internal Server Error")
         return nothing
     end
+
+    HTTP.setheader(http, "Cache-Control" => "no-cache")
+    HTTP.setheader(http, "Cache-Control" => "no-store")
+    HTTP.setheader(http, "Pragma" => "no-cache")
+    HTTP.setheader(http, "Content-Type" => "application/octet-stream")
+    HTTP.setstatus(http, 200)
+    HTTP.startwrite(http)
+    HTTP.write(http, take!(response))
+    return nothing
 end
 
 const XROUTER = HTTP.Router()
