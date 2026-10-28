@@ -262,32 +262,32 @@ function streamFile(http::HTTP.Stream, path::String)
         push!(headers, "Content-Type" => "video/mp4")
     end
 
-    try
-        if isfile(path)
-            HTTP.setstatus(http, 200)
-
-            # enumerate each header
-            for (key, value) in headers
-                HTTP.setheader(http, key => value)
-            end
-
-            HTTP.startwrite(http)
-            HTTP.write(http, read(path))
-        else
-            HTTP.setstatus(http, 404)
-            HTTP.startwrite(http)
-            HTTP.write(http, "$path Not Found.")
-        end
-    catch e
-        if occursin("ECONNRESET", string(e))
-            println(e)
-            return nothing
-        end
-
+    if !isfile(path)
         HTTP.setstatus(http, 404)
         HTTP.startwrite(http)
-        HTTP.write(http, "Error: $e")
+        HTTP.write(http, "$path Not Found.")
+        return nothing
     end
+
+    body = try
+        read(path)
+    catch e
+        @error "Failed to read file for HTTP response" path exception=(e, catch_backtrace())
+        HTTP.setstatus(http, 500)
+        HTTP.startwrite(http)
+        HTTP.write(http, "Internal Server Error")
+        return nothing
+    end
+
+    HTTP.setstatus(http, 200)
+
+    # enumerate each header
+    for (key, value) in headers
+        HTTP.setheader(http, key => value)
+    end
+
+    HTTP.startwrite(http)
+    HTTP.write(http, body)
 
     return nothing
 end
@@ -381,21 +381,15 @@ function streamDirectory(http::HTTP.Stream)
         resp *= "]}"
     end
 
-    try
-        HTTP.setstatus(http, 200)
+    HTTP.setstatus(http, 200)
 
-        # enumerate each header
-        for (key, value) in headers
-            HTTP.setheader(http, key => value)
-        end
-
-        HTTP.startwrite(http)
-        HTTP.write(http, resp)
-    catch e
-        HTTP.setstatus(http, 404)
-        HTTP.startwrite(http)
-        HTTP.write(http, "Error: $e")
+    # enumerate each header
+    for (key, value) in headers
+        HTTP.setheader(http, key => value)
     end
+
+    HTTP.startwrite(http)
+    HTTP.write(http, resp)
 
     return nothing
 end
