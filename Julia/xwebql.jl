@@ -117,8 +117,8 @@ const SERVER_STRING =
         "." *
         string(VERSION_SUB)
 
-const WASM_VERSION = "26.10.27.0"
-const VERSION_STRING = "J/SV2026-10-28.2-BETA"
+const WASM_VERSION = "26.11.11.0"
+const VERSION_STRING = "J/SV2026-11-11.0-BETA"
 
 const ZFP_HIGH_PRECISION = 16
 const ZFP_MEDIUM_PRECISION = 11
@@ -453,7 +453,7 @@ end
 function streamDocument(http::HTTP.Stream)
     request::HTTP.Request = http.message
     read(http)
-    HTTP.closeread(http)    
+    HTTP.closeread(http)
 
     # prevent a simple directory traversal
     if occursin("../", request.target) || occursin("..\\", request.target)
